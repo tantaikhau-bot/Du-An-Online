@@ -59,7 +59,7 @@ class Handler(BaseHTTPRequestHandler):
  def do_GET(self):
   page=urlsplit(self.path).path
   if page=='/api/version':
-   return self.reply(200,{'version':'7.6','build':'7.6-mobile-ultra','name':'Mobile Ultra','features':['fps-cap','refresh-aware-frame-scheduler','camera-sensitivity','joystick-customization','adaptive-mobile-quality','compact-fps-hud','shared-world','version-check']})
+   return self.reply(200,{'version':'7.7','build':'7.7-mobile-sharp','name':'Mobile Sharp+','features':['persistent-graphics-presets','adaptive-sharp-resolution','mobile-browser-help','hd-character-detail','fps-cap','joystick-customization','shared-world','version-check']})
   if page=='/healthz':
    try:
     with db() as c:c.execute('SELECT 1 FROM users LIMIT 1').fetchone()
