@@ -1,4 +1,4 @@
-import economy, beta, festival, referral, royal, payment
+import economy, beta, festival, referral, royal, payment, together
 import time, os, json, hmac, secrets, hashlib
 
 def init(c):
@@ -15,6 +15,7 @@ def handle(h,c,d=None):
   t=secrets.token_urlsafe(32);c.execute('DELETE FROM staff_sessions WHERE expiry<?',(now,));c.execute('INSERT INTO staff_sessions VALUES(?,?)',(hash_token(t),now+3600));c.commit();return reply(200,{'ok':True},cookie(t,3600))
  t=next((x.strip().split('=',1)[1] for x in h.headers.get('Cookie','').split(';') if x.strip().startswith('ww_admin=')), '')
  if not c.execute('SELECT 1 FROM staff_sessions WHERE token=? AND expiry>?',(hash_token(t),now)).fetchone():return reply(401,{'error':'Cần đăng nhập quản trị'})
+ if path in ('/api/admin/chat-reports','/api/admin/chat-review'):return together.staff(h,c,d)
  if path in ('/api/admin/alpha-feedback','/api/admin/alpha-review'):return beta.feedback_admin(h,c,d)
  if path=='/api/admin/payments':return payment.staff(h,c,d)
  if path in ('/api/admin/royal','/api/admin/royal-config'):return royal.staff(h,c,d)
