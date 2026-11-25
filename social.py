@@ -3,16 +3,44 @@ import time, math, sqlite3, together, guild
 def init(c):
  together.init(c)
  guild.init(c)
- c.executescript('''CREATE TABLE IF NOT EXISTS presence(uid TEXT PRIMARY KEY,x REAL,y REAL,area INTEGER,seen REAL); CREATE TABLE IF NOT EXISTS character61(uid TEXT PRIMARY KEY,body TEXT,skin TEXT,hair TEXT,style TEXT,dye TEXT,action TEXT,target TEXT); CREATE TABLE IF NOT EXISTS character64(uid TEXT PRIMARY KEY,height TEXT,build TEXT,face TEXT,eye TEXT); CREATE TABLE IF NOT EXISTS motion68(uid TEXT PRIMARY KEY,heading REAL,moving INTEGER,jump REAL); CREATE TABLE IF NOT EXISTS friends(sender TEXT,receiver TEXT,status TEXT,PRIMARY KEY(sender,receiver)); CREATE TABLE IF NOT EXISTS greetings(sender TEXT,receiver TEXT,kind TEXT,created REAL); CREATE TABLE IF NOT EXISTS reports(reporter TEXT,target TEXT,reason TEXT,created REAL);''')
+ c.executescript('''CREATE TABLE IF NOT EXISTS presence(uid TEXT PRIMARY KEY,x REAL,y REAL,area INTEGER,seen REAL); CREATE TABLE IF NOT EXISTS character61(uid TEXT PRIMARY KEY,body TEXT,skin TEXT,hair TEXT,style TEXT,dye TEXT,action TEXT,target TEXT); CREATE TABLE IF NOT EXISTS character64(uid TEXT PRIMARY KEY,height TEXT,build TEXT,face TEXT,eye TEXT); CREATE TABLE IF NOT EXISTS motion68(uid TEXT PRIMARY KEY,heading REAL,moving INTEGER,jump REAL); CREATE TABLE IF NOT EXISTS near69(id INTEGER PRIMARY KEY AUTOINCREMENT,sender TEXT NOT NULL,body TEXT NOT NULL,x REAL NOT NULL,y REAL NOT NULL,created REAL NOT NULL,hidden INTEGER NOT NULL DEFAULT 0); CREATE INDEX IF NOT EXISTS near69_sender ON near69(sender,created); CREATE TABLE IF NOT EXISTS near69_audience(mid INTEGER,uid TEXT,PRIMARY KEY(mid,uid)); CREATE INDEX IF NOT EXISTS near69_audience_uid ON near69_audience(uid,mid); CREATE TABLE IF NOT EXISTS friends(sender TEXT,receiver TEXT,status TEXT,PRIMARY KEY(sender,receiver)); CREATE TABLE IF NOT EXISTS greetings(sender TEXT,receiver TEXT,kind TEXT,created REAL); CREATE TABLE IF NOT EXISTS reports(reporter TEXT,target TEXT,reason TEXT,created REAL);''')
 
 def leave(c,uid):
  for table in ('presence','character61','character64','motion68'):
   c.execute('DELETE FROM '+table+' WHERE uid=?',(uid,))
 
+def nearby69(c,uid,now):
+ origin=c.execute('SELECT x,y FROM presence WHERE uid=? AND area=0 AND seen>?',(uid,now-5)).fetchone()
+ if not origin:return []
+ return [dict(r) for r in c.execute("""SELECT m.id,m.sender,u.name,m.body,m.created FROM near69 m JOIN near69_audience a ON a.mid=m.id JOIN users u ON u.id=m.sender JOIN presence p ON p.uid=m.sender WHERE a.uid=? AND m.hidden=0 AND m.created>? AND p.area=0 AND p.seen>? AND m.sender NOT IN (SELECT uid FROM blocked) AND NOT EXISTS(SELECT 1 FROM ww_blocks b WHERE (b.owner=? AND b.target=m.sender) OR (b.owner=m.sender AND b.target=?)) AND ((p.x-?)/35.0)*((p.x-?)/35.0)+((p.y-?)/14.0)*((p.y-?)/14.0)<=144 ORDER BY m.id DESC LIMIT 25""",(uid,now-45,now-5,uid,uid,origin['x'],origin['x'],origin['y'],origin['y']))][::-1]
+
 def handle(h,c,u,d):
  path=h.path; uid=u['id']; now=time.time(); reply=h.reply
  if path.startswith('/api/social/group/'):return guild.handle(h,c,u,d)
  if path.startswith('/api/social/together/'):return together.handle(h,c,u,d)
+ if path=='/api/social/near/send':
+  body=together.clean_body(d.get('body'))
+  if body is None or len(body)>100:return reply(400,{'error':'Tin nhắn 1–100 ký tự, không chứa liên kết hoặc thông tin liên hệ'})
+  c.execute('BEGIN IMMEDIATE')
+  origin=c.execute('SELECT x,y FROM presence WHERE uid=? AND area=0 AND seen>?',(uid,now-5)).fetchone()
+  if not origin:return reply(409,{'error':'Hãy vào thế giới chung trước'})
+  if c.execute('SELECT count(*) FROM near69 WHERE sender=? AND created>?',(uid,now-10)).fetchone()[0]>=3 or c.execute('SELECT count(*) FROM near69 WHERE sender=? AND created>?',(uid,now-3600)).fetchone()[0]>=60:return reply(429,{'error':'Bạn gửi quá nhanh, hãy chờ'})
+  c.execute('DELETE FROM near69_audience WHERE mid IN (SELECT id FROM near69 WHERE created<?)',(now-86400,))
+  c.execute('DELETE FROM near69 WHERE created<?',(now-86400,))
+  mid=c.execute('INSERT INTO near69(sender,body,x,y,created) VALUES(?,?,?,?,?)',(uid,body,origin['x'],origin['y'],now)).lastrowid
+  c.execute('INSERT INTO near69_audience VALUES(?,?)',(mid,uid))
+  for row in c.execute("""SELECT p.uid FROM presence p WHERE p.uid!=? AND p.area=0 AND p.seen>? AND p.uid NOT IN (SELECT uid FROM blocked) AND NOT EXISTS(SELECT 1 FROM ww_blocks b WHERE (b.owner=? AND b.target=p.uid) OR (b.owner=p.uid AND b.target=?)) AND ((p.x-?)/35.0)*((p.x-?)/35.0)+((p.y-?)/14.0)*((p.y-?)/14.0)<=144 LIMIT 100""",(uid,now-5,uid,uid,origin['x'],origin['x'],origin['y'],origin['y'])):
+   c.execute('INSERT OR IGNORE INTO near69_audience VALUES(?,?)',(mid,row['uid']))
+  c.commit();return reply(201,{'id':mid})
+ if path=='/api/social/near/report':
+  mid=d.get('message');reason=d.get('reason')
+  if type(mid) is not int or not 0<mid<=9223372036854775807 or reason not in ('Quấy rối','Spam','Nội dung không phù hợp','Khác'):return reply(400,{'error':'Báo cáo không hợp lệ'})
+  c.execute('BEGIN IMMEDIATE')
+  m=c.execute('SELECT m.sender,m.body FROM near69 m JOIN near69_audience a ON a.mid=m.id WHERE m.id=? AND a.uid=? AND m.created>?',(mid,uid,now-86400)).fetchone()
+  if not m or m['sender']==uid:return reply(404,{'error':'Không tìm thấy tin nhắn'})
+  if c.execute('SELECT count(*) FROM ww_chat_reports WHERE reporter=? AND created>?',(uid,now-86400)).fetchone()[0]>=20:return reply(429,{'error':'Đạt giới hạn báo cáo hôm nay'})
+  if not c.execute('INSERT OR IGNORE INTO ww_chat_reports(reporter,target,message_id,body,reason,created) VALUES(?,?,?,?,?,?)',(uid,m['sender'],-mid,m['body'],reason,int(now))).rowcount:return reply(409,{'error':'Đã báo cáo'})
+  c.commit();return reply(201,{'ok':True})
  if path=='/api/social/leave':
   leave(c,uid);c.commit();return reply(200,{'ok':True})
  if path=='/api/social/pulse':
@@ -65,7 +93,7 @@ def handle(h,c,u,d):
    if v['action'] in ('hand','photo','hug','duet') and not mutually_ready(v['id'],v['target'],v['action']):v['action']='idle'
    v.pop('target',None)
    players.append(v)
-  return reply(200,{'players':players,'match':target if mutually_ready(uid,target,action) else '', 'incoming':incoming[:10]})
+  return reply(200,{'players':players,'match':target if mutually_ready(uid,target,action) else '', 'incoming':incoming[:10], 'near':nearby69(c,uid,now) if a==0 else []})
  if path=='/api/social/list':
   return reply(200,{'friends':[dict(r) for r in c.execute('SELECT f.sender,f.receiver,f.status,u.name,u.id FROM friends f JOIN users u ON u.id=CASE WHEN f.sender=? THEN f.receiver ELSE f.sender END WHERE f.sender=? OR f.receiver=?',(uid,uid,uid))], 'greetings':[dict(r) for r in c.execute('SELECT u.name,g.kind,g.created FROM greetings g JOIN users u ON u.id=g.sender WHERE g.receiver=? ORDER BY g.created DESC LIMIT 20',(uid,))]})
  if path=='/api/social/search':
