@@ -22,3 +22,8 @@ Adaptive quality is selected under Settings; manual presets remain available. FP
 ### V5.0 Alpha playtest
 
 Open playtest (not an invitation-gated closed beta). Includes first-run guide, seven one-time local achievements, safer local/cloud restore with a previous-save snapshot, and authenticated feedback submitted explicitly by players. Staff review is under Admin → Phản hồi Alpha and requires a configured admin password. Feedback is limited to 10–1000 characters, one per minute and ten per rolling 24 hours per account. Render free storage remains ephemeral; export saves before deployments. The local coin economy is not authoritative. No real payments, no commercial launch, and no GPU/load-test certification.
+
+
+### V5.5 Atmosphere
+
+Original procedural sky clouds and stars, terrain snow/rock/riverbank shading, Fresnel-style water coloring (not scene reflections), curved animated grass clusters grouped into 16-unit cells with quality/distance culling, local contact shadows and mist/snow particles. `/play?fx=basic` disables the new custom shader effects while retaining Three.js. `/play?engine=classic` remains the older compatibility engine. Shader-hook string tests and JS syntax checks are not browser shader compilation or measured GPU benchmarks. No hardware ray tracing or external assets added. Free hosting remains unchanged.
