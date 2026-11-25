@@ -17,3 +17,8 @@ Optional browser-side loading of Poly Haven CC0 assets: [Forest Ground 01](https
 ### V4.9 performance and community
 
 Adaptive quality is selected under Settings; manual presets remain available. FPS and draw calls are shown in graphics settings. Shared box geometry reduces allocations; peer interpolation is visual only and presence is still polling, not authoritative multiplayer. Hidden tabs pause the 3D frame loop and presence updates; the renderer recovery dialog offers reload or classic mode. No paid hosting or live payments. Browser/GPU validation and load testing remain required.
+
+
+### V5.0 Alpha playtest
+
+Open playtest (not an invitation-gated closed beta). Includes first-run guide, seven one-time local achievements, safer local/cloud restore with a previous-save snapshot, and authenticated feedback submitted explicitly by players. Staff review is under Admin → Phản hồi Alpha and requires a configured admin password. Feedback is limited to 10–1000 characters, one per minute and ten per rolling 24 hours per account. Render free storage remains ephemeral; export saves before deployments. The local coin economy is not authoritative. No real payments, no commercial launch, and no GPU/load-test certification.
