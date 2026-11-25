@@ -12,3 +12,8 @@ Optional browser-side loading of Poly Haven CC0 assets: [Forest Ground 01](https
 
 - KayKit Character Pack: Adventurers, Rogue.glb, by Kay Lousberg, CC0 1.0. Source: https://github.com/KayKit-Game-Assets/KayKit-Character-Pack-Adventures-1.0 ; license: https://github.com/KayKit-Game-Assets/KayKit-Character-Pack-Adventures-1.0/blob/main/LICENSE.txt
 - Fox: PixelMannen (model, CC0), tomkranis (rig and animation, CC BY 4.0), AsoboStudio and scurest (glTF conversion, CC BY 4.0). Source: https://github.com/KhronosGroup/glTF-Sample-Assets/tree/main/Models/Fox ; license: https://creativecommons.org/licenses/by/4.0/ . Changes in WISH WORLD: runtime normalization of scale/orientation, animation selection and transition. No asset files are bundled. Optional runtime download; if unavailable or missing idle/walk/run clips, procedural fallback remains. KayKit preview uses its original outfit rather than the existing custom clothing system.
+
+
+### V4.9 performance and community
+
+Adaptive quality is selected under Settings; manual presets remain available. FPS and draw calls are shown in graphics settings. Shared box geometry reduces allocations; peer interpolation is visual only and presence is still polling, not authoritative multiplayer. Hidden tabs pause the 3D frame loop and presence updates; the renderer recovery dialog offers reload or classic mode. No paid hosting or live payments. Browser/GPU validation and load testing remain required.
