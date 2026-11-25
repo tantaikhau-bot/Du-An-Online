@@ -34,7 +34,7 @@ def handle(h,c,d=None):
  if action in ('block','unblock'):
   if not isinstance(target,str) or not c.execute('SELECT 1 FROM users WHERE id=?',(target,)).fetchone():return reply(404,{'error':'Không tìm thấy người chơi'})
   if action=='block':
-   c.execute('INSERT OR IGNORE INTO blocked VALUES(?)',(target,));c.execute('DELETE FROM sessions WHERE uid=?',(target,));c.execute('DELETE FROM presence WHERE uid=?',(target,))
+   c.execute('INSERT OR IGNORE INTO blocked VALUES(?)',(target,));c.execute('DELETE FROM ww_pairs WHERE sender=? OR receiver=?',(target,target));c.execute('DELETE FROM sessions WHERE uid=?',(target,));c.execute('DELETE FROM presence WHERE uid=?',(target,))
   else:c.execute('DELETE FROM blocked WHERE uid=?',(target,))
  elif action=='review':
   if type(target)!=int or not c.execute('SELECT 1 FROM reports WHERE rowid=?',(target,)).fetchone():return reply(404,{'error':'Không tìm thấy báo cáo'})
