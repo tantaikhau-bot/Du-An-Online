@@ -133,5 +133,5 @@ class Handler(BaseHTTPRequestHandler):
   except (ValueError,TypeError,AssertionError,KeyError):self.reply(400,{'error':'Yêu cầu không hợp lệ'})
   except Exception as e:print(type(e).__name__,flush=True);self.reply(500,{'error':'Lỗi máy chủ'})
 if __name__=='__main__':
- import test_together;test_together.smoke()
+ import test_together,test_guild;test_together.smoke();test_guild.smoke()
  init();port=int(os.environ.get('PORT','8080'));print(f'WISH WORLD: http://127.0.0.1:{port}',flush=True);BoundedServer((os.environ.get('HOST','127.0.0.1'),port),Handler).serve_forever()
