@@ -12,6 +12,7 @@ def init():
  with db() as c:
   c.execute("PRAGMA journal_mode=WAL")
   c.executescript('''CREATE TABLE IF NOT EXISTS users(id TEXT PRIMARY KEY, name TEXT UNIQUE COLLATE NOCASE, salt TEXT, password TEXT, save TEXT, revision INTEGER DEFAULT 0); CREATE TABLE IF NOT EXISTS sessions(token TEXT PRIMARY KEY, uid TEXT, expiry INTEGER); CREATE TABLE IF NOT EXISTS wishes(id TEXT PRIMARY KEY, uid TEXT, body TEXT, created INTEGER);''')
+  beta.init_alpha(c)
   social.init(c)
   admin.init(c)
   economy.init(c)
@@ -110,6 +111,7 @@ class Handler(BaseHTTPRequestHandler):
     if self.path.startswith('/api/festival/'):return festival.handle(self,c,u,d)
     if self.path.startswith('/api/economy/'):return economy.handle(self,c,u,d)
     if self.path.startswith('/api/friendship/'):return friendship.handle(self,c,u,d)
+    if self.path=='/api/alpha/feedback':return beta.submit_alpha(self,c,u,d)
     if self.path.startswith('/api/social/'):return social.handle(self,c,u,d)
     if self.path=='/api/logout':
      c.execute('DELETE FROM presence WHERE uid=?',(u['id'],))
