@@ -1,4 +1,4 @@
-import time,secrets
+import time,secrets,together
 KINDS={'cottage','villa','bench','fountain','lamp','pond','fence','path','flowerbed'}
 GIFTS={'flower':'Hoa yêu thương','lantern':'Hoa đăng tình bạn','star':'Ngôi sao may mắn'}
 NOTES=['Khu vườn đẹp quá!','Chúc bạn một ngày vui vẻ!','Cảm ơn vì đã chia sẻ!']
@@ -16,9 +16,10 @@ def handle(h,c,u,d):
   c.execute('INSERT OR REPLACE INTO gardens VALUES(?,?,?)',(uid,json.dumps([{k:o[k] for k in ('kind','x','z','r')} for o in a]),privacy));c.commit();return r(200,{'ok':True})
  if p=='inbox':
   own=c.execute('SELECT privacy FROM gardens WHERE uid=?',(uid,)).fetchone()
-  return r(200,{'privacy':own[0] if own else 'private','gifts':[dict(x) for x in c.execute('SELECT g.id,u.name,g.kind,g.created FROM gifts g JOIN users u ON u.id=g.sender WHERE g.receiver=? ORDER BY g.created DESC LIMIT 50',(uid,))]})
+  return r(200,{'privacy':own[0] if own else 'private','gifts':[dict(x) for x in c.execute('SELECT g.id,u.name,g.kind,g.created FROM gifts g JOIN users u ON u.id=g.sender WHERE g.receiver=? AND NOT EXISTS(SELECT 1 FROM ww_blocks b WHERE (b.owner=? AND b.target=g.sender) OR (b.target=? AND b.owner=g.sender)) ORDER BY g.created DESC LIMIT 50',(uid,uid,uid))]})
  target=d.get('id')
  if not isinstance(target,str) or target==uid or not c.execute('SELECT 1 FROM users WHERE id=? AND id NOT IN (SELECT uid FROM blocked)',(target,)).fetchone():return r(404,{'error':'Không tìm thấy người chơi'})
+ if together.blocked(c,uid,target):return r(403,{'error':'Không thể tương tác với người này'})
  friend=c.execute("SELECT 1 FROM friends WHERE status='accepted' AND ((sender=? AND receiver=?) OR (sender=? AND receiver=?))",(uid,target,target,uid)).fetchone()
  if p=='gift':
   if not friend:return r(403,{'error':'Chỉ gửi quà cho bạn bè'})
