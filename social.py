@@ -1,11 +1,13 @@
-import time, math, sqlite3, together
+import time, math, sqlite3, together, guild
 
 def init(c):
  together.init(c)
+ guild.init(c)
  c.executescript('''CREATE TABLE IF NOT EXISTS presence(uid TEXT PRIMARY KEY,x REAL,y REAL,area INTEGER,seen REAL); CREATE TABLE IF NOT EXISTS friends(sender TEXT,receiver TEXT,status TEXT,PRIMARY KEY(sender,receiver)); CREATE TABLE IF NOT EXISTS greetings(sender TEXT,receiver TEXT,kind TEXT,created REAL); CREATE TABLE IF NOT EXISTS reports(reporter TEXT,target TEXT,reason TEXT,created REAL);''')
 
 def handle(h,c,u,d):
  path=h.path; uid=u['id']; now=time.time(); reply=h.reply
+ if path.startswith('/api/social/group/'):return guild.handle(h,c,u,d)
  if path.startswith('/api/social/together/'):return together.handle(h,c,u,d)
  if path=='/api/social/pulse':
   x,y,a=d.get('x'),d.get('y'),d.get('area')
