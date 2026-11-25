@@ -7,7 +7,7 @@ def handle(h,c,u,d):
  path=h.path; uid=u['id']; now=time.time(); reply=h.reply
  if path=='/api/social/pulse':
   x,y,a=d.get('x'),d.get('y'),d.get('area')
-  if type(x) not in (int,float) or type(y) not in (int,float) or not math.isfinite(x) or not math.isfinite(y) or not 100<=x<=880 or not 435<=y<=715 or type(a)!=int or not 0<=a<=7:return reply(400,{'error':'Vị trí không hợp lệ'})
+  if type(x) not in (int,float) or type(y) not in (int,float) or not math.isfinite(x) or not math.isfinite(y) or not -1050<=x<=2030 or not -41<=y<=1191 or type(a)!=int or not 0<=a<=7:return reply(400,{'error':'Vị trí không hợp lệ'})
   c.execute('INSERT OR REPLACE INTO presence VALUES(?,?,?,?,?)',(uid,x,y,a,now));c.execute('DELETE FROM presence WHERE seen<?',(now-30,));c.commit()
   return reply(200,{'players':[dict(r) for r in c.execute('SELECT p.uid AS id,u.name,p.x,p.y,p.area FROM presence p JOIN users u ON u.id=p.uid WHERE p.uid!=? AND p.seen>? LIMIT 100',(uid,now-12))]})
  if path=='/api/social/list':
