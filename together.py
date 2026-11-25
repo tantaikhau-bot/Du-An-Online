@@ -45,7 +45,7 @@ def handle(h,c,u,d):
   peer=d.get('id'); after=d.get('after',0)
   if type(after) is not int or after<0 or after>9223372036854775807:return err(400,'Mốc tin nhắn không hợp lệ')
   if peer is not None and (not available(c,peer) or peer==uid or blocked(c,uid,peer) or not friend(c,uid,peer)):return err(403,'Chat riêng chỉ dành cho bạn bè chưa bị chặn')
-  where="m.hidden=0 AND m.created>=? AND m.sender NOT IN (SELECT uid FROM blocked) AND NOT EXISTS(SELECT 1 FROM ww_blocks b WHERE (b.owner=? AND b.target=m.sender) OR (b.owner=m.sender AND b.target=?))"
+  where="m.gid IS NULL AND m.hidden=0 AND m.created>=? AND m.sender NOT IN (SELECT uid FROM blocked) AND NOT EXISTS(SELECT 1 FROM ww_blocks b WHERE (b.owner=? AND b.target=m.sender) OR (b.owner=m.sender AND b.target=?))"
   args=[now-RETENTION,uid,uid]
   if peer is None:where+=' AND m.receiver IS NULL'
   else:where+=' AND ((m.sender=? AND m.receiver=?) OR (m.sender=? AND m.receiver=?))';args.extend([uid,peer,peer,uid])
@@ -66,7 +66,7 @@ def handle(h,c,u,d):
   if type(mid) is not int or not 0<mid<=9223372036854775807 or reason not in ('Quấy rối','Spam','Nội dung không phù hợp','Khác'):return err(400,'Báo cáo không hợp lệ')
   c.execute('BEGIN IMMEDIATE')
   m=c.execute('SELECT * FROM ww_chat WHERE id=? AND created>=?',(mid,now-RETENTION)).fetchone()
-  if not m or m['sender']==uid or (m['receiver'] is not None and m['receiver']!=uid):return err(404,'Không tìm thấy tin nhắn')
+  if not m or m['sender']==uid or (m['receiver'] is not None and m['receiver']!=uid) or (m['gid'] is not None and not c.execute('SELECT 1 FROM ww_group_members WHERE gid=? AND uid=?',(m['gid'],uid)).fetchone()):return err(404,'Không tìm thấy tin nhắn')
   if c.execute('SELECT count(*) FROM ww_chat_reports WHERE reporter=? AND created>?',(uid,now-86400)).fetchone()[0]>=20:return err(429,'Đạt giới hạn báo cáo hôm nay')
   if not c.execute('INSERT OR IGNORE INTO ww_chat_reports(reporter,target,message_id,body,reason,created) VALUES(?,?,?,?,?,?)',(uid,m['sender'],mid,m['body'],reason,now)).rowcount:return err(409,'Đã báo cáo tin nhắn')
   c.commit();return reply(201,{'ok':True})
