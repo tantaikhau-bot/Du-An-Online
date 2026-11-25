@@ -3,12 +3,18 @@ import time, math, sqlite3, together, guild
 def init(c):
  together.init(c)
  guild.init(c)
- c.executescript('''CREATE TABLE IF NOT EXISTS presence(uid TEXT PRIMARY KEY,x REAL,y REAL,area INTEGER,seen REAL); CREATE TABLE IF NOT EXISTS character61(uid TEXT PRIMARY KEY,body TEXT,skin TEXT,hair TEXT,style TEXT,dye TEXT,action TEXT,target TEXT); CREATE TABLE IF NOT EXISTS character64(uid TEXT PRIMARY KEY,height TEXT,build TEXT,face TEXT,eye TEXT); CREATE TABLE IF NOT EXISTS friends(sender TEXT,receiver TEXT,status TEXT,PRIMARY KEY(sender,receiver)); CREATE TABLE IF NOT EXISTS greetings(sender TEXT,receiver TEXT,kind TEXT,created REAL); CREATE TABLE IF NOT EXISTS reports(reporter TEXT,target TEXT,reason TEXT,created REAL);''')
+ c.executescript('''CREATE TABLE IF NOT EXISTS presence(uid TEXT PRIMARY KEY,x REAL,y REAL,area INTEGER,seen REAL); CREATE TABLE IF NOT EXISTS character61(uid TEXT PRIMARY KEY,body TEXT,skin TEXT,hair TEXT,style TEXT,dye TEXT,action TEXT,target TEXT); CREATE TABLE IF NOT EXISTS character64(uid TEXT PRIMARY KEY,height TEXT,build TEXT,face TEXT,eye TEXT); CREATE TABLE IF NOT EXISTS motion68(uid TEXT PRIMARY KEY,heading REAL,moving INTEGER,jump REAL); CREATE TABLE IF NOT EXISTS friends(sender TEXT,receiver TEXT,status TEXT,PRIMARY KEY(sender,receiver)); CREATE TABLE IF NOT EXISTS greetings(sender TEXT,receiver TEXT,kind TEXT,created REAL); CREATE TABLE IF NOT EXISTS reports(reporter TEXT,target TEXT,reason TEXT,created REAL);''')
+
+def leave(c,uid):
+ for table in ('presence','character61','character64','motion68'):
+  c.execute('DELETE FROM '+table+' WHERE uid=?',(uid,))
 
 def handle(h,c,u,d):
  path=h.path; uid=u['id']; now=time.time(); reply=h.reply
  if path.startswith('/api/social/group/'):return guild.handle(h,c,u,d)
  if path.startswith('/api/social/together/'):return together.handle(h,c,u,d)
+ if path=='/api/social/leave':
+  leave(c,uid);c.commit();return reply(200,{'ok':True})
  if path=='/api/social/pulse':
   x,y,a=d.get('x'),d.get('y'),d.get('area')
   if type(x) not in (int,float) or type(y) not in (int,float) or not math.isfinite(x) or not math.isfinite(y) or not -2030<=x<=3010 or not -433<=y<=1583 or type(a)!=int or not 0<=a<=7:return reply(400,{'error':'Vị trí không hợp lệ'})
@@ -28,12 +34,20 @@ def handle(h,c,u,d):
   target=d.get('target')
   if not isinstance(target,str) or len(target)>100 or target==uid:target=''
   if action not in ('hand','photo','hug','duet'):target=''
+  def num(key,lo,hi,default=0):
+   v=d.get(key)
+   return max(lo,min(hi,v)) if type(v) in (int,float) and math.isfinite(v) else default
+  heading=num('heading',-math.pi*2,math.pi*2)
+  jump=num('jump',0,2)
+  moving=int(d.get('moving') is True)
   c.execute('INSERT OR REPLACE INTO presence VALUES(?,?,?,?,?)',(uid,x,y,a,now))
+  c.execute('INSERT OR REPLACE INTO motion68 VALUES(?,?,?,?)',(uid,heading,moving,jump))
   c.execute('INSERT OR REPLACE INTO character61 VALUES(?,?,?,?,?,?,?,?)',(uid,body,skin,hair,style,dye,action,target))
   c.execute('INSERT OR REPLACE INTO character64 VALUES(?,?,?,?,?)',(uid,height,build,face,eye))
   c.execute('DELETE FROM presence WHERE seen<?',(now-30,))
   c.execute('DELETE FROM character61 WHERE uid NOT IN (SELECT uid FROM presence)')
   c.execute('DELETE FROM character64 WHERE uid NOT IN (SELECT uid FROM presence)')
+  c.execute('DELETE FROM motion68 WHERE uid NOT IN (SELECT uid FROM presence)')
   c.commit()
   def mutually_ready(first,second,kind):
    if not second or kind not in ('hand','photo','hug','duet'):return False
@@ -43,7 +57,7 @@ def handle(h,c,u,d):
    origin=c.execute('SELECT x,y,area,seen FROM presence WHERE uid=?',(first,)).fetchone()
    return bool(row and origin and row['seen']>now-4 and origin['seen']>now-4 and row['action']==kind and row['target']==first and row['area']==origin['area'] and math.hypot((row['x']-origin['x'])/35,(row['y']-origin['y'])/14)<3)
   players=[]; incoming=[]
-  for r in c.execute('SELECT p.uid AS id,u.name,p.x,p.y,p.area,q.body,q.skin,q.hair,q.style,q.dye,q.action,q.target,f.height,f.build,f.face,f.eye FROM presence p JOIN users u ON u.id=p.uid LEFT JOIN character61 q ON q.uid=p.uid LEFT JOIN character64 f ON f.uid=p.uid WHERE p.uid!=? AND p.seen>? AND p.uid NOT IN (SELECT uid FROM blocked) AND NOT EXISTS(SELECT 1 FROM ww_blocks b WHERE (b.owner=? AND b.target=p.uid) OR (b.target=? AND b.owner=p.uid)) LIMIT 100',(uid,now-12,uid,uid)):
+  for r in c.execute('SELECT p.uid AS id,u.name,p.x,p.y,p.area,q.body,q.skin,q.hair,q.style,q.dye,q.action,q.target,f.height,f.build,f.face,f.eye,m.heading,m.moving,m.jump FROM presence p JOIN users u ON u.id=p.uid LEFT JOIN character61 q ON q.uid=p.uid LEFT JOIN character64 f ON f.uid=p.uid LEFT JOIN motion68 m ON m.uid=p.uid WHERE p.uid!=? AND p.seen>? AND p.uid NOT IN (SELECT uid FROM blocked) AND NOT EXISTS(SELECT 1 FROM ww_blocks b WHERE (b.owner=? AND b.target=p.uid) OR (b.target=? AND b.owner=p.uid)) ORDER BY CASE WHEN p.area=? THEN 0 ELSE 1 END, ((p.x-?)/35.0)*((p.x-?)/35.0)+((p.y-?)/14.0)*((p.y-?)/14.0), p.uid LIMIT 100',(uid,now-12,uid,uid,a,x,x,y,y)):
    v=dict(r)
    v['friend']=int(bool(c.execute("SELECT 1 FROM friends WHERE status='accepted' AND ((sender=? AND receiver=?) OR (sender=? AND receiver=?))",(uid,v['id'],v['id'],uid)).fetchone()))
    if v['friend'] and v['target']==uid and v['action'] in ('hand','photo','hug','duet') and v['area']==a and math.hypot((v['x']-x)/35,(v['y']-y)/14)<3 and c.execute('SELECT 1 FROM presence WHERE uid=? AND seen>?',(v['id'],now-4)).fetchone():
