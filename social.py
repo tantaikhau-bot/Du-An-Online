@@ -20,7 +20,7 @@ def handle(h,c,u,d):
   hair=pick('hair',('chestnut','silver','dark'),'chestnut')
   style=pick('style',('short','long','tied'),'short')
   dye=pick('dye',('original','moss','navy','wine','sand','ivory','charcoal'),'original')
-  action=pick('action',('idle','wave','smile','sit','dance','hand','photo'),'idle')
+  action=pick('action',('idle','wave','bow','cheer','smile','sit','dance','hand','photo'),'idle')
   target=d.get('target')
   if not isinstance(target,str) or len(target)>100 or target==uid:target=''
   if action not in ('hand','photo'):target=''

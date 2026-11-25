@@ -58,13 +58,15 @@ class Handler(BaseHTTPRequestHandler):
   return c.execute('SELECT u.*,s.token FROM users u JOIN sessions s ON u.id=s.uid WHERE s.token=? AND s.expiry>? AND u.id NOT IN (SELECT uid FROM blocked)',(tokenhash(t),int(time.time()))).fetchone()
  def do_GET(self):
   page=urlsplit(self.path).path
+  if page=='/api/version':
+   return self.reply(200,{'version':'6.2','build':'6.2-living-characters','name':'Living Characters','features':['smooth-motion','pair-camera','partner-selection','version-check']})
   if page=='/healthz':
    try:
     with db() as c:c.execute('SELECT 1 FROM users LIMIT 1').fetchone()
     return self.reply(200,{'status':'ok'})
    except sqlite3.Error:return self.reply(503,{'status':'unavailable'})
   if page in ('/','/play','/admin','/privacy','/terms'):
-   b=(ROOT/({'/':'landing.html','/play':'index.html','/admin':'admin.html','/privacy':'privacy.html','/terms':'terms.html'}[page])).read_bytes();self.send_response(200);self.send_header('Content-Type','text/html; charset=utf-8');self.send_header('Content-Length',str(len(b)));self.end_headers();self.wfile.write(b);return
+   b=(ROOT/({'/':'landing.html','/play':'index.html','/admin':'admin.html','/privacy':'privacy.html','/terms':'terms.html'}[page])).read_bytes();self.send_response(200);self.send_header('Content-Type','text/html; charset=utf-8');self.send_header('Cache-Control','no-store');self.send_header('Content-Length',str(len(b)));self.end_headers();self.wfile.write(b);return
   with db() as c:
    if self.path.startswith('/api/admin/'):return admin.handle(self,c)
    if self.path=='/api/notices':return self.reply(200,{'notices':[dict(r) for r in c.execute('SELECT * FROM notices ORDER BY id DESC LIMIT 20')]})
