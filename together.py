@@ -77,7 +77,7 @@ def handle(h,c,u,d):
   c.execute('DELETE FROM ww_blocks WHERE owner=? AND target=?',(uid,target));c.commit();return reply(200,{'ok':True})
  if not available(c,target):return err(404,'Không tìm thấy người chơi')
  if action=='block':
-  if c.execute('SELECT count(*) FROM ww_blocks WHERE owner=?',(uid,)).fetchone()[0]>=200 and not blocked(c,uid,target):return err(429,'Danh sách chặn đã đầy')
+  if c.execute('SELECT count(*) FROM ww_blocks WHERE owner=?',(uid,)).fetchone()[0]>=200 and not c.execute('SELECT 1 FROM ww_blocks WHERE owner=? AND target=?',(uid,target)).fetchone():return err(429,'Danh sách chặn đã đầy')
   c.execute('INSERT OR IGNORE INTO ww_blocks VALUES(?,?)',(uid,target))
   end_pair(c,uid,target)
   c.execute('DELETE FROM friends WHERE (sender=? AND receiver=?) OR (sender=? AND receiver=?)',(uid,target,target,uid))
@@ -101,6 +101,7 @@ def handle(h,c,u,d):
   if len(positions)!=2 or positions[0]['area']!=positions[1]['area'] or ((positions[0]['x']-positions[1]['x'])/35)**2+((positions[0]['y']-positions[1]['y'])/14)**2>5**2:return err(409,'Hai bạn cần đứng gần nhau trong cùng khu vực')
   a,b=sorted((uid,target));day=time.strftime('%Y-%m-%d',time.gmtime(now+7*3600))
   row=c.execute('SELECT * FROM ww_pair_activity WHERE a=? AND b=? AND day=?',(a,b,day)).fetchone()
+  c.execute('DELETE FROM ww_pair_activity WHERE day<?',(time.strftime('%Y-%m-%d',time.gmtime(now-30*86400)),))
   if not row:c.execute('INSERT INTO ww_pair_activity(a,b,day,first) VALUES(?,?,?,?)',(a,b,day,uid))
   elif row['completed'] or row['first']==uid:return err(409,'Bạn đã gửi lời chúc hôm nay')
   else:c.execute('UPDATE ww_pair_activity SET second=?,completed=1 WHERE a=? AND b=? AND day=?',(uid,a,b,day))
