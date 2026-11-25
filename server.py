@@ -59,7 +59,7 @@ class Handler(BaseHTTPRequestHandler):
  def do_GET(self):
   page=urlsplit(self.path).path
   if page=='/api/version':
-   return self.reply(200,{'version':'6.9','build':'6.9-social-life','name':'Social Life','features':['proximity-chat','speech-bubbles','nearby-audience','mute','report','shared-world','version-check']})
+   return self.reply(200,{'version':'7.0','build':'7.0-next-generation','name':'Next Generation','features':['outing-invites','outing-consent','meeting-routes','peer-pets','shared-world','proximity-chat','version-check']})
   if page=='/healthz':
    try:
     with db() as c:c.execute('SELECT 1 FROM users LIMIT 1').fetchone()
