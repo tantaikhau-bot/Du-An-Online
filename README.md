@@ -27,3 +27,8 @@ Open playtest (not an invitation-gated closed beta). Includes first-run guide, s
 ### V5.5 Atmosphere
 
 Original procedural sky clouds and stars, terrain snow/rock/riverbank shading, Fresnel-style water coloring (not scene reflections), curved animated grass clusters grouped into 16-unit cells with quality/distance culling, local contact shadows and mist/snow particles. `/play?fx=basic` disables the new custom shader effects while retaining Three.js. `/play?engine=classic` remains the older compatibility engine. Shader-hook string tests and JS syntax checks are not browser shader compilation or measured GPU benchmarks. No hardware ray tracing or external assets added. Free hosting remains unchanged.
+
+
+### V5.6 Together
+
+Press Y or open Community → Chat & kết đôi. Authenticated public text chat and private friend chat, refreshed every three seconds while open. Companionship is a game-only, mutual, single-partner relationship; either party can cancel. Joint daily blessing requires both authenticated players to be nearby in the same area, based on reported presence. User blocking removes friendship and companionship and denies private chat and garden interactions. Reported messages are visible to authenticated staff and can be hidden. Chat reads show at most the latest 50 messages within seven days; cleanup occurs when a message is sent. Reports retain a copy for review. Basic anti-spam/contact filters are not comprehensive moderation. Private chat is access-controlled, not end-to-end encrypted. Admin password and active moderation are required before broad promotion. Free Render storage is ephemeral; no load test or guaranteed concurrency. Startup runs isolated in-memory smoke tests; no real accounts created.
