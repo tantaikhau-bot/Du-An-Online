@@ -20,29 +20,32 @@ def handle(h,c,u,d):
   hair=pick('hair',('chestnut','silver','dark'),'chestnut')
   style=pick('style',('short','long','tied'),'short')
   dye=pick('dye',('original','moss','navy','wine','sand','ivory','charcoal'),'original')
-  action=pick('action',('idle','wave','bow','cheer','smile','sit','dance','hand','photo'),'idle')
+  action=pick('action',('idle','wave','bow','cheer','smile','sit','dance','hand','photo','hug','duet','portrait'),'idle')
   target=d.get('target')
   if not isinstance(target,str) or len(target)>100 or target==uid:target=''
-  if action not in ('hand','photo'):target=''
+  if action not in ('hand','photo','hug','duet'):target=''
   c.execute('INSERT OR REPLACE INTO presence VALUES(?,?,?,?,?)',(uid,x,y,a,now))
   c.execute('INSERT OR REPLACE INTO character61 VALUES(?,?,?,?,?,?,?,?)',(uid,body,skin,hair,style,dye,action,target))
   c.execute('DELETE FROM presence WHERE seen<?',(now-30,))
   c.execute('DELETE FROM character61 WHERE uid NOT IN (SELECT uid FROM presence)')
   c.commit()
   def mutually_ready(first,second,kind):
-   if not second or kind not in ('hand','photo'):return False
+   if not second or kind not in ('hand','photo','hug','duet'):return False
    if together.blocked(c,first,second) or not together.available(c,second):return False
    if not c.execute("SELECT 1 FROM friends WHERE status='accepted' AND ((sender=? AND receiver=?) OR (sender=? AND receiver=?))",(first,second,second,first)).fetchone():return False
    row=c.execute('SELECT p.x,p.y,p.area,p.seen,q.action,q.target FROM presence p JOIN character61 q ON q.uid=p.uid WHERE p.uid=?',(second,)).fetchone()
    origin=c.execute('SELECT x,y,area,seen FROM presence WHERE uid=?',(first,)).fetchone()
    return bool(row and origin and row['seen']>now-4 and origin['seen']>now-4 and row['action']==kind and row['target']==first and row['area']==origin['area'] and math.hypot((row['x']-origin['x'])/35,(row['y']-origin['y'])/14)<3)
-  players=[]
+  players=[]; incoming=[]
   for r in c.execute('SELECT p.uid AS id,u.name,p.x,p.y,p.area,q.body,q.skin,q.hair,q.style,q.dye,q.action,q.target FROM presence p JOIN users u ON u.id=p.uid LEFT JOIN character61 q ON q.uid=p.uid WHERE p.uid!=? AND p.seen>? AND p.uid NOT IN (SELECT uid FROM blocked) AND NOT EXISTS(SELECT 1 FROM ww_blocks b WHERE (b.owner=? AND b.target=p.uid) OR (b.target=? AND b.owner=p.uid)) LIMIT 100',(uid,now-12,uid,uid)):
    v=dict(r)
-   if v['action'] in ('hand','photo') and not mutually_ready(v['id'],v['target'],v['action']):v['action']='idle'
+   v['friend']=int(bool(c.execute("SELECT 1 FROM friends WHERE status='accepted' AND ((sender=? AND receiver=?) OR (sender=? AND receiver=?))",(uid,v['id'],v['id'],uid)).fetchone()))
+   if v['friend'] and v['target']==uid and v['action'] in ('hand','photo','hug','duet') and v['area']==a and math.hypot((v['x']-x)/35,(v['y']-y)/14)<3 and c.execute('SELECT 1 FROM presence WHERE uid=? AND seen>?',(v['id'],now-4)).fetchone():
+    incoming.append({'id':v['id'],'name':v['name'],'action':v['action']})
+   if v['action'] in ('hand','photo','hug','duet') and not mutually_ready(v['id'],v['target'],v['action']):v['action']='idle'
    v.pop('target',None)
    players.append(v)
-  return reply(200,{'players':players,'match':target if mutually_ready(uid,target,action) else ''})
+  return reply(200,{'players':players,'match':target if mutually_ready(uid,target,action) else '', 'incoming':incoming[:10]})
  if path=='/api/social/list':
   return reply(200,{'friends':[dict(r) for r in c.execute('SELECT f.sender,f.receiver,f.status,u.name,u.id FROM friends f JOIN users u ON u.id=CASE WHEN f.sender=? THEN f.receiver ELSE f.sender END WHERE f.sender=? OR f.receiver=?',(uid,uid,uid))], 'greetings':[dict(r) for r in c.execute('SELECT u.name,g.kind,g.created FROM greetings g JOIN users u ON u.id=g.sender WHERE g.receiver=? ORDER BY g.created DESC LIMIT 20',(uid,))]})
  if path=='/api/social/search':
