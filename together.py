@@ -115,7 +115,10 @@ def staff(h,c,d=None):
   if type(key) is not int or type(hide) is not bool:return h.reply(400,{'error':'Báo cáo không hợp lệ'})
   row=c.execute('SELECT message_id FROM ww_chat_reports WHERE id=?',(key,)).fetchone()
   if not row:return h.reply(404,{'error':'Không tìm thấy'})
-  if hide:c.execute('UPDATE ww_chat SET hidden=1 WHERE id=?',(row['message_id'],))
+  if hide:
+   mid=row['message_id']
+   if mid<0:c.execute('UPDATE near69 SET hidden=1 WHERE id=?',(-mid,))
+   else:c.execute('UPDATE ww_chat SET hidden=1 WHERE id=?',(mid,))
   c.execute('UPDATE ww_chat_reports SET reviewed=1 WHERE id=?',(key,))
   c.execute('INSERT INTO audit(action,target,created) VALUES(?,?,?)',('chat-hide' if hide else 'chat-review',str(key),int(time.time())));c.commit();return h.reply(200,{'ok':True})
  return h.reply(404,{'error':'Không tìm thấy'})
