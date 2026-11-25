@@ -1,0 +1,7 @@
+{$WISH_DOMAIN} {
+    encode zstd gzip
+    header Strict-Transport-Security "max-age=86400"
+    reverse_proxy game:8080 {
+        header_up X-Real-IP {remote_host}
+    }
+}
