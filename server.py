@@ -59,7 +59,7 @@ class Handler(BaseHTTPRequestHandler):
  def do_GET(self):
   page=urlsplit(self.path).path
   if page=='/api/version':
-   return self.reply(200,{'version':'6.7','build':'6.7-open-world','name':'Open World','features':['camera-presets','scenery-photo','city-lighting','pbr-glass','foliage-reset','graphics-diagnostics','version-check']})
+   return self.reply(200,{'version':'6.8','build':'6.8-shared-world','name':'Shared World','features':['shared-public-world','player-markers','online-roster','motion-sync','private-presence','meeting-plaza','version-check']})
   if page=='/healthz':
    try:
     with db() as c:c.execute('SELECT 1 FROM users LIMIT 1').fetchone()
@@ -117,7 +117,7 @@ class Handler(BaseHTTPRequestHandler):
     if self.path.startswith('/api/social/'):return social.handle(self,c,u,d)
     if self.path=='/api/logout':
      c.execute('DELETE FROM presence WHERE uid=?',(u['id'],))
-     c.execute('DELETE FROM sessions WHERE token=?',(u['token'],));c.commit();return self.reply(200,{'ok':True},self.cookie('',0))
+     c.execute('DELETE FROM sessions WHERE token=?',(u['token'],));social.leave(c,u['id']);c.commit();return self.reply(200,{'ok':True},self.cookie('',0))
     if self.path=='/api/save':
      v=d.get('state');rev=d.get('revision');
      if not isinstance(v,dict) or not isinstance(rev,int) or not isinstance(v.get('name'),str) or not all(isinstance(v.get(k),list) for k in ('wishes','lanterns','plants','owned','collection','decor')) or not all(type(v.get(k)) is int and 0<=v[k]<=10000000 for k in ('coins','xp','petXp','streak')) or not isinstance(v.get('daily'),dict) or not isinstance(v['daily'].get('claimed'),list):return self.reply(400,{'error':'Bản lưu không hợp lệ'})
