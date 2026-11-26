@@ -1,14 +1,9 @@
 """Allowlisted static assets with bounded, same-origin upstream cache."""
 from pathlib import Path
 import shutil,urllib.request,hashlib,struct,threading,time,os,json
-FILES={'clip-motion.js':'text/javascript; charset=utf-8','character-identity.js':'text/javascript; charset=utf-8','locomotion-kaykit.glb':'model/gltf-binary','Sendagaya_Shibu.vrm':'model/gltf-binary','Vivi.vrm':'model/gltf-binary','Vita.vrm':'model/gltf-binary','Victoria_Rubin.vrm':'model/gltf-binary','arm-motion.js':'text/javascript; charset=utf-8','foot-ik.js':'text/javascript; charset=utf-8','smooth-motion.js':'text/javascript; charset=utf-8','HairSample_Male.vrm':'model/gltf-binary','HairSample_Female.vrm':'model/gltf-binary','vrm-character.js':'text/javascript; charset=utf-8','three-vrm.module.js':'text/javascript; charset=utf-8','Sakurada_Fumiriya.vrm':'model/gltf-binary','Sendagaya_Shino.vrm':'model/gltf-binary','deer.glb':'model/gltf-binary','anime-character.js':'text/javascript; charset=utf-8','game-policy.js':'text/javascript; charset=utf-8','realtime.js':'text/javascript; charset=utf-8','fox.glb':'model/gltf-binary','hero.glb':'model/gltf-binary','forrest_ground_01.jpg':'image/jpeg','medieval_blocks_05.jpg':'image/jpeg','medieval_wood.jpg':'image/jpeg','manifest.json':'application/json'}
+FILES={'arm-motion.js':'text/javascript; charset=utf-8','foot-ik.js':'text/javascript; charset=utf-8','smooth-motion.js':'text/javascript; charset=utf-8','HairSample_Male.vrm':'model/gltf-binary','HairSample_Female.vrm':'model/gltf-binary','vrm-character.js':'text/javascript; charset=utf-8','three-vrm.module.js':'text/javascript; charset=utf-8','Sakurada_Fumiriya.vrm':'model/gltf-binary','Sendagaya_Shino.vrm':'model/gltf-binary','deer.glb':'model/gltf-binary','anime-character.js':'text/javascript; charset=utf-8','game-policy.js':'text/javascript; charset=utf-8','realtime.js':'text/javascript; charset=utf-8','fox.glb':'model/gltf-binary','hero.glb':'model/gltf-binary','forrest_ground_01.jpg':'image/jpeg','medieval_blocks_05.jpg':'image/jpeg','medieval_wood.jpg':'image/jpeg','manifest.json':'application/json'}
 VRM='https://raw.githubusercontent.com/madjin/vrm-samples/master/vroid/beta/'
 UPSTREAM={
- 'locomotion-kaykit.glb':('https://raw.githubusercontent.com/NoLimitNexus/game-models/main/library/animations/Rig_Medium_MovementBasic.glb','git:08b16c9239fd020b7f503238a7bccdf10a57ea30'),
- 'Sendagaya_Shibu.vrm':(VRM+'Sendagaya_Shibu.vrm','git:233c9070f7bc3e13d2e162774dacccf72baaf566'),
- 'Vivi.vrm':(VRM+'Vivi.vrm','git:bed294ca40452e8703b530f93db4c5fc015e307d'),
- 'Vita.vrm':(VRM+'Vita.vrm','git:1d0e68333e7cee8f3df13b036aa55dc00a63282a'),
- 'Victoria_Rubin.vrm':(VRM+'Victoria_Rubin.vrm','git:3c59603eee2028756ed41ed4930dca6d99330f1e'),
  'HairSample_Male.vrm':(VRM+'HairSample_Male.vrm',None),
  'HairSample_Female.vrm':(VRM+'HairSample_Female.vrm',None),
  'Sakurada_Fumiriya.vrm':(VRM+'Sakurada_Fumiriya.vrm','d8fb05f33e377df028cb6b9d58c441ce68326c41fa23f6c735d40c65ae3dc710'),
@@ -32,7 +27,7 @@ def cached_asset(name):
     data=r.read(40*1024*1024+1)
    if not data or len(data)>40*1024*1024:raise ValueError('asset length')
    if name.endswith(('.vrm','.glb')) and (len(data)<20 or data[:4]!=b'glTF' or struct.unpack_from('<I',data,8)[0]!=len(data)):raise ValueError('bad glTF')
-   if name.startswith('HairSample_') or name in ('Sendagaya_Shibu.vrm','Vivi.vrm','Vita.vrm','Victoria_Rubin.vrm'):
+   if name.startswith('HairSample_'):
     n,kind=struct.unpack_from('<II',data,12)
     if kind!=0x4e4f534a:raise ValueError('bad VRM JSON')
     meta=json.loads(data[20:20+n]).get('extensions',{}).get('VRM',{}).get('meta',{})
