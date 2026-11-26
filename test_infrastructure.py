@@ -23,6 +23,18 @@ class Infrastructure(unittest.TestCase):
   with sqlite3.connect(':memory:') as c:
    save_guard.init(c);save_guard.audit(c,'alice',2,{'coins':5},{'coins':10000})
    self.assertEqual(c.execute('SELECT delta FROM save_anomalies').fetchone()[0],9995)
+ def test_runtime_guard(self):
+  import runtime_guard as g
+  self.assertEqual(g.decode(b'{"ok":[1,true,null]}'),{'ok':[1,True,None]})
+  for raw in (b'{"x":NaN}',b'{"x":1e999}',b'{"x":1,"x":2}',b'{"x":9223372036854775808}',b'{"x":"\\ud800"}',b'[]',b'{"x":'+b'['*40+b'0'+b']'*40+b'}'):
+   with self.assertRaises(ValueError):g.decode(raw)
+  for _ in range(120):self.assertTrue(g.allow('quota-test','/api/save',100))
+  self.assertFalse(g.allow('quota-test','/api/save',101))
+  self.assertTrue(g.allow('quota-test','/api/social/pulse',101))
+  self.assertTrue(g.allow('other-test','/api/save',101))
+  self.assertTrue(g.allow('quota-test','/api/save',160))
+  before=g.summary()['responses']['429'];g.record(429)
+  self.assertEqual(g.summary()['responses']['429'],before+1)
  def test_backup(self):
   with tempfile.TemporaryDirectory() as tmp:
    src=Path(tmp)/'a.db';dst=Path(tmp)/'b.db'

@@ -1,4 +1,4 @@
-import social, admin, economy, beta, friendship, festival, referral, royal, payment, save_guard, verified_rewards
+import social, admin, economy, beta, friendship, festival, referral, royal, payment, save_guard, verified_rewards, runtime_guard
 from static_files import serve_static
 from urllib.parse import urlsplit
 import threading, ipaddress
@@ -50,6 +50,9 @@ class BoundedServer(ThreadingHTTPServer):
   finally:self.slots.release()
 class Handler(BaseHTTPRequestHandler):
  timeout=15
+ def send_response(self,code,message=None):
+  runtime_guard.record(code)
+  super().send_response(code,message)
  def client_ip(self):
   if os.environ.get('WISH_TRUST_PROXY')=='1':
    try:return str(ipaddress.ip_address(self.headers.get('X-Real-IP','')))
@@ -60,6 +63,7 @@ class Handler(BaseHTTPRequestHandler):
   self.send_header('X-Frame-Options','DENY');self.send_header('Referrer-Policy','no-referrer');self.send_header('X-Content-Type-Options','nosniff');super().end_headers()
  def reply(self,status,obj,cookie=None):
   b=json.dumps(obj,ensure_ascii=False).encode();self.send_response(status);self.send_header('Content-Type','application/json; charset=utf-8');self.send_header('Cache-Control','no-store');self.send_header('X-Content-Type-Options','nosniff');self.send_header('Content-Length',str(len(b)))
+  if status==429:self.send_header('Retry-After','60')
   if cookie:self.send_header('Set-Cookie',cookie)
   self.end_headers()
   if self.command!='HEAD':self.wfile.write(b)
@@ -81,7 +85,7 @@ class Handler(BaseHTTPRequestHandler):
    if self.command!='HEAD':self.wfile.write(b)
    return
   if page=='/api/version':
-   return self.reply(200,{'version':'12.4','build':'12.4-world-expansion','name':'World Expansion','features':['four-regional-landmark-candidates','local-region-atlas','hysteresis-cell-culling','account-daily-adventure-routes','ordered-presence-checkins','cosmetic-adventure-badges','pet-acceleration-controller','pet-obstacle-detours','pet-follow-wait-recall','pet-touch-reaction','server-world-clock','timestamped-presence-snapshots','bounded-peer-interpolation','jittered-network-retry','six-local-weather-profiles','continuous-weather-blending','wind-scaled-particles','continuous-city-lighting','quality-bounded-precipitation','bounded-independent-sagittal-stance','continuous-air-flex','five-performance-presets','device-quality-detection','heap-pressure-heuristic','cpu-frame-measurement','camera-vector-reuse','grass-distance-optimization','continuous-daylight','world-clock-hud','idle-support-anchor','velocity-shaped-jump-arms','cat-rabbit-skinned-meshes','cat-rabbit-distance-lod','pet-sniff-meow','peer-visible-fallback','peer-vrm-retry','rigged-animal-assets','recessed-animal-eyes','five-fantasy-creature-meshes','species-articulated-idle','creature-reactions','shared-creature-assets','bridge-lantern-clearance','balanced-avatar-scale','dual-sole-contact','mesh-sole-contact','visible-terrain-alignment','npc-ground-contact','grounded-idle','contact-shadow','soft-knee-stance','restored-vrm-roster','speed-synchronised-gait','relaxed-male-motion','turn-acceleration-lean','rabbit-sculpture','species-specific-motion','fur-vertex-detail','asymmetric-idle','weighted-landing','matte-animal-fur','optional-avatar-bases','bone-attached-accessories','continuous-gait','natural-body-counterrotation','directional-arm-flex','arm-clearance','twenty-motion-personalities','safe-sagittal-ik','motion-preview','pet-gait-hysteresis','foot-contact-ik','remote-vrm-presets','private-backup-download','enhanced-housing','blended-locomotion','four-phase-jump','npc-impostor-lod','pet-velocity-animation','corrected-humanoid-pose','twenty-avatar-presets','nearby-npc-vrm','smooth-animal-normals','ten-avatar-presets','shared-preview-world-model','same-origin-model-cache','automatic-fox-deer','vrm-skinned-avatar-beta','portrait-closeup','secondary-hair-motion','anime-toon-character','facial-expressions','jump-anticipation','head-and-icon','database-connection-cleanup','mobile-clarity-guard','verified-rewards','save-validation','local-asset-support','effects-first-adaptive-quality','river-static-instancing','lightweight-water','near-character-detail','performance-diagnostics','unified-inventory','shared-car','ceremony-rsvp','safe-sync','shared-world','version-check']})
+   return self.reply(200,{'version':'13.0','build':'13.0-online-beta','name':'Online Beta','features':['strict-json-input','account-write-quotas','cross-site-post-guard','runtime-admin-counters','secure-admin-cookie','sqlite-busy-retry-status','four-regional-landmark-candidates','local-region-atlas','hysteresis-cell-culling','account-daily-adventure-routes','ordered-presence-checkins','cosmetic-adventure-badges','pet-acceleration-controller','pet-obstacle-detours','pet-follow-wait-recall','pet-touch-reaction','server-world-clock','timestamped-presence-snapshots','bounded-peer-interpolation','jittered-network-retry','six-local-weather-profiles','continuous-weather-blending','wind-scaled-particles','continuous-city-lighting','quality-bounded-precipitation','bounded-independent-sagittal-stance','continuous-air-flex','five-performance-presets','device-quality-detection','heap-pressure-heuristic','cpu-frame-measurement','camera-vector-reuse','grass-distance-optimization','continuous-daylight','world-clock-hud','idle-support-anchor','velocity-shaped-jump-arms','cat-rabbit-skinned-meshes','cat-rabbit-distance-lod','pet-sniff-meow','peer-visible-fallback','peer-vrm-retry','rigged-animal-assets','recessed-animal-eyes','five-fantasy-creature-meshes','species-articulated-idle','creature-reactions','shared-creature-assets','bridge-lantern-clearance','balanced-avatar-scale','dual-sole-contact','mesh-sole-contact','visible-terrain-alignment','npc-ground-contact','grounded-idle','contact-shadow','soft-knee-stance','restored-vrm-roster','speed-synchronised-gait','relaxed-male-motion','turn-acceleration-lean','rabbit-sculpture','species-specific-motion','fur-vertex-detail','asymmetric-idle','weighted-landing','matte-animal-fur','optional-avatar-bases','bone-attached-accessories','continuous-gait','natural-body-counterrotation','directional-arm-flex','arm-clearance','twenty-motion-personalities','safe-sagittal-ik','motion-preview','pet-gait-hysteresis','foot-contact-ik','remote-vrm-presets','private-backup-download','enhanced-housing','blended-locomotion','four-phase-jump','npc-impostor-lod','pet-velocity-animation','corrected-humanoid-pose','twenty-avatar-presets','nearby-npc-vrm','smooth-animal-normals','ten-avatar-presets','shared-preview-world-model','same-origin-model-cache','automatic-fox-deer','vrm-skinned-avatar-beta','portrait-closeup','secondary-hair-motion','anime-toon-character','facial-expressions','jump-anticipation','head-and-icon','database-connection-cleanup','mobile-clarity-guard','verified-rewards','save-validation','local-asset-support','effects-first-adaptive-quality','river-static-instancing','lightweight-water','near-character-detail','performance-diagnostics','unified-inventory','shared-car','ceremony-rsvp','safe-sync','shared-world','version-check']})
   if page=='/healthz':
    try:
     with db() as c:c.execute('SELECT 1 FROM users LIMIT 1').fetchone()
@@ -107,11 +111,15 @@ class Handler(BaseHTTPRequestHandler):
   self.reply(404,{'error':'Không tìm thấy'})
  def do_POST(self):
   try:
+   if self.headers.get('Sec-Fetch-Site','').lower()=='cross-site':return self.reply(403,{'error':'Không nhận yêu cầu từ website khác'})
    if self.headers.get_content_type()!='application/json':return self.reply(415,{'error':'Yêu cầu JSON'})
-   n=int(self.headers.get('Content-Length',0));
-   if not 0<n<=500000:return self.reply(413,{'error':'Dữ liệu quá lớn'})
-   d=json.loads(self.rfile.read(n));
-   if not isinstance(d,dict):return self.reply(400,{'error':'Yêu cầu không hợp lệ'})
+   lengths=self.headers.get_all('Content-Length') or []
+   if self.headers.get('Transfer-Encoding') or len(lengths)!=1 or not re.fullmatch(r'[0-9]{1,9}',lengths[0]):return self.reply(400,{'error':'Độ dài dữ liệu không hợp lệ'})
+   n=int(lengths[0])
+   if not 0<n<=runtime_guard.MAX_BODY:return self.reply(413,{'error':'Dữ liệu quá lớn'})
+   raw=self.rfile.read(n)
+   if len(raw)!=n:return self.reply(400,{'error':'Dữ liệu chưa đầy đủ'})
+   d=runtime_guard.decode(raw)
    if self.path in ('/api/login','/api/register','/api/admin/login') and not beta.allow(self.client_ip(),self.path):return self.reply(429,{'error':'Quá nhiều yêu cầu. Thử lại sau 60 giây.'})
    with db() as c:
     if self.path=='/api/payment/sandbox-webhook':return payment.webhook(self,c,d)
@@ -134,6 +142,7 @@ class Handler(BaseHTTPRequestHandler):
      t=secrets.token_urlsafe(32);c.execute('DELETE FROM sessions WHERE expiry<?',(int(time.time()),));c.execute('INSERT INTO sessions VALUES(?,?,?)',(tokenhash(t),uid,int(time.time())+86400));c.commit();return self.reply(200,{'ok':True},self.cookie(t,86400))
     u=self.session(c)
     if not u:return self.reply(401,{'error':'Cần đăng nhập'})
+    if not runtime_guard.allow(u['id'],self.path):return self.reply(429,{'error':'Máy chủ giới hạn yêu cầu. Thử lại sau 60 giây.'})
     if self.path.startswith('/api/verified/'):return verified_rewards.handle(self,c,u,d)
     if self.path.startswith('/api/royal/'):return royal.handle(self,c,u,d)
     if self.path.startswith('/api/referral/'):return referral.handle(self,c,u,d)
@@ -164,6 +173,10 @@ class Handler(BaseHTTPRequestHandler):
      c.execute('DELETE FROM wishes WHERE id=? AND uid=?',(str(d.get('id','')),u['id']));c.commit();return self.reply(200,{'ok':True})
    self.reply(404,{'error':'Không tìm thấy'})
   except (ValueError,TypeError,AssertionError,KeyError):self.reply(400,{'error':'Yêu cầu không hợp lệ'})
+  except (BrokenPipeError,ConnectionResetError,TimeoutError):self.close_connection=True
+  except sqlite3.OperationalError as e:
+   if (getattr(e,'sqlite_errorcode',0)&255) in (sqlite3.SQLITE_BUSY,sqlite3.SQLITE_LOCKED):return self.reply(503,{'error':'Máy chủ đang bận, vui lòng thử lại'})
+   print(type(e).__name__,flush=True);self.reply(500,{'error':'Lỗi máy chủ'})
   except Exception as e:print(type(e).__name__,flush=True);self.reply(500,{'error':'Lỗi máy chủ'})
 if __name__=='__main__':
  import test_together,test_guild;test_together.smoke();test_guild.smoke()
