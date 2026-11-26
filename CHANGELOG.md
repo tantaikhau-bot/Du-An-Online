@@ -1,5 +1,11 @@
 # WISH WORLD — Release history
 
+## V14.0 — Mobile Engine (candidate)
+- Bound compressed VRM buffer cache to 24 MiB/3 entries on mobile and 80 MiB/6 entries on desktop. Deduplicate active fetches; pending fetch bytes and parsed model memory are not included in that bound.
+- Keep at most two cached local avatar bases on mobile; release hidden distant peer/NPC VRMs after 20 seconds, preserve visible fallback. Desktop local roster cache retained.
+- Throttle expensive diagnostic arm/leg measurements on mobile while retaining animation, IK and spring updates. Cache legacy-avatar URL selection rather than parsing every frame. Report source bytes and resident actor counts in graphics diagnostics.
+- Tests exercise cache bounds, eviction, retry and active model protection. Real-device memory/FPS, full cloth collision and asynchronous terrain streaming remain open.
+
 ## V13.9 — Mobile Performance (candidate)
 - Default mobile starts Low, 30 FPS; strong devices may explicitly select Balanced/High/HD and 60 FPS. Legacy desktop policy unchanged.
 - Mobile render buffer capped by effect tier (420k / 850k / 1.25M pixels, explicit HD up to 1.8M); sustained slow frames quickly reduce effects and scale; recovery requires twelve good windows. Manual quality still protects render scale/effects.

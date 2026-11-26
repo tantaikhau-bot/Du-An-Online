@@ -2,7 +2,7 @@
 Scope: source and CI evidence, not certification on real devices. Keep original 20 VRM presets and five companion species.
 | Area | Implemented / tested | Open |
 |---|---|---|
-| V11.8 | Five graphics presets; adaptive resolution/effects; instancing/culling; frame metrics; local load tests; V13.9 candidate mobile buffer/actor limits and 30 FPS default | Real device GPU/RAM/FPS; cache lifecycle and all-scene profiling |
+| V11.8 | Five graphics presets; adaptive resolution/effects; instancing/culling; frame metrics; local load tests; V13.9 mobile buffer/actor limits and 30 FPS default; V14.0 candidate bounded VRM cache, eviction and diagnostic throttling | Real device GPU/RAM/FPS; cache lifecycle and all-scene profiling |
 | V11.9 | Speed-driven 20 motion profiles, stance IK, idle and jump, action crossfades; browser male/female smoke | Exact cloth/hand collision; full locomotion directions; sleep/lie; full roster visual review |
 | V12.0 | Smooth day cycle/weather, river and bank effects, existing city lights | Full environment redesign, all collision checks, full storm effects |
 | V12.1 | HTTP presence, optional gateway tested locally, peer fallback, server clock, interpolation, bounded prediction; 16/32/50 simulated local clients | Production WebSocket gateway, authoritative reconciliation, simultaneous visual clients and live load |

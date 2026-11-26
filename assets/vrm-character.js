@@ -30,10 +30,25 @@
   a.root.scale.setScalar(a.baseScale*heightFactor(p));
   for(const {material,base,role} of a.colors){material.color.copy(base);if(role==='hair')material.color.multiply(new T.Color(p.hair));else if(role==='cloth')material.color.multiply(new T.Color(p.cloth))}
   if(a.vrm&&!a.original&&typeof WWIdentity!=='undefined'){try{a.vrm.humanoid.resetNormalizedPose?.();a.vrm.humanoid.update();WWIdentity.apply(T,a,p)}catch(e){WWIdentity.clear(a);console.warn('Optional wearable fallback',e)}}
-  a.applied=p.id;a.motionProfile=p.id;a.action132={};a.secondary132={};a.idleGroundWeight=0;a.idleAnchor1170=null;a.contacts={};a.contactFrame=null;if(typeof WWMotion!=='undefined')a.motion=WWMotion.newState();
+  a.applied=p.id;a.motionProfile=p.id;a.lastDiagnostic140=undefined;a.rawDiagnostics140=null;a.action132={};a.secondary132={};a.idleGroundWeight=0;a.idleAnchor1170=null;a.contacts={};a.contactFrame=null;if(typeof WWMotion!=='undefined')a.motion=WWMotion.newState();
  }
  const remote='https://raw.githubusercontent.com/madjin/vrm-samples/master/vroid/beta/';
- let lib;const buffers=new Map();async function modelBuffer(kind){if(!buffers.has(kind)){const task=fetch('/assets/'+sources[kind]+'.vrm',typeof AbortSignal.timeout==='function'?{signal:AbortSignal.timeout(25000)}:{}).then(r=>{if(!r.ok)throw Error('VRM HTTP '+r.status);return r.arrayBuffer()}).catch(e=>{buffers.delete(kind);throw e});buffers.set(kind,task)}return buffers.get(kind)}
+ let lib;
+ // Bounded LRU of compressed source bytes. In-flight requests are deduplicated, never cancelled by eviction.
+ function createBufferCache140(fetcher,maxBytes,maxEntries){
+  const entries=new Map();
+  function trim(){let bytes=0,count=0;for(const e of entries.values())if(e.size!==null){bytes+=e.size;count++}
+   for(const [key,e] of entries){if(bytes<=maxBytes&&count<=maxEntries)break;if(e.size===null)continue;entries.delete(key);bytes-=e.size;count--}}
+  function get(key){let e=entries.get(key);if(e){entries.delete(key);entries.set(key,e);return e.promise}
+   e={size:null,promise:null};entries.set(key,e);
+   e.promise=Promise.resolve().then(()=>fetcher(key)).then(data=>{e.size=data.byteLength;trim();return data},err=>{if(entries.get(key)===e)entries.delete(key);throw err});return e.promise
+  }
+  return {get,stats:()=>({entries:entries.size,bytes:[...entries.values()].reduce((n,e)=>n+(e.size||0),0),pending:[...entries.values()].filter(e=>e.size===null).length})}
+ }
+ const mobile140=typeof window!=='undefined'&&(window.matchMedia('(pointer:coarse)').matches||Math.min(screen.width,screen.height)<700);
+ const buffers=createBufferCache140(async kind=>{const r=await fetch('/assets/'+sources[kind]+'.vrm',typeof AbortSignal.timeout==='function'?{signal:AbortSignal.timeout(25000)}:{});if(!r.ok)throw Error('VRM HTTP '+r.status);return r.arrayBuffer()},(mobile140?24:80)*1024*1024,mobile140?3:6);
+ function modelBuffer(kind){return buffers.get(kind)}
+
  async function load(T,kind){try{return await loadBase(T,kind)}catch(e){if(kind==='female3'||kind==='female4'){console.warn('Optional avatar base fallback',kind,e);const a=await loadBase(T,kind==='female3'?'female2':'female');a.fallbackBase=kind;return a}throw e}}
  async function loadBase(T,kind){
   lib??=Promise.all([import('three/addons/loaders/GLTFLoader.js'),import('/assets/three-vrm.module.js').catch(()=>import('https://cdn.jsdelivr.net/npm/@pixiv/three-vrm@2.1.2/lib/three-vrm.module.js'))]);
@@ -100,17 +115,18 @@
   if(detail===0){for(let remain=dt;remain>0;){let d=Math.min(.033,remain);vrm.update(d);remain-=d}}else{vrm.humanoid.update();vrm.expressionManager?.update();}
   if(detail<=1){const contact=WWFootIK.groundIdle(a.T,a,ground,dt,gait,offGround,mode);if(contact)a.footIK=contact;}
   a.motionState=a.motion.state;a.poseCheck={motionVersion:'13.2',actionWeights:{...weights},secondary:{...secondary},targetHeight:1.68*heightFactor(preset(a.motionProfile)),original:!!a.original,measuredSpeed:a.motion.speed,turn:a.motion.turn,identity:a.identityType||null,fallbackBase:a.fallbackBase||null,cycle:a.motion.cycle,walkWeight:a.motion.walk,runWeight:a.motion.run,profile:a.motionProfile,legSign:sign,hip:[v.hipL,v.hipR],knee:['left','right'].map(side=>(vrm.humanoid.getNormalizedBoneNode(side+'LowerLeg')?.rotation.x||0)*sign),ankle:[v.ankleL,v.ankleR],jumpWeight:a.motion.jump};
-  if(detail===0&&['idle','walk','run'].includes(mode)){
+  const measure140=!a.diagnosticInterval140||!Number.isFinite(a.lastDiagnostic140)||t-a.lastDiagnostic140>=a.diagnosticInterval140||a.lastMode140!==a.motion.state;const previousRaw140=a.rawDiagnostics140;if(previousRaw140){a.poseCheck.rawArm=previousRaw140.arm;a.poseCheck.rawLeg=previousRaw140.leg}
+  if(detail===0&&measure140&&['idle','walk','run'].includes(mode)){a.lastDiagnostic140=t;a.lastMode140=a.motion.state;
    a.root.updateWorldMatrix(true,true);
    const forward=a.modelForward.clone().applyQuaternion(a.root.getWorldQuaternion(new a.T.Quaternion()));
    a.poseCheck.rawArm=WWArms.measure(a);a.poseCheck.rawLeg=['left','right'].map(side=>{
     const get=n=>vrm.humanoid.getRawBoneNode(side+n)?.getWorldPosition(new a.T.Vector3()),A=get('UpperLeg'),B=get('LowerLeg'),C=get('Foot');if(!A||!B||!C)return null;
     const thigh=B.clone().sub(A),shin=C.clone().sub(B),axis=C.clone().sub(A).normalize(),bend=B.clone().sub(A);bend.addScaledVector(axis,-bend.dot(axis));
     return {flex:thigh.angleTo(shin),forward:bend.dot(forward),lateral:bend.clone().addScaledVector(forward,-bend.dot(forward)).length(),thigh:thigh.length(),shin:shin.length()};
-   });
+   });a.rawDiagnostics140={arm:a.poseCheck.rawArm,leg:a.poseCheck.rawLeg};
   }
-  if(mode==='idle'&&a.weight<.05&&!WWMotion.phaseOf(j)){vrm.scene.updateMatrixWorld(true);const h=vrm.humanoid.getRawBoneNode('head'),l=vrm.humanoid.getRawBoneNode('leftHand'),r=vrm.humanoid.getRawBoneNode('rightHand'),ls=vrm.humanoid.getRawBoneNode('leftUpperArm'),rs=vrm.humanoid.getRawBoneNode('rightUpperArm');if(h&&l&&r&&ls&&rs){const hy=h.matrixWorld.elements[13];a.handsBelowHead=l.matrixWorld.elements[13]<hy&&r.matrixWorld.elements[13]<hy;a.handsDown=l.matrixWorld.elements[13]<ls.matrixWorld.elements[13]&&r.matrixWorld.elements[13]<rs.matrixWorld.elements[13]}}
+  if(measure140&&mode==='idle'&&a.weight<.05&&!WWMotion.phaseOf(j)){vrm.scene.updateMatrixWorld(true);const h=vrm.humanoid.getRawBoneNode('head'),l=vrm.humanoid.getRawBoneNode('leftHand'),r=vrm.humanoid.getRawBoneNode('rightHand'),ls=vrm.humanoid.getRawBoneNode('leftUpperArm'),rs=vrm.humanoid.getRawBoneNode('rightUpperArm');if(h&&l&&r&&ls&&rs){const hy=h.matrixWorld.elements[13];a.handsBelowHead=l.matrixWorld.elements[13]<hy&&r.matrixWorld.elements[13]<hy;a.handsDown=l.matrixWorld.elements[13]<ls.matrixWorld.elements[13]&&r.matrixWorld.elements[13]<rs.matrixWorld.elements[13]}}
  }
  function release(a){if(typeof WWIdentity!=='undefined')WWIdentity.clear(a);a.root.removeFromParent();a.dispose?.();a.contacts={}}
- const api={load,animate,sources,roster,preset,applyPreset,release,heightFactor};if(typeof module!=='undefined')module.exports=api;else window.WWVRM=api;
+ const api={load,animate,sources,roster,preset,applyPreset,release,heightFactor,createBufferCache140,bufferStats140:()=>buffers.stats()};if(typeof module!=='undefined')module.exports=api;else window.WWVRM=api;
 })();

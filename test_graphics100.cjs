@@ -48,3 +48,7 @@ for(let i=0;i<11;i++)bad=P139.mobileStep139(bad,30,34,30,1,1,1);assert.equal(bad
 bad=P139.mobileStep139(bad,30,34,30,1,1,1);assert.ok(bad.scale>.5&&bad.scale<.6);
 const budget=P139.actorBudget139(true,2,0);assert.equal(budget.load,1);assert.equal(budget.npcCount,1);assert.ok(budget.peerCount>=1&&budget.peerRig<budget.peerRange);
 console.log('V13.9 mobile render budgets, 30 FPS default, fast degradation, slow recovery and visible actor policy passed');
+
+const P140=require('./assets/game-policy.js');const map140=new Map([['a',1],['b',2],['c',3],['d',4]]),disposed140=[];
+assert.equal(P140.trimModels140(map140,'a',2,v=>disposed140.push(v)),2);assert.deepEqual([...map140.keys()],['a','d']);assert.deepEqual(disposed140,[2,3]);assert.equal(P140.expiredModel140(0,19999),false);assert.equal(P140.expiredModel140(0,20000),true);assert.equal(P140.expiredModel140(undefined,30000),false);
+console.log('V14.0 active-model preservation, eviction and inactivity grace passed');
