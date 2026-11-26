@@ -1,5 +1,10 @@
 # WISH WORLD — Release history
 
+## V10.4 — Skinned Avatar Beta
+- Replace outdoor player visual with a rigged VRM sample when loading succeeds; use legacy rig for unsupported actions, interiors and failure fallback.
+- CC0 samples: Sakurada Fumiriya and Sendagaya Shino by pixiv Inc.; temporary evaluation assets, not original WISH WORLD art.
+- Preserve original saves and cosmetics. Full VRM clothing/hair customization and NPC migration are not yet implemented.
+
 ## V10.3 — Anime Portrait
 - Close-up face preview in atelier, expressive mouth width and secondary motion on hair strands.
 - Fix CI runner compatibility with the pinned browser test.
