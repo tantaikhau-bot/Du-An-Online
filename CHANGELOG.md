@@ -1,5 +1,10 @@
 # WISH WORLD — Release history
 
+## V11.7 — Daylight & Motion
+- Preserve the 420-second game day, with gradual dawn/day/afternoon/sunset/night keyframes, moving light direction and in-game clock. Local session clock, not server-synchronized. Smooth sky, fog, sunlight, environment intensity, stars, river and lantern glow.
+- Keep VRM identities. Stabilize settled idle lower-body pose, anchor support midpoint in world X/Z and align actual sole samples to rendered ground. Release anchor for locomotion or flight; allow height correction during standing takeoff preparation and landing. Not independent full-body per-foot IK.
+- Jump arms respond to upward/downward velocity, open further from torso and flex elbows with relaxed wrists. Existing animal and multiplayer code retained.
+
 ## V11.6.2 — Cat & Rabbit
 - Replace close-up cat and rabbit with textured skinned GLB assets: British Shorthair and Wild Rabbit, vinish.dev, CC BY 4.0. Credits in game settings and landing footer. Scale and matte material adjustments; blend Idle/Walk/Run/Sit/Sniff/Meow where present. Cache source, share geometry and materials; use lightweight prior model for far-away animals or failed loads. Retain fox, deer, dragon and multiplayer logic. Source URLs: https://vinish.dev/free-3d-models/cats and https://vinish.dev/free-3d-models/rabbits-mice-and-squirrels .
 
