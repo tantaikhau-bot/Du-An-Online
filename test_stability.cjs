@@ -14,7 +14,7 @@ assert.ok(battery<=1);
 let limited=resolution(4096,4096,3,2,1,false,true,1024,true);
 assert.ok(limited<=.25);
 assert.equal(resolution(390,780,1,1,1,false,false,4096,true),1);
-assert.match(html,/BUILD62='13\.2-character-animation'/);
+assert.match(html,/BUILD62='13\.3-cinematic-world'/);
 console.log('Mobile resolution regression checks passed');
 
 // V11.5.1: no experimental Original entry point in the game.
@@ -70,3 +70,15 @@ let camera131=.3;for(let i=0;i<300;i++)camera131=G131.cameraSafe131(camera131,1,
 const feet131={distance:0};let steps131=0;for(let i=0;i<60;i++)if(G131.stepSound131(feet131,.03,true,false))steps131++;assert.equal(steps131,3);assert.equal(G131.stepSound131(feet131,0,false,false),false);assert.equal(feet131.distance,0);
 assert.ok(html.includes("'discFish43','discFarm43','discAdventure123','discAtlas124'"));
 console.log('V13.1 visual blend, immediate camera collision, gradual recovery, audio cadence and immersive actions passed');
+
+const calm133=D.waterLook133(D.weatherProfiles[0],0),storm133=D.waterLook133(D.weatherProfiles[5],1);
+assert.ok(storm133.wave>calm133.wave&&storm133.roughness>calm133.roughness&&storm133.reflection<calm133.reflection);
+assert.equal(storm133.night,1);assert.ok(Number.isFinite(D.waterLook133({},NaN).wave));
+assert.deepEqual(D.sceneryBudget133(2,2,false),{reeds:0,mist:0,foam:0});
+assert.equal(D.sceneryBudget133(1,1,false).foam,36);
+assert.equal(D.sceneryBudget133(2,0,false).foam,90);
+const banks133=D.bankSites133([-54,0,54],-7.2,()=>true);
+assert.ok(banks133.length>0&&banks133.length<=136);
+for(const p of banks133){assert.ok(Math.abs(p.x)<=69&&[-54,0,54].every(b=>Math.abs(p.x-b)>=3.5));assert.ok(Math.abs(p.z+7.2)>2&&Math.abs(p.z+7.2)<3);}
+assert.deepEqual(D.bankSites133([],-7.2,()=>false),[]);
+console.log('V13.3 weather water, quality budgets and bank placement passed');

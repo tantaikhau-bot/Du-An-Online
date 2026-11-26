@@ -1,5 +1,13 @@
 # WISH WORLD — Release history
 
+## V13.3 — Cinematic World (candidate)
+- Existing physical river shader reacts to wind/rain via bounded wave, ripple and Fresnel parameters; lightweight river receives continuous day/night and storm tint. Preserve optional reflector and original water geometry.
+- Decorative low riverbank reeds, shared geometry/material and per-cell instancing, bridge/obstacle/site exclusion. No collision changes, no new texture downloads.
+- Cap visible reeds, mist and waterfall foam by graphics/effect tier; use visible ground for contact shadow placement. No additional post-processing render pass.
+- Add water/material, budget and placement policy regression. Visual/device FPS, shader compatibility across real GPUs and architectural remodeling remain pending.
+- Three.js documentation: https://threejs.org/docs/pages/InstancedMesh.html ; https://threejs.org/manual/pages/materials.html
+
+
 ## V13.2 — Character & Animation (candidate)
 - Smooth entry, exit and switching between VRM action poses. Preserve locomotion and existing foot IK; add bounded bow, cheer, hug, hand and portrait overlays on existing skeletons. Existing consent/nearby matching remains unchanged.
 - Ease facial expression weights rather than snap; preserve existing blinking. Bounded secondary response of custom identity wearables to gait, turning and local wind. Native VRM spring update remains unchanged.
