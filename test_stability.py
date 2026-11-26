@@ -20,10 +20,10 @@ class Stability(unittest.TestCase):
      con.execute('SELECT 1')
     srv=server.BoundedServer(('127.0.0.1',0),server.Handler)
     t=threading.Thread(target=srv.serve_forever,daemon=True);t.start()
-    def req(method,path,body=None):
+    def req(method,path,body=None,extra=None):
      h=http.client.HTTPConnection('127.0.0.1',srv.server_port,timeout=5)
      try:
-      h.request(method,path,body,{'Content-Type':'application/json'} if body is not None else {})
+      h.request(method,path,body,{**({'Content-Type':'application/json'} if body is not None else {}),**(extra or {})})
       r=h.getresponse();return r.status,dict(r.getheaders()),r.read()
      finally:h.close()
     try:
@@ -32,11 +32,15 @@ class Stability(unittest.TestCase):
       status,headers,empty=req('HEAD',path)
       self.assertEqual((a,status,empty),(200,200,b''))
       self.assertEqual(headers['Content-Length'],str(len(body)))
-     self.assertEqual(json.loads(req('GET','/api/version')[2])['build'],'12.4-world-expansion')
+     self.assertEqual(json.loads(req('GET','/api/version')[2])['build'],'13.0-online-beta')
      self.assertEqual(req('GET','/favicon.ico')[1]['Content-Type'],'image/svg+xml')
      self.assertEqual(req('HEAD','/api/save')[0],405)
      self.assertEqual(req('GET','/api/save')[0],401)
      self.assertEqual(req('POST','/api/register','[]')[0],400)
+     self.assertEqual(req('POST','/api/register','{"name":"a","name":"b"}')[0],400)
+     self.assertEqual(req('POST','/api/register','{"value":NaN}')[0],400)
+     self.assertEqual(req('POST','/api/register','{}',{'Sec-Fetch-Site':'cross-site'})[0],403)
+     self.assertEqual(req('GET','/api/admin/runtime')[0],503 if len(server.os.environ.get('WISH_ADMIN_PASSWORD',''))<14 else 401)
     finally:
      srv.shutdown();srv.server_close();t.join(timeout=5)
    finally:server.DB=previous

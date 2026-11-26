@@ -1,5 +1,12 @@
 # WISH WORLD — Release history
 
+## V13.0 — Online Beta (candidate)
+- Strict bounded JSON parser rejects duplicate keys, nonfinite numbers, oversized integers, invalid Unicode and excessive nesting; validate Content-Length and reject cross-site browser POSTs.
+- Per-account separate quotas for presence and other authenticated POSTs, Retry-After header, client presence backoff. SQLite busy/locked responses return HTTP 503. Process-local counters, no request payload or account identifier in metrics.
+- Authenticated admin runtime panel with uptime, aggregate HTTP status counters, SQLite journal/storage indication and sandbox payment mode; secure admin cookie on Render HTTPS. No paid hosting change or real payment activation.
+- Keep existing SQLite and backup/export tools. No live database migration, backup or durable storage assurance. Full production readiness, anti-cheat and independent security testing remain pending.
+- References: https://cheatsheetseries.owasp.org/cheatsheets/REST_Security_Cheat_Sheet.html ; https://docs.python.org/3.12/library/json.html
+
 ## V12.4 — World Expansion (candidate)
 - Four candidate scenic landmarks within existing playable pine, ruins, amber and summit regions. Deterministic terrain/slope/walkability and existing-site clearance checks; omit a site if no safe location is found. Decorative marker only, not new collision platform.
 - Regional atlas, route navigation, minimap markers and local cosmetic discovery progress. No reward currency or account-wide new achievement claim.
