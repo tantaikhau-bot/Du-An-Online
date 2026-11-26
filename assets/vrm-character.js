@@ -33,7 +33,7 @@
   a.applied=p.id;a.motionProfile=p.id;a.idleGroundWeight=0;a.contacts={};a.contactFrame=null;if(typeof WWMotion!=='undefined')a.motion=WWMotion.newState();
  }
  const remote='https://raw.githubusercontent.com/madjin/vrm-samples/master/vroid/beta/';
- let lib;const buffers=new Map();async function modelBuffer(kind){if(!buffers.has(kind)){const task=fetch('/assets/'+sources[kind]+'.vrm',{signal:AbortSignal.timeout(25000)}).then(r=>{if(!r.ok)throw Error('VRM HTTP '+r.status);return r.arrayBuffer()}).catch(e=>{buffers.delete(kind);throw e});buffers.set(kind,task)}return buffers.get(kind)}
+ let lib;const buffers=new Map();async function modelBuffer(kind){if(!buffers.has(kind)){const task=fetch('/assets/'+sources[kind]+'.vrm',typeof AbortSignal.timeout==='function'?{signal:AbortSignal.timeout(25000)}:{}).then(r=>{if(!r.ok)throw Error('VRM HTTP '+r.status);return r.arrayBuffer()}).catch(e=>{buffers.delete(kind);throw e});buffers.set(kind,task)}return buffers.get(kind)}
  async function load(T,kind){try{return await loadBase(T,kind)}catch(e){if(kind==='female3'||kind==='female4'){console.warn('Optional avatar base fallback',kind,e);const a=await loadBase(T,kind==='female3'?'female2':'female');a.fallbackBase=kind;return a}throw e}}
  async function loadBase(T,kind){
   lib??=Promise.all([import('three/addons/loaders/GLTFLoader.js'),import('/assets/three-vrm.module.js').catch(()=>import('https://cdn.jsdelivr.net/npm/@pixiv/three-vrm@2.1.2/lib/three-vrm.module.js'))]);
