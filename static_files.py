@@ -9,13 +9,13 @@ UPSTREAM={
  'Sakurada_Fumiriya.vrm':(VRM+'Sakurada_Fumiriya.vrm','d8fb05f33e377df028cb6b9d58c441ce68326c41fa23f6c735d40c65ae3dc710'),
  'Sendagaya_Shino.vrm':(VRM+'Sendagaya_Shino.vrm','1e177c1a7b14f783a9c48395831db8616260d3bddd4154cb2784b779adca49b5'),
  'three-vrm.module.js':('https://cdn.jsdelivr.net/npm/@pixiv/three-vrm@2.1.2/lib/three-vrm.module.js',None),
- 'fox.glb':('https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Assets/main/Models/Fox/glTF-Binary/Fox.glb',None),
+ 'fox.glb':('https://raw.githubusercontent.com/trebeljahr/quaternius-showcase/main/public/glb/animals_pack/Fox.glb','git:4b9e53701955206f394e3ebfd12831d74e0e3d31'),
  'deer.glb':('https://raw.githubusercontent.com/trebeljahr/quaternius-showcase/main/public/glb/animals_pack/Deer.glb','git:0c1a5a5d55ec13ca7899dd3a57256724cd9fca4e')
 }
 LOCKS={k:threading.Lock() for k in UPSTREAM}
 FAILED={}
 def cached_asset(name):
- folder=Path(os.environ.get('WISH_ASSET_CACHE','/tmp/wish-assets-v105'));folder.mkdir(mode=0o700,parents=True,exist_ok=True)
+ folder=Path(os.environ.get('WISH_ASSET_CACHE','/tmp/wish-assets-v107'));folder.mkdir(mode=0o700,parents=True,exist_ok=True)
  dest=folder/name
  with LOCKS[name]:
   if dest.is_file():return dest

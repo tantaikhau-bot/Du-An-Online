@@ -31,14 +31,16 @@ const fs=require('node:fs'),os=require('node:os'),path=require('node:path'),asse
   await page.screenshot({path:'test-output/vrm-world.png',timeout:120000});
   await page.evaluate(()=>studio12());
   await page.waitForFunction(()=>document.getElementById('previewHint52')?.textContent.includes('Anime Fantasy'),{},{timeout:30000});
+  await page.waitForFunction(()=>window.wwPreviewHands107===true,{},{timeout:30000});
   await page.selectOption('#expressionAnime','happy');
-  assert.equal(await page.locator('#rosterCards106 button').count(),5);
+  assert.equal(await page.locator('#rosterCards106 button').count(),10);
   await page.locator('#rosterTabs106 [data-gender="female"]').click();
-  assert.equal(await page.locator('#rosterCards106 button').count(),5);
+  assert.equal(await page.locator('#rosterCards106 button').count(),10);
   await page.waitForFunction(()=>window.wwRosterReady==='f1',{},{timeout:90000});
   await page.locator('#saveAvatar106').click();
   await page.waitForFunction(()=>window.wwGraphics59?.avatarPreset==='f1',{},{timeout:90000});
   assert.equal(await page.evaluate(()=>JSON.parse(localStorage.getItem('wishworld-v1')).avatar106),'f1');
+  await page.waitForFunction(()=>window.wwGraphics59?.handsDown===true,{},{timeout:30000});
   await page.evaluate(()=>studio12());
   await page.waitForFunction(()=>window.wwRosterReady==='f1',{},{timeout:90000});
   await page.waitForTimeout(500);
