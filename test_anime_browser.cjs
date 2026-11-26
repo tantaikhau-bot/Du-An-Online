@@ -18,7 +18,8 @@ const fs=require('node:fs'),os=require('node:os'),path=require('node:path'),asse
    await route.fulfill({path:file,contentType:'application/javascript',headers:{'Access-Control-Allow-Origin':'*'}});
   });
   await page.route('https://cdn.jsdelivr.net/npm/@pixiv/three-vrm@2.1.2/lib/three-vrm.module.js',route=>route.fulfill({path:path.resolve('node_modules/@pixiv/three-vrm/lib/three-vrm.module.js'),contentType:'application/javascript',headers:{'Access-Control-Allow-Origin':'*'}}));
-  await page.goto(origin+'/play?gfx=balanced');
+  await page.route(origin+'/assets/three-vrm.module.js',route=>route.fulfill({path:path.resolve('node_modules/@pixiv/three-vrm/lib/three-vrm.module.js'),contentType:'application/javascript'}));
+  await page.goto(origin+'/play?perf=1');
   await page.waitForFunction(()=>window.wwGraphics59?.stage==='running'||window.wwGraphics59?.engine==='classic',{},{timeout:90000});
   const info=await page.evaluate(()=>window.wwGraphics59);
   assert.equal(info.engine,'three',JSON.stringify(info));
