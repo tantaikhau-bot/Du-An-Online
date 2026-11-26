@@ -1,5 +1,8 @@
 # WISH WORLD — Release history
 
+## V11.5.3 — Sole Contact
+- Sample actual posed shoe geometry (bounded cached vertex set), instead of relying only on rest-pose ankle height; retain ankle fallback when sampling fails. Match rendered terrain triangles, raised roads and bridge deck for idle contact. Near NPCs and peers receive the same correction. Shadow follows support points. Fix cumulative wrist roll. No avatar replacement. Full horizontal foot locking is not included.
+
 ## V11.5.2 — Grounded Idle
 - Retain all VRM characters and previous creature upgrades. Softer symmetrical baseline knee flex, asymmetric weight shift, quieter pelvis and compensated ankle pitch.
 - Local player idle terrain alignment uses calibrated ankle heights after pose updates, bounded root offset, and release during jumps/other actions. Soft contact shadow helps show ground connection. This is vertical sole alignment, not full world-space XY foot locking. Visual QA pending.
