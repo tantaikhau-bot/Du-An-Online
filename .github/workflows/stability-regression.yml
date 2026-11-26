@@ -18,7 +18,7 @@ jobs:
         with:
           node-version: '22'
       - run: python -m compileall -q .
-      - run: python -m unittest test_stability
+      - run: python -m unittest test_stability test_asset_cache
       - run: python test_together.py
       - run: python test_guild.py
       - run: node test_stability.cjs
