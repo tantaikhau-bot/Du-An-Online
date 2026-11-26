@@ -27,6 +27,14 @@ const fs=require('node:fs'),os=require('node:os'),path=require('node:path'),asse
   const creatureKinds=await page.evaluate(()=>window.wwGraphics59.creatureAssets);
   assert.deepEqual([...creatureKinds].sort(),['cat','deer','dragon','fox','rabbit']);
   console.log('All five fantasy creature assets active in world:',creatureKinds);
+  // Switch to fox to prove the authored skinned GLB replaces the procedural fallback.
+  await page.evaluate(()=>{window.__savedPet117=s.pet;s.pet='fox';document.querySelectorAll('dialog[open]').forEach(d=>d.close())});
+  await page.waitForFunction(()=>window.wwGraphics59?.riggedAnimals?.includes('fox'),{},{timeout:90000});
+  console.log('Skinned fox model and authored animation loaded');
+  fs.mkdirSync('test-output',{recursive:true});
+  await page.screenshot({path:'test-output/rigged-fox-world.png',timeout:120000});
+  await page.evaluate(()=>{s.pet=window.__savedPet117});
+
   // Render an independent lineup from the exact assets used by the world.
   const lineup=await page.evaluate(async()=>{
    const T=await import('three'),scene=new T.Scene();scene.background=new T.Color(0xe7dccb);
@@ -45,6 +53,23 @@ const fs=require('node:fs'),os=require('node:os'),path=require('node:path'),asse
   const asset=await page.evaluate(()=>window.wwGraphics59.avatarAsset);
   assert.equal(asset,'VRM male');
   await page.waitForFunction(()=>window.wwGraphics59?.motionState==='idle'&&window.wwGraphics59?.npcBlockFallback===0,{},{timeout:45000});
+  // Exercise the real peer render pipeline with isolated synthetic presence snapshots.
+  // First deliberately fail VRM loading, then restore it and introduce a fresh peer.
+  await page.evaluate(()=>{
+   window.__peerLoad117=WWVRM.load;
+   WWVRM.load=()=>Promise.reject(new Error('simulated peer VRM load failure'));
+   window.__peerId117='peer-render-failure';
+   window.__peerTimer117=setInterval(()=>{remotePlayers=[{id:window.__peerId117,name:'Peer QA',area:0,x:player.x+50,y:player.y,body:'male',avatar109:'m1',heading:0,moving:false}]},80);
+  });
+  await page.waitForFunction(()=>window.wwGraphics59?.peerCount===1&&window.wwGraphics59?.peerVisible===1&&window.wwGraphics59?.peerFallback===1,{},{timeout:30000});
+  console.log('Peer load failure: animated fallback visible');
+  await page.evaluate(()=>{WWVRM.load=window.__peerLoad117;window.__peerId117='peer-render-success'});
+  await page.waitForFunction(()=>window.wwGraphics59?.peerCount===1&&window.wwGraphics59?.peerVisible===1&&window.wwGraphics59?.peerVRM===1,{},{timeout:90000});
+  console.log('Peer loaded: VRM visible and fallback replaced');
+  fs.mkdirSync('test-output',{recursive:true});
+  await page.screenshot({path:'test-output/multiplayer-visible.png',timeout:120000});
+  await page.evaluate(()=>{clearInterval(window.__peerTimer117);remotePlayers=[];WWVRM.load=window.__peerLoad117;delete window.__peerLoad117});
+
   await page.waitForFunction(()=>window.wwGraphics59?.npcVRM>=1,{},{timeout:90000});
   await page.waitForFunction(()=>window.wwGraphics59?.poseCheck?.profile==='m1',{},{timeout:45000});
   const checkArms=async()=>{const a=await page.evaluate(()=>window.wwGraphics59.poseCheck.rawArm);assert.equal(a.length,2);for(const arm of a){assert.ok(arm&&arm.flex>.35&&arm.flex<1.45,JSON.stringify(arm));assert.ok(arm.wristSide>arm.shoulderSide-.015,JSON.stringify(arm));}console.log('Running arm joints',JSON.stringify(a))};

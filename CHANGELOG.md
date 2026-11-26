@@ -1,5 +1,9 @@
 # WISH WORLD — Release history
 
+## V11.6.1 — Creatures & Multiplayer
+- Remote players retain their visible animated fallback until the correct VRM successfully loads and animates; retry failures, discard stale asynchronous results and avoid transparent impostors for peers. Add counts for visible peers, VRM and fallback. Keep privacy and presence filtering unchanged.
+- Prefer rigged fox/deer assets from Quaternius Ultimate Animated Animal Pack (CC0) and optional Dragon from Quaternius Animated Monster Pack via cairnfall-public (CC0); use separate skeleton/mixer per instance and cache source loads. Smooth normals and matte surfaces. Refine original rabbit/cat and fallback geometry, eyes, muzzle, leg overlaps and decorations. No claim of newly sculpted GLB for all five. Assets: https://quaternius.com/packs/ultimateanimatedanimals.html ; https://quaternius.com/packs/animatedmonster.html ; https://github.com/euuuuuuan/cairnfall-public/blob/main/CREDITS.md .
+
 ## V11.6 — Fantasy Creatures
 - Five reusable original runtime-generated creature mesh templates, distinct proportions and geometry, articulated ears/legs/tails, eye blinks, matte fur/scale detail, fantasy accessories. Shared mesh and material resources for local, wild and remote pets; existing culling retained. Old fox/deer GLB kept as fallback only. Species-specific idle/locomotion and feeding reaction. No external model requests for new creatures. Not separate hand-sculpted GLB files or motion capture; visual quality/performance on real devices pending.
 
