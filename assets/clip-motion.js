@@ -29,7 +29,7 @@
    for(const name of names){const clip=g.animations.find(v=>v.name===name);if(!clip||clip.duration<=0)throw Error('Missing clip '+name);
     const a=mixer.clipAction(clip);a.reset().play();const frames=[];
     for(let i=0;i<64;i++){mixer.setTime(clip.duration*i/64);model.updateMatrixWorld(true);const p=sample();if(!Object.values(p).every(Number.isFinite))throw Error('Invalid motion samples');frames.push(p)}
-    a.stop();mixer.uncacheAction(clip);out[name]=frames;
+    a.stop();mixer.uncacheAction(clip);let anchor=frames.reduce((best,p,i)=>p.hipL<frames[best].hipL?i:best,0);out[name]=frames.slice(anchor).concat(frames.slice(0,anchor));if(Math.max(...frames.map(p=>p.hipL))-Math.min(...frames.map(p=>p.hipL))<.08)throw Error('Degenerate movement '+name);
    }
    mixer.stopAllAction();mixer.uncacheRoot(model);library=out;return out;
   })().catch(e=>{console.warn('KayKit movement unavailable; safe fallback',e);setTimeout(()=>{pending=null},30000);return null});
