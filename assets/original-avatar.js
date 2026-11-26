@@ -29,7 +29,7 @@
  function build(T,p){
   const d=designs[p.id]||designs.m1,[width,headH,depth,headW,chin,hairStyle,garment,clothColor,hairColor,accent]=d;
   const female=p.gender==='female',root=new T.Group(),nodes={},all=[];
-  const skin=new T.MeshStandardMaterial({color:female?0xe6b697:0xd9a584,roughness:.88});
+  const skin=new T.MeshStandardMaterial({color:female?0xe6b697:0xd9a584,roughness:.88,side:T.DoubleSide});
   const cloth=new T.MeshStandardMaterial({color:clothColor,roughness:.96,metalness:0,side:T.DoubleSide});
   const dark=new T.MeshStandardMaterial({color:new T.Color(clothColor).multiplyScalar(.46),roughness:.92,side:T.DoubleSide});
   const trim=new T.MeshStandardMaterial({color:accent,roughness:.76,metalness:.04,side:T.DoubleSide});
