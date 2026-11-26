@@ -32,3 +32,15 @@ for(let i=0;i<90;i++){r3.position.y=.09;c3=IK.groundIdle(T,a3,()=>.035,1/60,0,fa
 
 // Settled idle support anchor counteracts small lateral drift and releases on jump.
 r2.position.set(0,0,0);a2.idleAnchor1170=null;a2.idleGroundWeight=1;IK.groundIdle(T,a2,()=>1,1/60,0,false,'idle');assert.ok(a2.idleAnchor1170);const mid=lf.getWorldPosition(new T.Vector3()).add(rf.getWorldPosition(new T.Vector3())).multiplyScalar(.5);r2.position.set(.02,0,0);IK.groundIdle(T,a2,()=>1,1/60,0,false,'idle');const mid2=lf.getWorldPosition(new T.Vector3()).add(rf.getWorldPosition(new T.Vector3())).multiplyScalar(.5);assert.ok(Math.abs(mid.x-mid2.x)<.001);IK.groundIdle(T,a2,()=>1,1/60,0,true,'idle');assert.equal(a2.idleAnchor1170,null);console.log('Idle support midpoint locked and released on jump');
+
+// V11.9: independent forward stance correction with bounded release.
+const walkRoot=new T.Group(),wu=new T.Bone(),wk=new T.Bone(),wf=new T.Bone();
+walkRoot.add(wu);wu.add(wk);wk.add(wf);wu.position.y=1;wk.position.y=-.45;wf.position.y=-.45;wu.rotation.x=-.2;wk.rotation.x=.4;walkRoot.updateMatrixWorld(true);
+const wa={root:walkRoot,modelForward:new T.Vector3(0,0,1),contacts:{},vrm:{humanoid:{update(){walkRoot.updateMatrixWorld(true)}}}};
+const first=IK.stance119(T,wa,'left',wu,wk,wf,wf,()=>0,.1,.55);assert.ok(first?.anchor);
+wa.contacts.left={anchor:first.anchor};walkRoot.position.z+=.035;walkRoot.updateMatrixWorld(true);
+const next=IK.stance119(T,wa,'left',wu,wk,wf,wf,()=>0,.2,.55);assert.ok(next.corrected>0&&next.corrected<=.055);assert.ok(next.error<.035);
+const other=IK.stance119(T,wa,'right',wu,wk,wf,wf,()=>0,.2,.55);assert.equal(other.corrected,0);assert.notEqual(other.anchor,first.anchor);
+assert.equal(IK.stance119(T,wa,'left',wu,wk,wf,wf,()=>0,.6,.55),null);
+walkRoot.position.z+=1;walkRoot.updateMatrixWorld(true);const released=IK.stance119(T,wa,'left',wu,wk,wf,wf,()=>0,.2,.55);assert.equal(released.corrected,0);assert.ok(released.anchor.distanceTo(first.anchor)>.5);
+console.log('V11.9 stance anchor independence, bounded correction and release passed');

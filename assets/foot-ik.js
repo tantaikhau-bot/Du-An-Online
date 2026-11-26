@@ -75,6 +75,30 @@
   const contacts=rows.map(r=>({...r,gap:delta-r.error}));
   return {planted:contacts.filter(r=>Math.abs(r.gap)<.025).length,maxError:Math.max(...contacts.map(r=>Math.abs(r.gap))),offset:delta,weight:a.idleGroundWeight,mode:'grounded-idle',anchorLocked:!!a.idleAnchor1170,source:contacts.every(r=>r.source==='mesh')?'mesh':'ankle-fallback',contacts};
  }
+ // Bounded independent stance correction along the character's sagittal plane.
+ // Keep lateral motion and knee plane authored; reject targets that become unreachable.
+ function stance119(T,a,side,u,k,f,raw,ground,phase,gait){
+  if(!a.modelForward||typeof a.vrm.humanoid.update!=='function'||gait<.15||phase>.52)return null;
+  const hum=a.vrm.humanoid,root=a.root,forward=a.modelForward.clone().applyQuaternion(root.getWorldQuaternion(new T.Quaternion()));forward.y=0;
+  if(forward.lengthSq()<.01)return null;forward.normalize();
+  const pos=raw.getWorldPosition(new T.Vector3()),prior=a.contacts[side]?.anchor;
+  let anchor=prior||pos.clone();const horizontal=anchor.clone().sub(pos);horizontal.y=0;
+  if(horizontal.length()>.20){anchor=pos.clone();return {anchor,corrected:0,error:0}}
+  const error=horizontal.dot(forward),y0=pos.y;
+  if(Math.abs(error)<.004)return {anchor,corrected:0,error:Math.abs(error)};
+  const old=[u.rotation.x,f.rotation.x],eps=.008;
+  function set(x){u.rotation.x=old[0]+x;f.rotation.x=old[1]-x;hum.update();root.updateWorldMatrix(true,true);return raw.getWorldPosition(new T.Vector3())}
+  const probe=set(eps),slope=probe.clone().sub(pos).dot(forward)/eps;
+  let correction=Number.isFinite(slope)&&Math.abs(slope)>.05?clamp(error/slope,-.055,.055)*.65:0;
+  // Fade out before toe-off; leave pitch in a safe range and avoid vertical penetration.
+  correction*=clamp((.52-phase)/.13,0,1);
+  const candidate=set(correction),next=Math.abs(anchor.clone().sub(candidate).dot(forward));
+  const floor=ground(candidate.x,candidate.z),oldFloor=ground(pos.x,pos.z);
+  if(!Number.isFinite(next)||next>=Math.abs(error)||!Number.isFinite(floor)||!Number.isFinite(oldFloor)||Math.abs((candidate.y-floor)-(y0-oldFloor))>.018||Math.abs(u.rotation.x)>.63||Math.abs(f.rotation.x)>.31){
+   set(0);return {anchor,corrected:0,error:Math.abs(error)};
+  }
+  return {anchor,corrected:Math.abs(correction),error:next};
+ }
  function apply(T,a,ground,dt,gait,jump,mode){
   if(!ground||jump||gait>=.76||a.motion?.run>.18||!['idle','walk','run'].includes(mode)||dt>.085){reset(a);return null}
   const hum=a.vrm.humanoid,st=a.motion,root=a.root;
@@ -84,7 +108,7 @@
   a.contacts??={};
   if(previous&&(previous.pos.distanceTo(pos)>.12||previous.rot.angleTo(rot)>.20)){a.contacts={};return null}
   const w=gait<.10?.42:gait<.42?.22:.10,sign=a.legSign||1;
-  let planted=0,maxError=0,maxCorrection=0;
+  let planted=0,maxError=0,maxCorrection=0,stanceFeet=0,stanceError=0;
   for(const [side,offset] of [['left',0],['right',Math.PI]]){
    let phase=((st.cycle+offset)/(2*Math.PI)%1+1)%1;
    if(gait>=.10&&phase>.56){delete a.contacts[side];continue}
@@ -104,9 +128,9 @@
     u.rotation.x-=sign*change*.5;k.rotation.x=sign*next;
     f.rotation.x=sign*clamp(f.rotation.x*sign-change*.5,-.30,.22);
    }
-   a.contacts[side]={y:y+sole};planted++;maxError=Math.max(maxError,Math.abs(y+sole-C.y));maxCorrection=Math.max(maxCorrection,Math.abs(correction));
+   const stance=stance119(T,a,side,u,k,f,raw,ground,phase,gait);a.contacts[side]={y:y+sole,...(stance?{anchor:stance.anchor}:{})};if(stance){stanceFeet++;stanceError=Math.max(stanceError,stance.error)}planted++;maxError=Math.max(maxError,Math.abs(y+sole-C.y));maxCorrection=Math.max(maxCorrection,Math.abs(correction));
   }
-  return {planted,maxError:Math.round(maxError*1000)/1000,maxCorrection,weight:w,mode:'vertical-only'};
+  return {planted,maxError:Math.round(maxError*1000)/1000,maxCorrection,weight:w,mode:stanceFeet?'bounded-sagittal-stance':'vertical-only',stanceFeet,stanceError};
  }
- const api={solve,apply,reset,groundIdle,calibrateSoles,soleContacts};if(typeof module!=='undefined')module.exports=api;else root.WWFootIK=api;
+ const api={solve,apply,reset,groundIdle,calibrateSoles,soleContacts,stance119};if(typeof module!=='undefined')module.exports=api;else root.WWFootIK=api;
 })(typeof globalThis!=='undefined'?globalThis:this);
