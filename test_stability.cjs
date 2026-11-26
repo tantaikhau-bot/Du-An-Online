@@ -14,7 +14,7 @@ assert.ok(battery<=1);
 let limited=resolution(4096,4096,3,2,1,false,true,1024,true);
 assert.ok(limited<=.25);
 assert.equal(resolution(390,780,1,1,1,false,false,4096,true),1);
-assert.match(html,/BUILD62='13\.0-online-beta'/);
+assert.match(html,/BUILD62='13\.1-graphics-gameplay'/);
 console.log('Mobile resolution regression checks passed');
 
 // V11.5.1: no experimental Original entry point in the game.
@@ -60,3 +60,13 @@ assert.equal(G124.cellVisible124(31,0,30,true),true);
 assert.equal(G124.cellVisible124(36,0,30,true),false);
 assert.deepEqual(G124.landmarkVisits124(['pine-lookout','fake','pine-lookout']),['pine-lookout']);
 console.log('V12.4 safe landmark placement, bounded world coordinates, visit migration and LOD hysteresis passed');
+
+const G131=require('./assets/game-policy.js');
+assert.equal(G131.look131('invalid').exposure,1);
+const light131={exposure:1,ambient:1,sun:1};for(let i=0;i<300;i++)G131.blendLook131(light131,'clear',1/60);
+assert.ok(Math.abs(light131.exposure-1.1)<.001);
+assert.equal(G131.cameraSafe131(1,.3,16),.3);assert.ok(G131.cameraSafe131(.3,1,16)>.3&&G131.cameraSafe131(.3,1,16)<.4);
+let camera131=.3;for(let i=0;i<300;i++)camera131=G131.cameraSafe131(camera131,1,16);assert.ok(camera131>.99&&camera131<=1);
+const feet131={distance:0};let steps131=0;for(let i=0;i<60;i++)if(G131.stepSound131(feet131,.03,true,false))steps131++;assert.equal(steps131,3);assert.equal(G131.stepSound131(feet131,0,false,false),false);assert.equal(feet131.distance,0);
+assert.ok(html.includes("'discFish43','discFarm43','discAdventure123','discAtlas124'"));
+console.log('V13.1 visual blend, immediate camera collision, gradual recovery, audio cadence and immersive actions passed');
