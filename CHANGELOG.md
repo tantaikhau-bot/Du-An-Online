@@ -1,5 +1,11 @@
 # WISH WORLD — Release history
 
+## V13.9 — Mobile Performance (candidate)
+- Default mobile starts Low, 30 FPS; strong devices may explicitly select Balanced/High/HD and 60 FPS. Legacy desktop policy unchanged.
+- Mobile render buffer capped by effect tier (420k / 850k / 1.25M pixels, explicit HD up to 1.8M); sustained slow frames quickly reduce effects and scale; recovery requires twelve good windows. Manual quality still protects render scale/effects.
+- Bound nearby detailed VRM actors and model loading concurrency on mobile; distant actors retain visible fallback, no name-only regression. Avoid NPC impostor GPU readback on mobile, reduce map and scenery refresh.
+- Policy tests and separate touch/high-DPR Chromium context validate budgets and compatibility; no measured real-device FPS. WebGL compatibility fallback remains available. Sources: https://threejs.org/manual/pages/responsive.html ; https://developer.mozilla.org/en-US/docs/Web/API/WebGL_API/WebGL_best_practices
+
 ## V13.8 — Combat & Dungeon (candidate)
 - Server-resolved turn-based solo PvE, five stages and escalating crystal dragon boss. Strike, burst, guard, heal and retreat; visible next enemy damage. Revision rejects stale/replayed actions; account-bound progress, no coins or tradable reward.
 - Responsive modal arena with HP/energy bars and illustrative enemy icons, reachable from quest drawer. Not a real-time 3D dungeon or new character models.

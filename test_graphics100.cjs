@@ -29,10 +29,22 @@ const q=s=>new URLSearchParams(s);
 assert.equal(Object.keys(WW_PERF118).length,5);
 assert.equal(perfPreset118(q(''),null,4,8,false),'low');
 assert.equal(perfPreset118(q(''),null,8,4,true),'low');
-assert.equal(perfPreset118(q(''),null,undefined,undefined,true),'balanced');
+assert.equal(perfPreset118(q(''),null,undefined,undefined,true),'low');
 for(const k of Object.keys(WW_PERF118))assert.equal(perfPreset118(q('gfx='+k),'balanced',2,2,true),k);
 assert.equal(perfPreset118(q('perf=1&hd=1'),'sharp',16,16,false),'battery');
 assert.equal(perfPreset118(q('hd=1'),'low',4,4,true),'sharp');
 assert.deepEqual(perfWarning118(20,65,60,.9),{framePressure:true,heapPressure:true});
 assert.deepEqual(perfWarning118(30,34,30,null),{framePressure:false,heapPressure:false});
 console.log('Five profiles, URL compatibility, device heuristics and pressure cases passed');
+
+const P139=require('./assets/game-policy.js');
+assert.equal(P139.mobileCap139('low',60),30);assert.equal(P139.mobileCap139('balanced',0),30);assert.equal(P139.mobileCap139('high',60),60);
+for(const [w,h] of [[360,640],[390,844],[844,390],[1280,720],[1920,1080]])for(const tier of [0,1,2])for(const scale of [.5,.75,1,1.25]){
+ const r=P139.mobileResolution139(w,h,3,0,tier,scale,false,4096);assert.ok(r>0&&w*h*r*r<=[1250000,850000,420000][tier]+.01);
+}
+let bad={tier:1,quality:1,scale:1,slow:0,good:0};bad=P139.mobileStep139(bad,9,120,30,1,1,1);assert.equal(bad.tier,2);assert.equal(bad.quality,0);
+for(let i=0;i<20;i++)bad=P139.mobileStep139(bad,9,120,30,1,1,1);assert.equal(bad.scale,.5);
+for(let i=0;i<11;i++)bad=P139.mobileStep139(bad,30,34,30,1,1,1);assert.equal(bad.scale,.5);
+bad=P139.mobileStep139(bad,30,34,30,1,1,1);assert.ok(bad.scale>.5&&bad.scale<.6);
+const budget=P139.actorBudget139(true,2,0);assert.equal(budget.load,1);assert.equal(budget.npcCount,1);assert.ok(budget.peerCount>=1&&budget.peerRig<budget.peerRange);
+console.log('V13.9 mobile render budgets, 30 FPS default, fast degradation, slow recovery and visible actor policy passed');

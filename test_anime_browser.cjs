@@ -26,14 +26,14 @@ const fs=require('node:fs'),os=require('node:os'),path=require('node:path'),asse
   }finally{await qa.close();await qb.close()}
   const page=await browser.newPage({viewport:{width:1280,height:800},deviceScaleFactor:1});const errors=[];
   page.on('pageerror',e=>errors.push(e.message));
-  await page.route('https://cdn.jsdelivr.net/npm/three@0.164.1/**',async route=>{
+  async function installRoutes(target){await target.route('https://cdn.jsdelivr.net/npm/three@0.164.1/**',async route=>{
    const rel=new URL(route.request().url()).pathname.split('/three@0.164.1/')[1];
    const file=path.resolve('node_modules/three',rel);
    if(!file.startsWith(path.resolve('node_modules/three')+path.sep)||!fs.existsSync(file))return route.abort();
    await route.fulfill({path:file,contentType:'application/javascript',headers:{'Access-Control-Allow-Origin':'*'}});
   });
-  await page.route('https://cdn.jsdelivr.net/npm/@pixiv/three-vrm@2.1.2/lib/three-vrm.module.js',route=>route.fulfill({path:path.resolve('node_modules/@pixiv/three-vrm/lib/three-vrm.module.js'),contentType:'application/javascript',headers:{'Access-Control-Allow-Origin':'*'}}));
-  await page.route(origin+'/assets/three-vrm.module.js',route=>route.fulfill({path:path.resolve('node_modules/@pixiv/three-vrm/lib/three-vrm.module.js'),contentType:'application/javascript'}));
+  await target.route('https://cdn.jsdelivr.net/npm/@pixiv/three-vrm@2.1.2/lib/three-vrm.module.js',route=>route.fulfill({path:path.resolve('node_modules/@pixiv/three-vrm/lib/three-vrm.module.js'),contentType:'application/javascript',headers:{'Access-Control-Allow-Origin':'*'}}));
+  await target.route(origin+'/assets/three-vrm.module.js',route=>route.fulfill({path:path.resolve('node_modules/@pixiv/three-vrm/lib/three-vrm.module.js'),contentType:'application/javascript'}));}await installRoutes(page);
   await page.goto(origin+'/play?perf=1');
   await page.waitForFunction(()=>window.wwGraphics59?.stage==='running'||window.wwGraphics59?.engine==='classic',{},{timeout:90000});
   const info=await page.evaluate(()=>window.wwGraphics59);
@@ -146,7 +146,8 @@ const fs=require('node:fs'),os=require('node:os'),path=require('node:path'),asse
   await page.setViewportSize({width:844,height:390});await page.waitForFunction(()=>window.wwGraphics59?.cssWidth>0&&window.wwGraphics59.cssWidth<=844,{},{timeout:30000});
   const mobileCanvas=await page.locator('.next-world canvas').first().boundingBox();assert.ok(mobileCanvas&&mobileCanvas.width<=844&&mobileCanvas.height>0);
   await page.screenshot({path:'test-output/landscape-844x390.png',timeout:120000});
-  assert.deepEqual(errors,[]);
+  assert.deepEqual(errors,[]);await page.close();
+  const mc=await browser.newContext({viewport:{width:844,height:390},screen:{width:844,height:390},deviceScaleFactor:3,isMobile:true,hasTouch:true});try{await installRoutes(mc);const mp=await mc.newPage(),me=[];mp.on('pageerror',e=>me.push(e.message));await mp.goto(origin+'/play?gfx=low');await mp.waitForFunction(()=>window.wwGraphics59?.stage==='running'||window.wwGraphics59?.engine==='classic',{},{timeout:90000});await mp.waitForFunction(()=>window.wwGraphics59?.fpsCap===30&&window.wwGraphics59?.renderPixels>0,{},{timeout:30000});const mi=await mp.evaluate(()=>window.wwGraphics59);assert.equal(mi.engine,'three');assert.equal(mi.mobile,true);assert.ok(mi.renderPixels<=420000);assert.ok(mi.pixelRatio<=1);await mp.screenshot({path:'test-output/mobile-low-844x390.png',timeout:120000});assert.deepEqual(me,[]);console.log('V13.9 emulated mobile viewport, budget and 30 FPS cap passed (not hardware benchmark)');}finally{await mc.close()}
   console.log('Three.js rendered and anime atelier preview completed');
  }finally{if(browser)await browser.close();server.kill();await new Promise(r=>server.once('exit',r));fs.rmSync(temp,{recursive:true,force:true});}
 })().catch(e=>{console.error(e);process.exitCode=1});
