@@ -1,7 +1,7 @@
 name: Stability regression
 on:
   push:
-    branches: [fix/v10.1-stability, fix/v10.5-assets, main]
+    branches: [fix/v10.1-stability, fix/v10.5-assets, fix/v10.6-roster, main]
   pull_request:
     branches: [main]
 permissions:
@@ -27,6 +27,7 @@ jobs:
       - run: python -m unittest test_infrastructure test_realtime
       - run: python load_test_local.py --players 16 --rounds 5
       - run: node test_anime.cjs
+      - run: node test_roster.cjs
       - run: npm install --no-save --no-package-lock three@0.164.1 playwright@1.51.1 @pixiv/three-vrm@2.1.2
       - run: npx playwright install --with-deps chromium
       - run: python tools/fetch_vrm.py
