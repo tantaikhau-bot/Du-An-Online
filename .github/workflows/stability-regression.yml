@@ -1,7 +1,7 @@
 name: Stability regression
 on:
   push:
-    branches: [fix/v10.1-stability, main]
+    branches: [fix/v10.1-stability, fix/v10.5-assets, main]
   pull_request:
     branches: [main]
 permissions:
@@ -18,7 +18,7 @@ jobs:
         with:
           node-version: '22'
       - run: python -m compileall -q .
-      - run: python -m unittest test_stability
+      - run: python -m unittest test_stability test_asset_cache
       - run: python test_together.py
       - run: python test_guild.py
       - run: node test_stability.cjs

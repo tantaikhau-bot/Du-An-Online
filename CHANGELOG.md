@@ -1,5 +1,11 @@
 # WISH WORLD — Release history
 
+## V10.5 — Asset Recovery
+- Cache validated VRM samples on the server, show asset status and retry failed loads.
+- Automatically use rigged Fox and Deer models when available, with original procedural fallback.
+- Existing VRoid samples are anime, not photorealistic. NPCs, other species and full customization remain legacy.
+- Fox: PixelMannen, tomkranis, AsoboStudio/scurest; CC-BY 4.0, https://github.com/KhronosGroup/glTF-Sample-Assets/tree/main/Models/Fox. Deer: Quaternius CC0, https://quaternius.com/packs/ultimateanimatedanimals.html (GLB conversion from trebeljahr/quaternius-showcase).
+
 ## V10.4 — Skinned Avatar Beta
 - Replace outdoor player visual with a rigged VRM sample when loading succeeds; use legacy rig for unsupported actions, interiors and failure fallback.
 - CC0 samples: Sakurada Fumiriya and Sendagaya Shino by pixiv Inc.; temporary evaluation assets, not original WISH WORLD art.
