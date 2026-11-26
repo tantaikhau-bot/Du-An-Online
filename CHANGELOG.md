@@ -1,5 +1,8 @@
 # WISH WORLD — Release history
 
+## V11.6 — Fantasy Creatures
+- Five reusable original runtime-generated creature mesh templates, distinct proportions and geometry, articulated ears/legs/tails, eye blinks, matte fur/scale detail, fantasy accessories. Shared mesh and material resources for local, wild and remote pets; existing culling retained. Old fox/deer GLB kept as fallback only. Species-specific idle/locomotion and feeding reaction. No external model requests for new creatures. Not separate hand-sculpted GLB files or motion capture; visual quality/performance on real devices pending.
+
 ## V11.5.4 — Bridge & Grounding
 - Keep floating river lanterns out of bridge deck footprints; move fixed bridge lamps outward onto raised stone pedestals.
 - Preserve VRM appearance, use 92% relative scale for female avatars, keep male scale. Match studio camera to adjusted height.

@@ -23,6 +23,23 @@ const fs=require('node:fs'),os=require('node:os'),path=require('node:path'),asse
   await page.waitForFunction(()=>window.wwGraphics59?.stage==='running'||window.wwGraphics59?.engine==='classic',{},{timeout:90000});
   const info=await page.evaluate(()=>window.wwGraphics59);
   assert.equal(info.engine,'three',JSON.stringify(info));
+  await page.waitForFunction(()=>window.wwGraphics59?.creatureAssets?.length===5,{},{timeout:30000});
+  const creatureKinds=await page.evaluate(()=>window.wwGraphics59.creatureAssets);
+  assert.deepEqual([...creatureKinds].sort(),['cat','deer','dragon','fox','rabbit']);
+  console.log('All five fantasy creature assets active in world:',creatureKinds);
+  // Render an independent lineup from the exact assets used by the world.
+  const lineup=await page.evaluate(async()=>{
+   const T=await import('three'),scene=new T.Scene();scene.background=new T.Color(0xe7dccb);
+   const camera=new T.PerspectiveCamera(33,2.2,.1,30);camera.position.set(2.4,2.2,-6.5);camera.lookAt(0,.66,0);
+   scene.add(new T.HemisphereLight(0xfff4e2,0x60706a,2.1));let l=new T.DirectionalLight(0xffedd6,2.5);l.position.set(-3,5,-4);scene.add(l);
+   const ground=new T.Mesh(new T.PlaneGeometry(20,20),new T.MeshStandardMaterial({color:0xb5bba0,roughness:1}));ground.rotation.x=-Math.PI/2;scene.add(ground);
+   const all=WWCreatures.KINDS.map((k,i)=>{let a=WWCreatures.create(T,k);a.root.visible=true;a.root.position.x=(i-2)*1.08;a.root.rotation.y=.32;scene.add(a.root);return a;});
+   const r=new T.WebGLRenderer({antialias:true,preserveDrawingBuffer:true});r.setSize(1100,500);r.setPixelRatio(1);
+   for(let a of all)WWCreatures.animate(a,0,16,0);r.render(scene,camera);
+   const uri=r.domElement.toDataURL('image/png'),calls=r.info.render.calls,triangles=r.info.render.triangles;r.dispose();return {uri,calls,triangles};
+  });
+  fs.mkdirSync('test-output',{recursive:true});fs.writeFileSync('test-output/fantasy-creature-lineup.png',Buffer.from(lineup.uri.split(',')[1],'base64'));console.log('Creature lineup render:',lineup.calls,lineup.triangles);
+
   await page.evaluate(()=>document.querySelectorAll('dialog[open]').forEach(d=>d.close()));
   await page.waitForFunction(()=>window.wwGraphics59?.avatarAsset?.startsWith('VRM ')||window.wwGraphics59?.avatarAsset?.startsWith('fallback:'),{},{timeout:90000});
   const asset=await page.evaluate(()=>window.wwGraphics59.avatarAsset);
