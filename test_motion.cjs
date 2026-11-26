@@ -49,3 +49,12 @@ for(const hz of [15,30,60,120])for(const id of Object.keys(M.profiles)){
  assert.equal(state.state,'idle');assert.ok(max-min>.40,id+' @ '+hz);
 }
 console.log('V11.3: 36000 motion samples, frame rate and gait range passed');
+
+// V11.4 idle and landing regression.
+for(const id of Object.keys(M.profiles)){
+ const st=M.newState();let side=0,land=0;
+ for(let i=0;i<600;i++){let p=M.step(st,1/60,0,{},'idle',id);side=Math.max(side,Math.abs(p.hipSide));}
+ for(let i=0;i<20;i++){let p=M.step(st,1/60,0,{land:.34-i/60},'idle',id);land=Math.min(land,p.hipY);}
+ assert.ok(side>.012,id);assert.ok(land<-.06,id);
+}
+console.log('V11.4: idle shift and landing absorption passed');
