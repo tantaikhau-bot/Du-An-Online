@@ -59,7 +59,7 @@ class Handler(BaseHTTPRequestHandler):
  def do_GET(self):
   page=urlsplit(self.path).path
   if page=='/api/version':
-   return self.reply(200,{'version':'7.7','build':'7.7-mobile-sharp','name':'Mobile Sharp+','features':['persistent-graphics-presets','adaptive-sharp-resolution','mobile-browser-help','hd-character-detail','fps-cap','joystick-customization','shared-world','version-check']})
+   return self.reply(200,{'version':'7.8','build':'7.8-safe-sync','name':'Safe Sync','features':['opt-in-session-autosave','save-owner-check','revision-conflict-stop','multi-tab-guard','network-recovery','network-rtt','persistent-graphics-presets','shared-world','version-check']})
   if page=='/healthz':
    try:
     with db() as c:c.execute('SELECT 1 FROM users LIMIT 1').fetchone()
@@ -77,7 +77,7 @@ class Handler(BaseHTTPRequestHandler):
    if self.path.startswith('/api/referral/'):return referral.handle(self,c,u)
    if self.path.startswith('/api/festival/'):return festival.handle(self,c,u)
    if self.path.startswith('/api/economy/'):return economy.handle(self,c,u)
-   if self.path=='/api/save':return self.reply(200,{'state':json.loads(u['save']) if u['save'] else None,'revision':u['revision']})
+   if self.path=='/api/save':return self.reply(200,{'state':json.loads(u['save']) if u['save'] else None,'revision':u['revision'],'owner':u['id']})
    if self.path=='/api/wishes':return self.reply(200,{'wishes':[dict(r) for r in c.execute('SELECT w.id,w.body,w.created,u.name,(w.uid=?) AS mine FROM wishes w JOIN users u ON w.uid=u.id ORDER BY w.created DESC LIMIT 50',(u['id'],))]})
   self.reply(404,{'error':'Không tìm thấy'})
  def do_POST(self):
@@ -120,9 +120,10 @@ class Handler(BaseHTTPRequestHandler):
      c.execute('DELETE FROM sessions WHERE token=?',(u['token'],));social.leave(c,u['id']);c.commit();return self.reply(200,{'ok':True},self.cookie('',0))
     if self.path=='/api/save':
      v=d.get('state');rev=d.get('revision');
-     if not isinstance(v,dict) or not isinstance(rev,int) or not isinstance(v.get('name'),str) or not all(isinstance(v.get(k),list) for k in ('wishes','lanterns','plants','owned','collection','decor')) or not all(type(v.get(k)) is int and 0<=v[k]<=10000000 for k in ('coins','xp','petXp','streak')) or not isinstance(v.get('daily'),dict) or not isinstance(v['daily'].get('claimed'),list):return self.reply(400,{'error':'Bản lưu không hợp lệ'})
+     if 'owner' in d and d['owner']!=u['id']:return self.reply(403,{'error':'Tài khoản bản lưu không khớp'})
+     if not isinstance(v,dict) or type(rev) is not int or not 0<=rev<9223372036854775807 or not isinstance(v.get('name'),str) or not all(isinstance(v.get(k),list) for k in ('wishes','lanterns','plants','owned','collection','decor')) or not all(type(v.get(k)) is int and 0<=v[k]<=10000000 for k in ('coins','xp','petXp','streak')) or not isinstance(v.get('daily'),dict) or not isinstance(v['daily'].get('claimed'),list):return self.reply(400,{'error':'Bản lưu không hợp lệ'})
      r=c.execute('UPDATE users SET save=?,revision=revision+1 WHERE id=? AND revision=?',(json.dumps(v,ensure_ascii=False),u['id'],rev));c.commit()
-     return self.reply(200,{'revision':rev+1}) if r.rowcount else self.reply(409,{'error':'Bản lưu máy chủ đã thay đổi; tải lại trước khi lưu'})
+     return self.reply(200,{'revision':rev+1,'owner':u['id']}) if r.rowcount else self.reply(409,{'error':'Bản lưu máy chủ đã thay đổi; tải lại trước khi lưu'})
     if self.path=='/api/wishes':
      body=d.get('body','');now=int(time.time())
      if not isinstance(body,str) or not 1<=len(body.strip())<=280:return self.reply(400,{'error':'Điều ước tối đa 280 ký tự'})
