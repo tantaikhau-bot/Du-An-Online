@@ -1,5 +1,8 @@
 # WISH WORLD — Release history
 
+## V11.5.1 — VRM Restore
+- Restore V11.4 VRM anime roster as the only standard avatar selection; disable Original mode even on old links. Keep V11.5 locomotion, creature geometry/material changes, and saved avatar IDs. Original source retained for development history, not loaded by game.
+
 ## V11.5 — Creature & Motion
 - Speed-matched walking/jogging, acceleration and turn response, relaxed male upper-body gait. Walking/sprinting speed reduced from 3.8/6.5 to 1.65/3.8 world units/s; vehicle speeds unchanged.
 - Optional Original workshop (`/play?avatar=original`): 20 procedural original geometry profiles, weighted arm/leg/torso surfaces, custom face, hair and clothing shapes. Existing VRM default preserved; not twenty hand-sculpted production assets. No motion capture.
