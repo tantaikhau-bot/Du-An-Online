@@ -27,7 +27,7 @@ def cached_asset(name):
    if name.endswith(('.vrm','.glb')) and (len(data)<20 or data[:4]!=b'glTF' or struct.unpack_from('<I',data,8)[0]!=len(data)):raise ValueError('bad glTF')
    if name.endswith('.js') and (len(data)<1000 or b'VRMLoaderPlugin' not in data):raise ValueError('bad module')
    if digest and digest.startswith('git:'):
-    if hashlib.sha1(('blob '+str(len(data))+'\0').encode()+data).hexdigest()!=digest[4:]:raise ValueError('asset hash')
+    if hashlib.sha1(('blob '+str(len(data))).encode()+bytes([0])+data).hexdigest()!=digest[4:]:raise ValueError('asset hash')
    elif digest and hashlib.sha256(data).hexdigest()!=digest:raise ValueError('asset hash')
    temp.write_bytes(data);temp.replace(dest)
    print('Asset cached: '+name+' '+str(len(data)),flush=True);return dest
