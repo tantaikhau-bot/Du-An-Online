@@ -48,8 +48,10 @@
   vrm.humanoid.update();root.updateMatrixWorld(true);
   // VRM0 and VRM1 may have opposite normalized local forward axes. Read toe direction in rest pose.
   let legSign=1;for(const side of ['left','right']){let toe=vrm.humanoid.getNormalizedBoneNode(side+'Toes');if(toe&&Math.abs(toe.position.z)>.015){legSign=Math.sign(toe.position.z);break}}
+  let modelForward=new T.Vector3(0,0,1);
+  for(const side of ['left','right']){const foot=vrm.humanoid.getRawBoneNode(side+'Foot'),toe=vrm.humanoid.getRawBoneNode(side+'Toes');if(foot&&toe){const d=root.worldToLocal(toe.getWorldPosition(new T.Vector3())).sub(root.worldToLocal(foot.getWorldPosition(new T.Vector3())));d.y=0;if(d.length()>.015){modelForward=d.normalize();break}}}
   const soleHeight=Object.fromEntries(['left','right'].map(side=>{let n=vrm.humanoid.getRawBoneNode(side+'Foot');return [side,n?Math.max(.025,Math.min(.16,n.getWorldPosition(new T.Vector3()).y)):.06]}));
-  return {root,vrm,kind,phase:0,weight:0,elapsed:0,baseScale:root.scale.x,colors,armDown,legSign,motionProfile:kind.startsWith('female')?'f1':'m1',motion:WWMotion.newState(),hipsRest:vrm.humanoid.getNormalizedBoneNode('hips')?.position.clone(),springReady:false,T,dispose:()=>VRMUtils.deepDispose(vrm.scene),soleHeight};
+  return {root,vrm,kind,phase:0,weight:0,elapsed:0,baseScale:root.scale.x,colors,armDown,legSign,modelForward,motionProfile:kind.startsWith('female')?'f1':'m1',motion:WWMotion.newState(),hipsRest:vrm.humanoid.getNormalizedBoneNode('hips')?.position.clone(),springReady:false,T,dispose:()=>VRMUtils.deepDispose(vrm.scene),soleHeight};
  }
  function animate(a,dt,gait,mode='idle',jump=0,detail=0,ground=null){
   const {vrm}=a;dt=Math.min(.35,Math.max(0,dt));a.elapsed+=dt;a.motion??=WWMotion.newState();let j=typeof jump==='object'?jump:{height:jump,velocity:0},v=WWMotion.step(a.motion,dt,gait,j,mode,a.motionProfile),t=a.elapsed;
@@ -71,6 +73,15 @@
   if(detail===0&&ground){vrm.humanoid.update();a.footIK=WWFootIK.apply(a.T,a,ground,dt,gait,WWMotion.phaseOf(j)||a.motion.jump>.12,mode)}else{WWFootIK.reset(a);a.footIK=null}
   if(detail===0){for(let remain=dt;remain>0;){let d=Math.min(.033,remain);vrm.update(d);remain-=d}}else{vrm.humanoid.update();vrm.expressionManager?.update();}
   a.motionState=a.motion.state;a.poseCheck={profile:a.motionProfile,legSign:sign,hip:[v.hipL,v.hipR],knee:['left','right'].map(side=>(vrm.humanoid.getNormalizedBoneNode(side+'LowerLeg')?.rotation.x||0)*sign),ankle:[v.ankleL,v.ankleR],jumpWeight:a.motion.jump};
+  if(detail===0&&['idle','walk','run'].includes(mode)){
+   a.root.updateWorldMatrix(true,true);
+   const forward=a.modelForward.clone().applyQuaternion(a.root.getWorldQuaternion(new a.T.Quaternion()));
+   a.poseCheck.rawLeg=['left','right'].map(side=>{
+    const get=n=>vrm.humanoid.getRawBoneNode(side+n)?.getWorldPosition(new a.T.Vector3()),A=get('UpperLeg'),B=get('LowerLeg'),C=get('Foot');if(!A||!B||!C)return null;
+    const thigh=B.clone().sub(A),shin=C.clone().sub(B),axis=C.clone().sub(A).normalize(),bend=B.clone().sub(A);bend.addScaledVector(axis,-bend.dot(axis));
+    return {flex:thigh.angleTo(shin),forward:bend.dot(forward),lateral:bend.clone().addScaledVector(forward,-bend.dot(forward)).length(),thigh:thigh.length(),shin:shin.length()};
+   });
+  }
   if(mode==='idle'&&a.weight<.05&&!WWMotion.phaseOf(j)){vrm.scene.updateMatrixWorld(true);const h=vrm.humanoid.getRawBoneNode('head'),l=vrm.humanoid.getRawBoneNode('leftHand'),r=vrm.humanoid.getRawBoneNode('rightHand'),ls=vrm.humanoid.getRawBoneNode('leftUpperArm'),rs=vrm.humanoid.getRawBoneNode('rightUpperArm');if(h&&l&&r&&ls&&rs){const hy=h.matrixWorld.elements[13];a.handsBelowHead=l.matrixWorld.elements[13]<hy&&r.matrixWorld.elements[13]<hy;a.handsDown=l.matrixWorld.elements[13]<ls.matrixWorld.elements[13]&&r.matrixWorld.elements[13]<rs.matrixWorld.elements[13]}}
  }
  function release(a){a.root.removeFromParent();a.dispose?.();a.contacts={}}
