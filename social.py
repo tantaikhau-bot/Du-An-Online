@@ -74,7 +74,7 @@ def handle(h,c,u,d):
   leave(c,uid);c.commit();return reply(200,{'ok':True})
  if path=='/api/social/pulse':
   x,y,a=d.get('x'),d.get('y'),d.get('area')
-  if type(x) not in (int,float) or type(y) not in (int,float) or not math.isfinite(x) or not math.isfinite(y) or not -2030<=x<=3010 or not -433<=y<=1583 or type(a)!=int or not 0<=a<=7:return reply(400,{'error':'Vị trí không hợp lệ'})
+  if type(x) not in (int,float) or type(y) not in (int,float) or not math.isfinite(x) or not math.isfinite(y) or not -2030<=x<=3010 or not -657<=y<=1807 or type(a)!=int or not 0<=a<=7:return reply(400,{'error':'Vị trí không hợp lệ'})
   def pick(key,allowed,default):
    v=d.get(key)
    return v if isinstance(v,str) and v in allowed else default

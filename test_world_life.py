@@ -24,6 +24,19 @@ class WorldLife(unittest.TestCase):
    self.assertNotIn('seen',r)
    self.assertEqual((r['avatar109'],r['gait109']),('f10',1))
    r=pulse('a')[1]['players'][0];self.assertEqual((r['avatar109'],r['gait109']),('f1',0))
+ def test_expanded_presence(self):
+  with sqlite3.connect(':memory:') as c:
+   c.row_factory=sqlite3.Row
+   c.executescript("CREATE TABLE users(id TEXT PRIMARY KEY,name TEXT);CREATE TABLE blocked(uid TEXT PRIMARY KEY);INSERT INTO users VALUES('a','A'),('b','B');")
+   social.init(c)
+   def pulse(uid,x,y):return social.handle(H('/api/social/pulse'),c,{'id':uid},{'x':x,'y':y,'area':0})
+   self.assertEqual(pulse('a',490,-657)[0],200)
+   code,res=pulse('b',490,-640);self.assertEqual(code,200)
+   self.assertTrue(any(p['id']=='a' and p['y']==-657 for p in res['players']))
+   self.assertEqual(pulse('a',490,1807)[0],200)
+   self.assertEqual(pulse('a',490,1808)[0],400)
+   self.assertEqual(pulse('a',490,-658)[0],400)
+   self.assertEqual(pulse('a',3011,575)[0],400)
  def test_daily_adventure(self):
   import adventure
   with sqlite3.connect(':memory:') as c:
