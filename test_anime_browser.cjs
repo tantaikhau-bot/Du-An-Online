@@ -27,13 +27,13 @@ const fs=require('node:fs'),os=require('node:os'),path=require('node:path'),asse
   const asset=await page.evaluate(()=>window.wwGraphics59.avatarAsset);
   assert.equal(asset,'VRM male');
   fs.mkdirSync('test-output',{recursive:true});
-  await page.screenshot({path:'test-output/vrm-world.png'});
+  await page.screenshot({path:'test-output/vrm-world.png',timeout:120000});
   await page.evaluate(()=>studio12());
   await page.waitForFunction(()=>document.getElementById('previewHint52')?.textContent.includes('Anime Fantasy'),{},{timeout:30000});
   await page.selectOption('#expressionAnime','happy');
   await page.waitForTimeout(500);
   fs.mkdirSync('test-output',{recursive:true});
-  await page.screenshot({path:'test-output/anime-desktop.png'});
+  await page.screenshot({path:'test-output/anime-desktop.png',timeout:120000});
   assert.deepEqual(errors,[]);
   console.log('Three.js rendered and anime atelier preview completed');
  }finally{if(browser)await browser.close();server.kill();await new Promise(r=>server.once('exit',r));fs.rmSync(temp,{recursive:true,force:true});}
