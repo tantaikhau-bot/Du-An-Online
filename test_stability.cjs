@@ -1,14 +1,7 @@
 const fs = require('node:fs');
 const assert = require('node:assert/strict');
 const html=fs.readFileSync('index.html','utf8');
-function get(name,next){
- const start=html.indexOf('function '+name+'(');
- const end=html.indexOf(next,start);
- assert.ok(start>=0&&end>start);
- return new Function(html.slice(start,end)+';return '+name)();
-}
-const clarity=get('clarityStep100','function openPerformance100');
-const resolution=get('resolution77','const gl74=');
+const {clarityStep100:clarity,resolution77:resolution}=require('./assets/game-policy.js');
 let v={tier:0,scale:1};
 for(let i=0;i<12;i++)v=clarity(v,15,100,45,true,false);
 assert.equal(v.tier,2);assert.equal(v.scale,.85);
