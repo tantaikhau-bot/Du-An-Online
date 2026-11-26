@@ -1,5 +1,6 @@
 import economy, beta, festival, referral, royal, payment, together, guild
-import time, os, json, hmac, secrets, hashlib
+import time, os, json, hmac, secrets, hashlib, tempfile, sqlite3, shutil
+from pathlib import Path
 
 def init(c):
  c.executescript('''CREATE TABLE IF NOT EXISTS staff_sessions(token TEXT PRIMARY KEY, expiry INTEGER); CREATE TABLE IF NOT EXISTS blocked(uid TEXT PRIMARY KEY); CREATE TABLE IF NOT EXISTS reviewed(report_id INTEGER PRIMARY KEY); CREATE TABLE IF NOT EXISTS audit(id INTEGER PRIMARY KEY, action TEXT, target TEXT, created INTEGER); CREATE TABLE IF NOT EXISTS notices(id INTEGER PRIMARY KEY, body TEXT, created INTEGER);''')
@@ -22,6 +23,17 @@ def handle(h,c,d=None):
  if path=='/api/admin/referrals' and d is None:return referral.staff(h,c)
  if path in ('/api/admin/festivals','/api/admin/festival-create','/api/admin/festival-close'):return festival.staff(h,c,d)
  if path in ('/api/admin/economy','/api/admin/price','/api/admin/sandbox-credit'):return economy.staff(h,c,d)
+ if path=='/api/admin/backup-download' and d is not None:
+  # Authenticated POST only; snapshot is never served by static routes or logged.
+  with tempfile.TemporaryDirectory(prefix='wish-private-') as tmp:
+   file=Path(tmp)/'world.sqlite3'
+   with sqlite3.connect(file) as out:
+    c.backup(out)
+    if out.execute('PRAGMA integrity_check').fetchone()[0]!='ok':return reply(500,{'error':'Bản sao không hợp lệ'})
+   file.chmod(0o600)
+   h.send_response(200);h.send_header('Content-Type','application/octet-stream');h.send_header('Content-Disposition','attachment; filename="wish-world-private.sqlite3"');h.send_header('Cache-Control','no-store');h.send_header('Content-Length',str(file.stat().st_size));h.end_headers()
+   with file.open('rb') as source:shutil.copyfileobj(source,h.wfile)
+   return
  if path=='/api/admin/backup' and d is not None:
   filename=beta.backup(c,c.execute('PRAGMA database_list').fetchone()[2]);c.execute('INSERT INTO audit(action,target,created) VALUES(?,?,?)',('backup',filename,now));c.commit();return reply(200,{'file':filename})
  if path=='/api/admin/dashboard' and d is None:

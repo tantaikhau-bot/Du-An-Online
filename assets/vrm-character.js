@@ -1,4 +1,4 @@
-/* V10.8: skinned VRM avatar pipeline. CC0 VRoid sample models, not original game artwork. */
+/* V10.9: skinned VRM avatar pipeline. CC0 VRoid sample models, not original game artwork. */
 (function(){
  const sources={male:'Sakurada_Fumiriya',female:'Sendagaya_Shino',male2:'HairSample_Male',female2:'HairSample_Female'};
  const roster=[
@@ -45,9 +45,9 @@
   vrm.scene.traverse(o=>{if(o.isMesh){o.frustumCulled=false;o.castShadow=false;o.receiveShadow=false}});
   const armDown={};for(const side of ['left','right']){const lower=vrm.humanoid.getNormalizedBoneNode(side+'LowerArm');armDown[side]=lower&&Math.abs(lower.position.x)>.01?-Math.sign(lower.position.x):(side==='left'?1:-1)}
   const colors=[],seen=new Set();vrm.scene.traverse(o=>{if(!o.isMesh)return;for(const m of Array.isArray(o.material)?o.material:[o.material]){if(!m?.color||seen.has(m))continue;seen.add(m);const n=(m.name||'').toLowerCase();const role=/hair/.test(n)?'hair':/skin|face|body|eye|mouth|teeth|brow|lash/.test(n)?'skin':'cloth';colors.push({material:m,base:m.color.clone(),role})}});
-  return {root,vrm,kind,phase:0,weight:0,elapsed:0,baseScale:root.scale.x,colors,armDown,motion:WWMotion.newState(),hipsRest:vrm.humanoid.getNormalizedBoneNode('hips')?.position.clone(),springReady:false};
+  return {root,vrm,kind,phase:0,weight:0,elapsed:0,baseScale:root.scale.x,colors,armDown,motion:WWMotion.newState(),hipsRest:vrm.humanoid.getNormalizedBoneNode('hips')?.position.clone(),springReady:false,T,dispose:()=>VRMUtils.deepDispose(vrm.scene),soleHeight:Object.fromEntries(['left','right'].map(side=>{let n=vrm.humanoid.getNormalizedBoneNode(side+'Foot');return [side,n?Math.max(.025,Math.min(.15,n.getWorldPosition(new T.Vector3()).y)):.06]}))};
  }
- function animate(a,dt,gait,mode='idle',jump=0,detail=0){
+ function animate(a,dt,gait,mode='idle',jump=0,detail=0,ground=null){
   const {vrm}=a;dt=Math.min(.35,Math.max(0,dt));a.elapsed+=dt;a.motion??=WWMotion.newState();let j=typeof jump==='object'?jump:{height:jump,velocity:0},v=WWMotion.step(a.motion,dt,gait,j,mode),t=a.elapsed;
   a.weight=a.motion.walk+a.motion.run;
   function bone(name,x=0,y=0,z=0){let b=vrm.humanoid.getNormalizedBoneNode(name);if(b)b.rotation.set(x,y,z)}
@@ -64,9 +64,11 @@
   if(mode==='dance'||mode==='duet'){bone('leftUpperArm',Math.sin(t*4)*.4,0,left*.85);bone('rightUpperArm',-Math.sin(t*4)*.4,0,right*.85);bone('spine',0,Math.sin(t*2)*.15,Math.sin(t*4)*.09)}
   if(mode==='wave'){bone('rightUpperArm',-.25,0,-right*.25);bone('rightLowerArm',-.8,0,Math.sin(t*5)*.35)}
   const em=vrm.expressionManager;if(em){for(const k of ['happy','angry','surprised','blink']){let value=k==='blink'?Math.max(0,1-Math.abs((a.elapsed%4.9)-4.65)/.13):k==='happy'&&['happy','smile','wave','cheer','portrait'].includes(mode)?0.75:k===mode?.8:0;if(em.getExpression(k))em.setValue(k,value)}}
+  if(detail===0&&ground){a.footIK=WWFootIK.apply(a.T,a,ground,dt,gait,WWMotion.phaseOf(j),mode)}else{a.contacts={};a.footIK=null}
   if(detail===0){for(let remain=dt;remain>0;){let d=Math.min(.033,remain);vrm.update(d);remain-=d}}else{vrm.humanoid.update();vrm.expressionManager?.update();}
   a.motionState=a.motion.state;
   if(mode==='idle'&&a.weight<.05&&!WWMotion.phaseOf(j)){vrm.scene.updateMatrixWorld(true);const h=vrm.humanoid.getRawBoneNode('head'),l=vrm.humanoid.getRawBoneNode('leftHand'),r=vrm.humanoid.getRawBoneNode('rightHand'),ls=vrm.humanoid.getRawBoneNode('leftUpperArm'),rs=vrm.humanoid.getRawBoneNode('rightUpperArm');if(h&&l&&r&&ls&&rs){const hy=h.matrixWorld.elements[13];a.handsBelowHead=l.matrixWorld.elements[13]<hy&&r.matrixWorld.elements[13]<hy;a.handsDown=l.matrixWorld.elements[13]<ls.matrixWorld.elements[13]&&r.matrixWorld.elements[13]<rs.matrixWorld.elements[13]}}
  }
- const api={load,animate,sources,roster,preset,applyPreset};if(typeof module!=='undefined')module.exports=api;else window.WWVRM=api;
+ function release(a){a.root.removeFromParent();a.dispose?.();a.contacts={}}
+ const api={load,animate,sources,roster,preset,applyPreset,release};if(typeof module!=='undefined')module.exports=api;else window.WWVRM=api;
 })();
