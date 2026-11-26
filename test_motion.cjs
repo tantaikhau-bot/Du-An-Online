@@ -73,3 +73,5 @@ console.log('V11.5 actual speed and directional response passed');
 // V11.5.2: quiet pelvis, soft knees, compensating ankles in settled idle.
 for(const id of Object.keys(M.profiles)){const a=M.newState();for(let i=0;i<360;i++){const p=M.step(a,1/60,0,{},'idle',id);assert.ok(p.hipY<0);assert.ok(p.kneeL>.10&&p.kneeR>.10);assert.ok(Math.abs(p.hipL+p.kneeL+p.ankleL)<1e-6);assert.ok(Math.abs(p.hipR+p.kneeR+p.ankleR)<1e-6)}}
 console.log('20 grounded idle profiles passed');
+
+for(const id of Object.keys(M.profiles)){const a=M.newState();for(let i=0;i<60;i++)M.step(a,1/60,0,{},'idle',id);const rest=a.pose.spread;for(let i=0;i<12;i++)M.step(a,1/60,0,{height:.3,velocity:3.8},'idle',id);assert.ok(a.pose.spread>rest+.25);assert.ok(a.pose.elbowL>.60);const lift=a.pose.armL;for(let i=0;i<14;i++)M.step(a,1/60,0,{height:.3,velocity:-3},'idle',id);assert.ok(a.pose.armL>lift+.45);for(let i=0;i<90;i++)M.step(a,1/60,0,{},'idle',id);assert.ok(Math.abs(a.pose.spread-rest)<.01)}console.log('20 avatar jump arm profiles and return to idle passed');

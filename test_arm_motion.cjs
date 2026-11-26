@@ -8,3 +8,5 @@ let n=0;for(const side of [-1,1])for(let swing=-.53;swing<=.58;swing+=.03)for(le
  n++;
 }
 console.log('Arm direction, flex and side clearance passed',n);
+
+for(const side of [-1,1]){const out=new T.Vector3(side,0,0),up=new T.Vector3(0,1,0),forward=new T.Vector3(0,0,1);const rest=A.directions(T,up,out,forward,0,.2,.2),jump=A.directions(T,up,out,forward,.9,.8,.55,1);assert.ok(jump.upper.dot(out)>rest.upper.dot(out)+.20);assert.ok(jump.upper.dot(forward)>.55);assert.ok(jump.lower.dot(out)>.05)}console.log('Jump arm clearance and forward swing passed');
