@@ -35,6 +35,7 @@ def digest(p,s):return hashlib.scrypt(p.encode(),salt=bytes.fromhex(s),n=16384,r
 def tokenhash(t):return hashlib.sha256(t.encode()).hexdigest()
 class BoundedServer(ThreadingHTTPServer):
  daemon_threads=True
+ request_queue_size=64
  def __init__(self,*args):
   self.slots=threading.BoundedSemaphore(64);super().__init__(*args)
  def process_request(self,request,address):
