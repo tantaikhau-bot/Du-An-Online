@@ -15,3 +15,9 @@ IK.apply(T,a,()=>0,.033,0,false,'idle');root.rotation.y=1;assert.equal(IK.apply(
 assert.equal(IK.apply(T,a,()=>0,.033,0,true,'idle'),null);assert.deepEqual(a.contacts,{});
 assert.equal(IK.apply(T,a,()=>0,.033,0,false,'ride'),null);
 console.log('Stable knee plane, bounded hinge, fast-turn/run/jump lock release passed');
+
+// Ground idle aligns the sole on flat terrain, including scaled parents, and releases for jumps.
+const parent=new T.Group();parent.position.set(2,1,3);parent.scale.setScalar(1.2);const r2=new T.Group();parent.add(r2);const lf=new T.Bone(),rf=new T.Bone();lf.position.set(-.1,.14,0);rf.position.set(.1,.145,0);r2.add(lf,rf);const a2={root:r2,baseScale:1,soleHeight:{left:.08,right:.08},motion:{run:0},vrm:{humanoid:{getNormalizedBoneNode:n=>n==='leftFoot'?lf:n==='rightFoot'?rf:null}}};let out;
+for(let i=0;i<80;i++){r2.position.y=0;out=IK.groundIdle(T,a2,()=>1,1/60,0,false,'idle')}
+assert.equal(out.mode,'grounded-idle');assert.equal(out.planted,2);assert.ok(Math.abs(lf.getWorldPosition(new T.Vector3()).y-1.096)<.001);assert.ok(out.offset<0);r2.position.y=0;assert.equal(IK.groundIdle(T,a2,()=>1,1/60,0,true,'idle'),null);assert.equal(r2.position.y,0);
+console.log('Grounded idle terrain alignment and jump release passed');
