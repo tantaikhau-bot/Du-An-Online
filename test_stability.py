@@ -32,7 +32,7 @@ class Stability(unittest.TestCase):
       status,headers,empty=req('HEAD',path)
       self.assertEqual((a,status,empty),(200,200,b''))
       self.assertEqual(headers['Content-Length'],str(len(body)))
-     self.assertEqual(json.loads(req('GET','/api/version')[2])['build'],'13.6-coop-adventure')
+     self.assertEqual(json.loads(req('GET','/api/version')[2])['build'],'13.7-world-expansion-ii')
      self.assertEqual(req('GET','/favicon.ico')[1]['Content-Type'],'image/svg+xml')
      self.assertEqual(req('HEAD','/api/save')[0],405)
      self.assertEqual(req('GET','/api/save')[0],401)

@@ -1,5 +1,11 @@
 # WISH WORLD — Release history
 
+## V13.7 — World Expansion II (candidate)
+- Increase playable rectangular bounds from 144×144 to 144×176 world units. Preserve all legacy locations, original central terrain grid and bridge geometry. Add two matching 16-unit terrain strips with distance visibility, updated horizon and raycast.
+- Four candidate frontier landmarks in north/south strips; atlas, minimap, route and visit persistence include them. Sand/grass vertex tint blends at seams; no new asset downloads.
+- Extend server presence Y bounds, preserve X and coordinate transform. Regression for expanded bounds, reciprocal presence and bridge/non-bridge collision.
+- Terrain strips are constructed at startup and culled, not asynchronous streaming. No caves/islands/boats, new NPCs, hardware FPS or full visual QA claim.
+
 ## V13.6 — Co-op Adventure (candidate)
 - Daily two-player scenic route with nearby friend invitation, explicit recipient consent, cancellation and three shared checkpoints. Server checks current public presence for both, order, friendship and blocking. No new coins or tradable rewards.
 - One accepted/completed pair per player/day, three outgoing invitations/day, day rollover and private progress. UI reachable from daily adventure. Tests for consent, isolation, stale/missing presence, repeat check-ins and block visibility.

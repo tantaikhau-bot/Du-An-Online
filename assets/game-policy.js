@@ -40,10 +40,19 @@ const WW_LANDMARK124=Object.freeze([
  {id:'amber-rest',n:'Trạm nghỉ hổ phách',region:'amber',x:-63,z:47,desc:'Góc nghỉ ngắm sắc lá vàng.'},
  {id:'snow-beacon',n:'Đèn dẫn lối tuyết',region:'summit',x:63,z:46,desc:'Điểm ngắm cao nguyên tuyết.'}
 ].map(Object.freeze));
+const WW_WORLD137=Object.freeze({halfX:72,halfZ:88,terrainX:152,terrainZ:184,margin:4});
+const WW_EXPANSION137=Object.freeze([
+ {id:'north-dunes',n:'Đồng cát phương Bắc',region:'north',x:-22,z:-82,desc:'Dải đất cát phía bắc, ngoài ranh giới bản đồ cũ.'},
+ {id:'north-stones',n:'Bãi đá bình minh',region:'north',x:22,z:-82,desc:'Điểm dừng ngắm đường chân trời phía bắc.'},
+ {id:'south-prairie',n:'Thảo nguyên phương Nam',region:'south',x:-22,z:82,desc:'Đồng cỏ rộng phía nam, ngoài ranh giới cũ.'},
+ {id:'south-crystal',n:'Trạm pha lê phương Nam',region:'south',x:22,z:82,desc:'Điểm ngắm cảnh vùng đồng cỏ mới.'}
+].map(Object.freeze));
+function insideWorld137(x,z){return Number.isFinite(x)&&Number.isFinite(z)&&Math.abs(x)<=WW_WORLD137.halfX&&Math.abs(z)<=WW_WORLD137.halfZ}
+function expansionRegion137(z){return z<-76?'north':z>76?'south':null}
 function landmarkSite124(spec,walkable,height,biome,excluded=[]){
  for(const radius of [0,1.5,3,4.5,6])for(let i=0;i<(radius?8:1);i++){
   const a=i*Math.PI/4,x=Math.round((spec.x+Math.cos(a)*radius)*2)/2,z=Math.round((spec.z+Math.sin(a)*radius)*2)/2;
-  if(Math.abs(x)>69||Math.abs(z)>69||biome(x,z)!==spec.region||excluded.some(q=>(q.x-x)**2+(q.z-z)**2<16))continue;
+  if(Math.abs(x)>69||Math.abs(z)>(['north','south'].includes(spec.region)?85:69)||biome(x,z)!==spec.region||excluded.some(q=>(q.x-x)**2+(q.z-z)**2<16))continue;
   const y=height(x,z);if(!Number.isFinite(y))continue;
   if([[0,0],[1.1,0],[-1.1,0],[0,1.1],[0,-1.1]].every(([dx,dz])=>walkable(x+dx,z+dz)&&Math.abs(height(x+dx,z+dz)-y)<.6))return {...spec,x,z};
  }
@@ -54,7 +63,7 @@ function cellVisible124(dx,dz,range,wasVisible,padding=5){
  const limit=range+(wasVisible?Math.max(0,padding):0);
  return dx*dx+dz*dz<=limit*limit;
 }
-function landmarkVisits124(raw){return Array.isArray(raw)?[...new Set(raw.filter(id=>WW_LANDMARK124.some(p=>p.id===id)))]:[]}
+function landmarkVisits124(raw){return Array.isArray(raw)?[...new Set(raw.filter(id=>[...WW_LANDMARK124,...WW_EXPANSION137].some(p=>p.id===id)))]:[]}
 // Visual presets without an additional render pass.
 const WW_LOOK131=Object.freeze({original:Object.freeze({name:'Nguyên bản',exposure:1,ambient:1,sun:1}),cinema:Object.freeze({name:'Điện ảnh',exposure:1.04,ambient:.94,sun:1.09}),clear:Object.freeze({name:'Sáng rõ',exposure:1.10,ambient:1.14,sun:.96})});
 function look131(key){return Object.hasOwn(WW_LOOK131,key)?WW_LOOK131[key]:WW_LOOK131.original}
@@ -70,4 +79,4 @@ function stepSound131(state,distance,moving,run){
  const stride=run?.85:.58;
  if(state.distance<stride)return false;state.distance%=stride;return true;
 }
-if(typeof module!=='undefined')module.exports={clarityStep100,resolution77,WW_PERF118,perfPreset118,perfWarning118,WW_LANDMARK124,landmarkSite124,cellVisible124,landmarkVisits124,WW_LOOK131,look131,blendLook131,cameraSafe131,stepSound131};
+if(typeof module!=='undefined')module.exports={WW_WORLD137,WW_EXPANSION137,insideWorld137,expansionRegion137,clarityStep100,resolution77,WW_PERF118,perfPreset118,perfWarning118,WW_LANDMARK124,landmarkSite124,cellVisible124,landmarkVisits124,WW_LOOK131,look131,blendLook131,cameraSafe131,stepSound131};
