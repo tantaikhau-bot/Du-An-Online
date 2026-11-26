@@ -15,5 +15,12 @@ for(const w of [360,740,960,1920,3840])for(const h of [320,420,1080,2160])for(co
  const budget=fast?700000:hd?3600000:mobile?[2200000,3000000,3800000][q]:[1800000,2600000,3600000][q];
  assert(Number.isFinite(r)&&r>0&&r<=dpr&&r*Math.max(w,h)<=4096+.001&&w*h*r*r<=budget+.01);n++;
 }
+for (const [w,h] of [[390,844],[844,390]]) {
+  for (const scale of [.6,.75,.76,1]) {
+    assert(resolution77(w,h,3,0,scale,false,false,4096,true)>=1);
+    assert(resolution77(w,h,3,0,scale,false,true,4096,true)>=1.25);
+  }
+}
+assert.equal(clarityStep100({tier:2,scale:1.34},45,25,45,true,false).scale,1.35);
 let scripts=0;for(const m of h.matchAll(/<script\b([^>]*)>([\s\S]*?)<\/script>/gi)){if(/\bsrc\s*=/.test(m[1])||/type\s*=\s*["'](?:module|importmap|application\/ld\+json)/.test(m[1]))continue;new Function(m[2]);scripts++}
 console.log(n+' policy cases and '+scripts+' inline scripts passed');
