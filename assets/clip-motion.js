@@ -39,7 +39,7 @@
  function apply(a,v,j,mode,dt){
   const m=a.motion,move=Math.min(1,m.walk+m.run),run=m.run/Math.max(.001,move),active=library&&['idle','walk','run'].includes(mode)&&!j.prep&&!j.height&&!j.velocity&&!j.land&&m.jump<.10;
   a.clipWeight=mix(a.clipWeight||0,active?move*.70:0,1-Math.exp(-dt/.16));
-  if(!library||a.clipWeight<.002){a.clipMotion='procedural';return v}
+  if(!active||!library||a.clipWeight<.002){a.clipMotion='procedural';return v}
   const id=a.motionProfile||'m1',cfg=WWMotion.profile(id),i=Number(id.slice(1))||1;
   const walkName=['Walking_A','Walking_B','Walking_C'][(i-1)%3],runName=(id.startsWith('f')||i%2===0)?'Running_B':'Running_A';
   const w=sampleCurve(library[walkName],m.cycle),r=sampleCurve(library[runName],m.cycle),p={...v};
