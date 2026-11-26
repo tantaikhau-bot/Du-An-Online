@@ -18,12 +18,26 @@
     return {t:at,x:a.x+(b.x-a.x)*k,z:a.z+(b.z-a.z)*k,jump:a.jump+(b.jump-a.jump)*k,heading:angle(a.heading,b.heading,k),moving:k<.5?a.moving:b.moving};}
   }
   const before=history.at(-2);let dx=0,dz=0;
-  if(before&&last.moving&&last.t>before.t&&at-last.t<1000){
+  if(before&&last.moving&&last.t>before.t){
    const extra=clamp(at-last.t,0,150),span=last.t-before.t;
    dx=(last.x-before.x)*extra/span;dz=(last.z-before.z)*extra/span;
    const length=Math.hypot(dx,dz);if(length>.65){dx*=.65/length;dz*=.65/length;}
   }
   return {...last,x:last.x+dx,z:last.z+dz,moving:!!last.moving&&at-last.t<1000};
+ }
+ // Server sample identity is stable across repeated polling responses.
+ function serverSnapshot134(state,history,s,serverMs,receivedMs,rtt=0){
+  if(!s||![s.sample_ms,serverMs,receivedMs,s.x,s.z,s.jump,s.heading].every(finite))return false;
+  if(s.sample_ms>serverMs+1000||serverMs-s.sample_ms>12000)return false;
+  if(finite(state.last)&&s.sample_ms<=state.last)return false;
+  const observed=receivedMs-clamp(serverMs-s.sample_ms,0,12000)-clamp(finite(rtt)?rtt/2:0,0,1000);
+  let t=observed;
+  if(finite(state.last)&&s.sample_ms-state.last<=4000&&history.length){
+   const prior=history.at(-1).t,expected=prior+s.sample_ms-state.last;
+   t=Math.max(prior+1,expected+clamp(observed-expected,-40,40));
+  }
+  if(!addSnapshot(history,{...s,t}))return false;
+  state.last=s.sample_ms;return true;
  }
  function clockReading(serverMs,receivedMs,rttMs){
   if(![serverMs,receivedMs,rttMs].every(finite)||serverMs<0||rttMs<0||rttMs>12000)return null;
@@ -31,7 +45,7 @@
  }
  function clockSeconds(c,now){return c&&finite(now)?(c.serverMs+Math.max(0,now-c.receivedMs))/1000:null}
  function retryDelay(failures,random=.5){return Math.round(Math.min(30000,700*2**clamp(failures,1,6))*(.8+.4*clamp(random,0,1)))}
- const api={addSnapshot,sample,clockReading,clockSeconds,retryDelay};
+ const api={addSnapshot,sample,serverSnapshot134,clockReading,clockSeconds,retryDelay};
  if(typeof module!=='undefined')module.exports=api;else root.WWRealtime=api;
 })(typeof globalThis!=='undefined'?globalThis:this);
 /* Opt-in transport, same-origin socket with HTTP fallback. */

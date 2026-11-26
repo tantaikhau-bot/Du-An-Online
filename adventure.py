@@ -26,8 +26,11 @@ def details(c,uid,now):
  row=c.execute('SELECT step FROM ww_adventure123 WHERE uid=? AND day=?',(uid,day)).fetchone()
  step=row[0] if row else 0
  total=c.execute('SELECT count(*) FROM ww_adventure123 WHERE uid=? AND step=3',(uid,)).fetchone()[0]
+ # Epoch day zero was Thursday; Monday is day four. Account-bound, no extra currency.
+ week=day-(day+3)%7
+ weekly=c.execute('SELECT count(*) FROM ww_adventure123 WHERE uid=? AND step=3 AND day>=? AND day<=?',(uid,week,day)).fetchone()[0]
  return {'day':day,'title':TITLES[i],'stops':[{'id':k,'name':PLACES[k][0]} for k in route],
-         'step':step,'complete':step==3,'completed_routes':total,'reset':(day+1)*86400-7*3600}
+         'step':step,'complete':step==3,'completed_routes':total,'weekly':{'count':weekly,'goal':3,'complete':weekly>=3,'reset':(week+7)*86400-7*3600},'reset':(day+1)*86400-7*3600}
 def handle(h,c,u,d,now=None):
  now=time.time() if now is None else now
  uid=u['id'];action=h.path.rsplit('/',1)[-1]

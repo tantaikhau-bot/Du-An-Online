@@ -47,6 +47,13 @@ class WorldLife(unittest.TestCase):
     self.assertEqual(call('checkin',{'id':stop['id'],'day':day},when=when)[0],409)
    self.assertTrue(result['complete']);self.assertEqual(result['completed_routes'],1)
    self.assertEqual(call('status',{},uid='b')[1]['completed_routes'],0)
+   self.assertEqual(result['weekly']['count'],1)
+   self.assertEqual(call('status',{},uid='b')[1]['weekly']['count'],0)
+   week=day-(day+3)%7
+   for d in (day-1,day-2):
+    if d>=week:c.execute('INSERT INTO ww_adventure123 VALUES(?,?,3,?)',('a',d,now))
+   self.assertEqual(call('status',{})[1]['weekly']['count'],min(3,day-week+1))
+   self.assertEqual(call('status',{},when=(week+7)*86400-7*3600)[1]['weekly']['count'],0)
    self.assertEqual(call('status',{},when=now+86400)[1]['step'],0)
    self.assertEqual(call('checkin',{'id':stops[0]['id'],'day':day},when=now+86400)[0],409)
  def test_backup_download(self):
