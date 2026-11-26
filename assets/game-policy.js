@@ -112,4 +112,19 @@ function actorBudget139(mobile,tier,quality){
 }
 function trimModels140(cache,keep,limit,dispose){for(const [key,value] of cache){if(cache.size<=limit)break;if(key===keep)continue;cache.delete(key);dispose(value)}return cache.size}
 function expiredModel140(last,now,ttl=20000){return Number.isFinite(last)&&Number.isFinite(now)&&now-last>=ttl}
-if(typeof module!=='undefined')module.exports={trimModels140,expiredModel140,mobileCap139,mobileResolution139,mobileStep139,actorBudget139,WW_WORLD137,WW_EXPANSION137,insideWorld137,expansionRegion137,clarityStep100,resolution77,WW_PERF118,perfPreset118,perfWarning118,WW_LANDMARK124,landmarkSite124,cellVisible124,landmarkVisits124,WW_LOOK131,look131,blendLook131,cameraSafe131,stepSound131};
+// Bounded simulation catch-up: a stall never causes unbounded movement or work.
+function physicsDelta141(elapsed){return Number.isFinite(elapsed)?Math.max(0,Math.min(100,elapsed)):0}
+function physicsSteps141(elapsed,step){const dt=physicsDelta141(elapsed);if(!dt)return 0;const n=Math.ceil(dt/25);for(let i=0;i<n;i++)step(dt/n);return n}
+function angle141(current,target,dt,tau=75){if(!Number.isFinite(target))return current;if(!Number.isFinite(current))return target;const d=Math.atan2(Math.sin(target-current),Math.cos(target-current));return current+d*(1-Math.exp(-physicsDelta141(dt)/tau))}
+function orbit141(state,yaw,pitch,zoom,dt,snap=false){
+ if(snap||!Number.isFinite(state.yaw)){state.yaw=yaw;state.pitch=pitch;state.zoom=zoom;return state}
+ const k=1-Math.exp(-physicsDelta141(dt)/75);
+ state.yaw=angle141(state.yaw,yaw,dt);state.pitch+=(pitch-state.pitch)*k;state.zoom+=(zoom-state.zoom)*k;return state
+}
+function jumpStep141(j,ms,canLaunch){
+ const dt=physicsDelta141(ms)/1000;let {prep,height,velocity,land}=j;let remaining=dt,landed=false;land=Math.max(0,land-dt);
+ if(prep>0){const used=Math.min(prep,remaining);prep=Math.max(0,prep-used);remaining-=used;if(!prep&&canLaunch)velocity=4}
+ if((velocity||height)&&remaining>0){const next=height+velocity*remaining-5.25*remaining*remaining;velocity-=10.5*remaining;if(next<=0){height=0;velocity=0;land=.34;landed=true}else height=next}
+ return {prep,height,velocity,land,landed}
+}
+if(typeof module!=='undefined')module.exports={physicsDelta141,physicsSteps141,angle141,orbit141,jumpStep141,trimModels140,expiredModel140,mobileCap139,mobileResolution139,mobileStep139,actorBudget139,WW_WORLD137,WW_EXPANSION137,insideWorld137,expansionRegion137,clarityStep100,resolution77,WW_PERF118,perfPreset118,perfWarning118,WW_LANDMARK124,landmarkSite124,cellVisible124,landmarkVisits124,WW_LOOK131,look131,blendLook131,cameraSafe131,stepSound131};

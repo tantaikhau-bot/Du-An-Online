@@ -1,5 +1,11 @@
 # WISH WORLD — Release history
 
+## V14.1 — Mobile Physics (candidate)
+- Bound simulation catch-up to 100 ms and collision-checked movement to at most four substeps of 25 ms, preventing unbounded work after stalls. Smooth character heading with time-based angle damping.
+- Integrate jump height analytically and consume preparation time separately; preserve existing jump speed and gravity, landing cue, and collision routine.
+- Smooth mobile orbit yaw/pitch/zoom before collision checks, use rendered yaw for controls and minimap, snap distant focus and reset orbit on resume. Desktop orbit remains direct.
+- Test numerical 10–60 FPS jump timing and bounded steps. Existing Chromium/bridge regressions remain; no hardware performance certification, cloth collision fix or asynchronous terrain streaming claim.
+
 ## V14.0 — Mobile Engine (candidate)
 - Bound compressed VRM buffer cache to 24 MiB/3 entries on mobile and 80 MiB/6 entries on desktop. Deduplicate active fetches; pending fetch bytes and parsed model memory are not included in that bound.
 - Keep at most two cached local avatar bases on mobile; release hidden distant peer/NPC VRMs after 20 seconds, preserve visible fallback. Desktop local roster cache retained.
