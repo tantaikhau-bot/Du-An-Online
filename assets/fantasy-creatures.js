@@ -95,7 +95,7 @@
  function bind(root){const find=n=>root.getObjectByName(n),kind=root.userData.kind;return {kind,root,rig:find('rig'),body:find('body'),head:find('head'),tail:find('tail'),paws:[0,1,2,3].map(i=>find('leg'+i)),knees:[0,1,2,3].map(i=>find('leg'+i).getObjectByName('knee')),eyes:['eyeL','eyeR'].map(find),ears:['earL','earR'].map(find),wings:[-1,1].map(i=>find('wing'+i)).filter(Boolean),nose:find('nose'),muzzle:find('muzzle'),fantasy116:true,clock:0,weight:0,phase:0,reaction:0}}
  function create(T,kind){const r=resources(T);if(!r.templates.has(kind))r.templates.set(kind,asset(T,kind));return bind(r.templates.get(kind).clone(true))}
  function react(a){if(a?.fantasy116)a.reaction=1}
- function animate(a,speed,dt,time){dt=clamp(dt/1000,0,.1);speed=Number.isFinite(speed)?clamp(speed,0,5):0;a.clock+=dt;let t=a.clock+(Number.isFinite(time)?Math.sin(time*.1)*.05:0),kind=a.kind;
+ function animate(a,speed,dt,time){dt=clamp(dt/1000,0,.25);speed=Number.isFinite(speed)?clamp(speed,0,5):0;a.clock+=dt;let t=a.clock+(Number.isFinite(time)?Math.sin(time*.1)*.05:0),kind=a.kind;
   a.weight=mix(a.weight,clamp(speed/1.05),1-Math.exp(-dt*8));let w=a.weight,idle=1-w,run=clamp((speed-1.4)/1.8);
   a.phase=(a.phase+dt*(kind==='rabbit'?4.8+speed*4.1:kind==='deer'?2.5+speed*3.1:3.2+speed*3.6))%6.2831853;let p=a.phase,hop=Math.max(0,Math.sin(p)),breath=Math.sin(t*(kind==='deer'?2.1:3)),r=a.reaction||0;a.reaction=Math.max(0,r-dt*.95);let joy=Math.sin(r*Math.PI),lift=kind==='rabbit'?hop*.11*w:.008*Math.sin(p*2)*w;
   a.body.scale.set(1+.014*breath*idle,1+.021*breath*idle,1+.012*breath*idle);
