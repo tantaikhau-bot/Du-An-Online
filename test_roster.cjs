@@ -14,3 +14,5 @@ console.log('Twenty presets, defaults and repeatable shared appearance passed');
 
 assert.equal(new Set(roster.map(p=>p.source)).size,6);
 assert.equal(preset('f3').source,'female4');assert.equal(preset('f4').source,'female3');
+
+const {heightFactor}=require('./assets/vrm-character.js');for(const p of roster){assert.ok(Math.abs(heightFactor(p)-p.height*(p.gender==='female'?.92:1))<1e-9)}assert.ok(Math.max(...roster.filter(p=>p.gender==='female').map(heightFactor))<1);console.log('Female relative scale and preserved male sizes passed');
