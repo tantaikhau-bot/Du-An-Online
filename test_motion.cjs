@@ -58,3 +58,14 @@ for(const id of Object.keys(M.profiles)){
  assert.ok(side>.012,id);assert.ok(land<-.06,id);
 }
 console.log('V11.4: idle shift and landing absorption passed');
+
+// V11.5: actual speed, acceleration and turning drive motion without invalid pose values.
+for(const id of Object.keys(M.profiles)){
+ const st=M.newState();let seenTurn=false;
+ for(let i=0;i<420;i++){let t=i/60,speed=t<1?0:t<3?1.65:t<5?3.8:0,turn=t>2&&t<3?2.6:0;
+  const v=M.step(st,1/60,speed>3?1:speed>0?.65:0,{speed,turn},'idle',id);
+  assert.ok(Object.values(v).every(Number.isFinite));assert.ok(Math.abs(st.turn)<=3);if(st.turn>1)seenTurn=true;
+ }
+ assert.ok(seenTurn);assert.equal(st.state,'idle');assert.ok(st.speed<.01);
+}
+console.log('V11.5 actual speed and directional response passed');

@@ -14,5 +14,5 @@ assert.ok(battery<=1);
 let limited=resolution(4096,4096,3,2,1,false,true,1024,true);
 assert.ok(limited<=.25);
 assert.equal(resolution(390,780,1,1,1,false,false,4096,true),1);
-assert.match(html,/BUILD62='11\.4-living-characters'/);
+assert.match(html,/BUILD62='11\.5-creature-motion'/);
 console.log('Mobile resolution regression checks passed');

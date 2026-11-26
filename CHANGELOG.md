@@ -1,5 +1,11 @@
 # WISH WORLD — Release history
 
+## V11.5 — Creature & Motion
+- Speed-matched walking/jogging, acceleration and turn response, relaxed male upper-body gait. Walking/sprinting speed reduced from 3.8/6.5 to 1.65/3.8 world units/s; vehicle speeds unchanged.
+- Optional Original workshop (`/play?avatar=original`): 20 procedural original geometry profiles, weighted arm/leg/torso surfaces, custom face, hair and clothing shapes. Existing VRM default preserved; not twenty hand-sculpted production assets. No motion capture.
+- Rabbit proportions and ears redesigned; species-specific procedural pet motion, matte fur color variation for rabbit/cat/fox/deer and retained fox/deer GLB clips. No strand-groom simulation. Full visual QA pending.
+- Research: Unreal locomotion-based blending, Unity navigation/animation coupling, Three.js MeshStandardMaterial, Blender Principled BSDF. No third-party code copied.
+
 ## V11.4 — Living Characters
 - Asymmetric idle weight shift, more pronounced breath and torso movement, velocity-shaped airborne pose and deeper landing. Longer anticipation and landing windows.
 - Six VRM base choices, two new optional female models with safe existing-base fallback, bone-attached themed wearable meshes and secondary cape movement. No independently sculpted faces or fully skinned custom outfits.
