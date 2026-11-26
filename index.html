@@ -709,6 +709,22 @@ let walkPhase62=0;const blend62=new WeakMap();
  function updateCitizens54(dt,time){let blocked=!!document.querySelector('dialog[open]'),here=saveToWorld(player);for(let v of citizens54){let pos=v.p.position,d=Math.hypot(here.x-pos.x,here.z-pos.z);v.p.visible=d<(effectTier100===2?22:effectTier100===1?36:55);if(blocked||!v.p.visible)continue;if(v.phase!==dayMode||(!v.path.length&&time>=v.retry)){v.phase=dayMode;v.retry=time+10;let goal=nearestWalk4(v.q[NPC_PHASE54[dayMode]]);v.path=[];let stamp=(v.routeStamp72||0)+1;v.routeStamp72=stamp;let zone=area,phase=dayMode,obs=staticObstacles,obsCount=obs.length;if(goal&&Math.hypot(pos.x-goal.x,pos.z-goal.z)>.25)queueRoute72({x:pos.x,z:pos.z},goal,()=>v.routeStamp72===stamp&&area===zone&&dayMode===phase&&obs===staticObstacles&&obsCount===obs.length,path=>{v.path=path})}
  let dest=v.path[0],moving=false;if(dest){let dx=dest.x-pos.x,dz=dest.z-pos.z,d=Math.hypot(dx,dz);if(d<.06)v.path.shift();else{let step=Math.min(d,dt*.00115),next={x:pos.x+dx/d*step,z:pos.z+dz/d*step};if(segment4({x:pos.x,z:pos.z},next)){pos.set(next.x,walkHeight4(next.x,next.z),next.z);let h=Math.atan2(-dx,-dz);v.heading+=Math.atan2(Math.sin(h-v.heading),Math.cos(h-v.heading))*Math.min(1,dt*.01);v.p.rotation.y=v.heading;moving=true}else{v.path=[];v.retry=time+3}}}let a=moving?Math.sin(time*9)*.45:0;v.limbs.forEach((l,i)=>{l.arm.rotation.x=(i?1:-1)*a;l.leg.rotation.x=-l.arm.rotation.x});v.rig.position.y=Math.abs(a)*.03}}
  const npcPresets108={guide:'m1',keeper:'m9',linh54:'f1',hai54:'m3',moc54:'m2',sao54:'f4'},npcRetry108=new Map();let npcLoading108=false,npcRefresh108=0;
+ function makeNPCImpostor108(a){
+  const root=a.root,parent=root.parent,position=root.position.clone(),rotation=root.quaternion.clone(),visible=root.visible;
+  const oldTarget=renderer.getRenderTarget(),oldColor=renderer.getClearColor(new T.Color()),oldAlpha=renderer.getClearAlpha(),oldAuto=renderer.autoClear;
+  const w=144,h=256,rt=new T.WebGLRenderTarget(w,h,{depthBuffer:true});rt.texture.colorSpace=T.SRGBColorSpace;
+  let stage=new T.Scene(),cam=new T.OrthographicCamera(-.56,.56,1.0,-1.0,.1,10);cam.position.set(0,.9,-4);cam.lookAt(0,.9,0);
+  stage.add(new T.HemisphereLight(0xfff3df,0x647b77,2));let sun=new T.DirectionalLight(0xffebcf,2);sun.position.set(-2,4,-3);stage.add(sun);
+  try{
+   stage.add(root);root.position.set(0,0,0);root.rotation.set(0,Math.PI,0);root.visible=true;
+   renderer.autoClear=true;renderer.setRenderTarget(rt);renderer.setClearColor(0,0);renderer.clear();renderer.render(stage,cam);
+   const pixels=new Uint8Array(w*h*4);renderer.readRenderTargetPixels(rt,0,0,w,h,pixels);
+   const canvas=document.createElement('canvas');canvas.width=w;canvas.height=h;const ctx=canvas.getContext('2d'),im=ctx.createImageData(w,h);
+   for(let y=0;y<h;y++)im.data.set(pixels.subarray((h-y-1)*w*4,(h-y)*w*4),y*w*4);
+   ctx.putImageData(im,0,0);const tex=new T.CanvasTexture(canvas);tex.colorSpace=T.SRGBColorSpace;tex.minFilter=T.LinearFilter;
+   const sprite=new T.Sprite(new T.SpriteMaterial({map:tex,transparent:true,alphaTest:.12,depthWrite:true,toneMapped:false}));sprite.position.y=.9;sprite.scale.set(1.12,2,1);return sprite;
+  }finally{parent.add(root);root.position.copy(position);root.quaternion.copy(rotation);root.visible=visible;renderer.setRenderTarget(oldTarget);renderer.setClearColor(oldColor,oldAlpha);renderer.autoClear=oldAuto;rt.dispose()}
+ }
  function updateNPC107(x,z,dt){
   const rows=[...guideModels91,...citizens54],dist=q=>Math.hypot(q.p.position.x-x,q.p.position.z-z);
   for(let q of rows)q.rig.visible=false;
@@ -720,7 +736,7 @@ let walkPhase62=0;const blend62=new WeakMap();
     if(!q.p.visible||d>55||q.avatar108||npcLoading108||Date.now()<(npcRetry108.get(id)||0))continue;
     npcLoading108=true;
     let p=WWVRM.preset(npcPresets108[id]||'m1');
-    WWVRM.load(T,p.source).then(a=>{WWVRM.applyPreset(T,a,p);q.p.add(a.root);a.root.position.set(0,0,0);q.avatar108=a;q.lodTime108=0;WWVRM.animate(a,.033,0,'idle');npcRetry108.delete(id)}).catch(e=>{npcRetry108.set(id,Date.now()+15000);console.warn('NPC model retry',id,e)}).finally(()=>npcLoading108=false);break;
+    WWVRM.load(T,p.source).then(a=>{WWVRM.applyPreset(T,a,p);q.p.add(a.root);a.root.position.set(0,0,0);q.avatar108=a;q.lodTime108=0;WWVRM.animate(a,.033,0,'idle');try{q.sprite108=makeNPCImpostor108(a);q.sprite108.visible=false;q.p.add(q.sprite108)}catch(e){console.warn('NPC impostor unavailable',e)}npcRetry108.delete(id)}).catch(e=>{npcRetry108.set(id,Date.now()+15000);console.warn('NPC model retry',id,e)}).finally(()=>npcLoading108=false);break;
    }
   }
   let counts=[0,0,0],visible=0;
@@ -728,10 +744,10 @@ let walkPhase62=0;const blend62=new WeakMap();
    if(!q.p.visible)continue;
    visible++;if(!q.avatar108)continue;
    let d=dist(q),lod=WWMotion.npcLOD(d,effectTier100),a=q.avatar108;
-   counts[lod.level]++;q.lodTime108=(q.lodTime108||0)+dt/1000;
+   counts[lod.level]++;const distant=lod.level===2&&!!q.sprite108;a.root.visible=!distant;if(q.sprite108)q.sprite108.visible=distant;if(distant)continue;q.lodTime108=(q.lodTime108||0)+dt/1000;
    if(q.lodTime108>=lod.interval){let elapsed=q.lodTime108;q.lodTime108=0;WWVRM.animate(a,elapsed,q.path?.length ? .62 : 0,'idle',{},lod.level)}
   }
-  report59.npcVRM=counts.reduce((a,b)=>a+b,0);report59.npcLOD=counts;report59.npcPending=visible-report59.npcVRM;report59.npcBlockFallback=0;
+  report59.npcVRM=counts.reduce((a,b)=>a+b,0);report59.npcLOD=counts;report59.npcPending=visible-report59.npcVRM;report59.npcBlockFallback=0;report59.npcImpostors=rows.filter(q=>q.p.visible&&q.sprite108?.visible).length;
  }
  const animalWild42=[];for(let [kind,x,z] of [['deer',-30,27],['deer',-33,29],['rabbit',-25,-25],['rabbit',-29,-23],['fox',-32,19],['fox',-60,-55],['deer',-60,57],['rabbit',59,55],['dragon',60,-54]]){let p=makePet42(kind);pet.remove(p.root);world.add(p.root);p.root.visible=true;let start=nearestWalk4({x,z});if(!start){world.remove(p.root);continue}p.root.position.set(start.x,walkHeight4(start.x,start.z),start.z);animalWild42.push({...p,x,z,id:'wild53-'+animalWild42.length,tx:start.x,tz:start.z,next:0,heading:0,mode:'idle'})}
 const horse53=new T.Group();scene.add(horse53);horse53.visible=false;const horseCoat53=organic42(0x78563e,furTex42,.98,.018),horseMane53=organic42(0x392c25,furTex42,.98,.021),saddle53=organic42(0x684731,leatherTex42,.95,.013);
