@@ -1,0 +1,26 @@
+name: Live game motion audit
+on:
+  pull_request:
+    branches: [main]
+    paths: ['test_live_motion.cjs', '.github/workflows/live-motion-audit.yml']
+permissions:
+  contents: read
+jobs:
+  live-motion:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm install --no-save --no-package-lock playwright@1.51.1
+      - run: npx playwright install --with-deps chromium
+      - run: node test_live_motion.cjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: live-motion-video-and-metrics
+          path: live-motion-output/
+          if-no-files-found: ignore
+          retention-days: 7
