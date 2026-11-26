@@ -1,5 +1,9 @@
 # WISH WORLD — Release history
 
+## V11.5.2 — Grounded Idle
+- Retain all VRM characters and previous creature upgrades. Softer symmetrical baseline knee flex, asymmetric weight shift, quieter pelvis and compensated ankle pitch.
+- Local player idle terrain alignment uses calibrated ankle heights after pose updates, bounded root offset, and release during jumps/other actions. Soft contact shadow helps show ground connection. This is vertical sole alignment, not full world-space XY foot locking. Visual QA pending.
+
 ## V11.5.1 — VRM Restore
 - Restore V11.4 VRM anime roster as the only standard avatar selection; disable Original mode even on old links. Keep V11.5 locomotion, creature geometry/material changes, and saved avatar IDs. Original source retained for development history, not loaded by game.
 
