@@ -84,7 +84,7 @@ def handle(h,c,u,d):
   face=pick('face',('soft','classic','angular'),'classic')
   eye=pick('eye',('brown','green','blue','amber'),'brown')
   dye=pick('dye',('original','moss','navy','wine','sand','ivory','charcoal'),'original')
-  action=pick('action',('idle','wave','bow','cheer','smile','sit','dance','hand','photo','hug','duet','portrait'),'idle')
+  action=pick('action',('idle','wave','bow','cheer','smile','happy','angry','surprised','sit','dance','hand','photo','hug','duet','portrait'),'idle')
   target=d.get('target')
   if not isinstance(target,str) or len(target)>100 or target==uid:target=''
   if action not in ('hand','photo','hug','duet'):target=''
