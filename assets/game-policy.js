@@ -110,4 +110,6 @@ function mobileStep139(v,fps,p95,cap,ceiling,tierFloor,scaleCeiling,manual=false
 function actorBudget139(mobile,tier,quality){
  return mobile?{peerCount:tier===2?5:8,peerRange:tier===2?26:38,peerRig:tier===2?9:18,npcRig:tier===2?10:20,npcCount:tier===2?1:2,load:1,mapMs:tier===2?650:450,heavyMs:tier===2?420:280}:{peerCount:[5,8,12][quality],peerRange:[28,38,48][quality],peerRig:Infinity,npcRig:55,npcCount:6,load:2,mapMs:[400,250,160][quality],heavyMs:[250,160,100][quality]};
 }
-if(typeof module!=='undefined')module.exports={mobileCap139,mobileResolution139,mobileStep139,actorBudget139,WW_WORLD137,WW_EXPANSION137,insideWorld137,expansionRegion137,clarityStep100,resolution77,WW_PERF118,perfPreset118,perfWarning118,WW_LANDMARK124,landmarkSite124,cellVisible124,landmarkVisits124,WW_LOOK131,look131,blendLook131,cameraSafe131,stepSound131};
+function trimModels140(cache,keep,limit,dispose){for(const [key,value] of cache){if(cache.size<=limit)break;if(key===keep)continue;cache.delete(key);dispose(value)}return cache.size}
+function expiredModel140(last,now,ttl=20000){return Number.isFinite(last)&&Number.isFinite(now)&&now-last>=ttl}
+if(typeof module!=='undefined')module.exports={trimModels140,expiredModel140,mobileCap139,mobileResolution139,mobileStep139,actorBudget139,WW_WORLD137,WW_EXPANSION137,insideWorld137,expansionRegion137,clarityStep100,resolution77,WW_PERF118,perfPreset118,perfWarning118,WW_LANDMARK124,landmarkSite124,cellVisible124,landmarkVisits124,WW_LOOK131,look131,blendLook131,cameraSafe131,stepSound131};
