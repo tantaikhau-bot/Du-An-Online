@@ -79,5 +79,24 @@
  }
  function animalState(previous,speed){return previous==='run'?(speed<1.48?(speed<.10?'idle':'walk'):'run'):previous==='walk'?(speed>1.95?'run':speed<.09?'idle':'walk'):speed>.20?'walk':'idle'}
  function npcLOD(distance,tier=0){if(distance<=(tier===2?9:tier===1?14:20))return {level:0,interval:0};if(distance<=(tier===2?20:32))return {level:1,interval:tier===2?.16:.10};return {level:2,interval:.35}}
- const api={newState,step,phaseOf,npcLOD,profile,profiles,animalState};if(typeof module!=='undefined')module.exports=api;else root.WWMotion=api;
+ // V13.2: action crossfade and bounded secondary motion, independent of skeleton.
+ const ACTIONS132=['sit','ride','dance','duet','wave','bow','cheer','hug','hand','photo','portrait'];
+ function actionBlend132(st,mode,dt){
+  dt=Number.isFinite(dt)?clamp(dt,0,.35):0;
+  const desired=ACTIONS132.includes(mode)?mode:'idle',k=1-Math.exp(-dt/.13);
+  st.weights??={};for(const id of ACTIONS132){const v=mix(st.weights[id]||0,id===desired?1:0,k);if(v>.0001)st.weights[id]=v;else delete st.weights[id]}
+  return st.weights;
+ }
+ function expression132(st,mode,dt,t){
+  const smile=['happy','smile','wave','cheer','portrait','photo','hug','hand','duet','dance'].includes(mode);
+  const target={happy:smile?.72:0,angry:mode==='angry'?.78:0,surprised:mode==='surprised'?.78:0};
+  st.face??={happy:0,angry:0,surprised:0,blink:0};const k=1-Math.exp(-clamp(dt,0,.35)/.12);
+  for(const key of Object.keys(target))st.face[key]=mix(st.face[key],target[key],k);
+  st.face.blink=Math.max(0,1-Math.abs(((t+.32*Math.sin(t*.71))%4.9)-4.65)/.13);
+  return st.face;
+ }
+ function secondary132(st,dt,gait,turn,wind){
+  const k=1-Math.exp(-clamp(dt,0,.35)/.19);st.pitch=mix(st.pitch||0,clamp(gait,0,1)*.6,k);st.roll=mix(st.roll||0,clamp(turn||0,-3,3)*-.16,k);st.wind=mix(st.wind||1,clamp(Number.isFinite(wind)?wind:1,.45,2.8),k);return st;
+ }
+ const api={newState,step,phaseOf,npcLOD,profile,profiles,animalState,actionBlend132,expression132,secondary132};if(typeof module!=='undefined')module.exports=api;else root.WWMotion=api;
 })(typeof globalThis!=='undefined'?globalThis:this);

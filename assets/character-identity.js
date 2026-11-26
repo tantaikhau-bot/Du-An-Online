@@ -55,6 +55,6 @@
   // Each group can reference shared materials; dispose unused ones on next preset.
   a.identityType=type;
  }
- function animate(a,t,gait){for(const {g,rest,amplitude} of a.identityMotion||[]){g.quaternion.copy(rest);g.rotateX(Math.sin(t*4.1)*amplitude*(.28+gait*.72));g.rotateZ(Math.sin(t*2.7+.4)*amplitude*.25)}}
+ function animate(a,t,gait,secondary={}){const pitch=secondary.pitch||0,roll=secondary.roll||0,wind=secondary.wind||1;for(const {g,rest,amplitude} of a.identityMotion||[]){g.quaternion.copy(rest);g.rotateX(amplitude*(Math.sin(t*4.1)*(.28+gait*.72)+pitch*.4+Math.sin(t*2.2)*.12*wind));g.rotateZ(amplitude*(Math.sin(t*2.7+.4)*.25+roll*.55))}}
  const api={designs,apply,clear,animate};if(typeof module!=='undefined')module.exports=api;else root.WWIdentity=api;
 })(typeof globalThis!=='undefined'?globalThis:this);
