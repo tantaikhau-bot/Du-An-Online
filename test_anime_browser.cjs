@@ -27,6 +27,14 @@ const fs=require('node:fs'),os=require('node:os'),path=require('node:path'),asse
   const creatureKinds=await page.evaluate(()=>window.wwGraphics59.creatureAssets);
   assert.deepEqual([...creatureKinds].sort(),['cat','deer','dragon','fox','rabbit']);
   console.log('All five fantasy creature assets active in world:',creatureKinds);
+  // Switch to fox to prove the authored skinned GLB replaces the procedural fallback.
+  await page.evaluate(()=>{window.__savedPet117=s.pet;s.pet='fox';document.querySelectorAll('dialog[open]').forEach(d=>d.close())});
+  await page.waitForFunction(()=>window.wwGraphics59?.riggedAnimals?.includes('fox'),{},{timeout:90000});
+  console.log('Skinned fox model and authored animation loaded');
+  fs.mkdirSync('test-output',{recursive:true});
+  await page.screenshot({path:'test-output/rigged-fox-world.png',timeout:120000});
+  await page.evaluate(()=>{s.pet=window.__savedPet117});
+
   // Render an independent lineup from the exact assets used by the world.
   const lineup=await page.evaluate(async()=>{
    const T=await import('three'),scene=new T.Scene();scene.background=new T.Color(0xe7dccb);
