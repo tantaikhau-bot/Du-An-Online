@@ -1,5 +1,11 @@
 # WISH WORLD — Release history
 
+## V11.8 — Performance Master
+- Five graphics profiles (battery/low/balanced/high/Ultra HD), device heuristic on first use, existing pixel budget and adaptive balance retained. Diagnostics include update CPU submission, frame P95, resource counts, avatar cache and creature update cadence; warnings are heuristics, not measured GPU memory or GPU utilization.
+- Cache exact terrain triangle corner heights for terrain and roads; avoid repeated analytical height evaluations during sole contact and movement. No change to height formula.
+- Distance-based creature animation cadence (full rate near/local; accumulated 33–180 ms further away), shared processed animal geometry/materials per source, release detached skeletons, bounded local avatar cache (2–3 inactive/active total subject to protected previews).
+- Existing instancing, static batching, shadow throttling and LOD remain. No new model or texture replacements, no server plan change. Device FPS and full VRAM remain unverified. Research: https://threejs.org/docs/pages/WebGLRenderer.html ; https://dev.epicgames.com/documentation/en-us/unreal-engine/animation-budget-allocator-in-unreal-engine ; https://learn.unity.com/course/doozyui-related-tutorials/tutorial/optimizing-graphics-in-unity .
+
 ## V11.7 — Daylight & Motion
 - Preserve the 420-second game day, with gradual dawn/day/afternoon/sunset/night keyframes, moving light direction and in-game clock. Local session clock, not server-synchronized. Smooth sky, fog, sunlight, environment intensity, stars, river and lantern glow.
 - Keep VRM identities. Stabilize settled idle lower-body pose, anchor support midpoint in world X/Z and align actual sole samples to rendered ground. Release anchor for locomotion or flight; allow height correction during standing takeoff preparation and landing. Not independent full-body per-foot IK.
