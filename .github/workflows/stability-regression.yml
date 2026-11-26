@@ -22,3 +22,7 @@ jobs:
       - run: python test_together.py
       - run: python test_guild.py
       - run: node test_stability.cjs
+
+      - run: python -m pip install -r requirements-realtime.txt
+      - run: python -m unittest test_infrastructure test_realtime
+      - run: python load_test_local.py --players 16 --rounds 5
