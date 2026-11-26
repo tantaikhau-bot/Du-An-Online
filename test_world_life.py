@@ -37,6 +37,31 @@ class WorldLife(unittest.TestCase):
    self.assertEqual(pulse('a',490,1808)[0],400)
    self.assertEqual(pulse('a',490,-658)[0],400)
    self.assertEqual(pulse('a',3011,575)[0],400)
+ def test_dungeon(self):
+  import dungeon
+  with sqlite3.connect(':memory:') as c:
+   c.row_factory=sqlite3.Row;dungeon.init(c)
+   now=1700000000
+   def call(uid,action,data):
+    nonlocal now
+    now+=1
+    with c:return dungeon.handle(H('/api/dungeon/'+action),c,{'id':uid},data,now)
+   v=call('a','status',{})[1];self.assertEqual(v['best'],0)
+   self.assertEqual(call('a','start',{'rev':0,'stage':5})[0],403)
+   for stage in range(1,6):
+    code,v=call('a','start',{'rev':v['rev'],'stage':stage});self.assertEqual(code,200)
+    self.assertEqual(call('a','act',{'rev':v['rev']-1,'skill':'strike'})[0],409)
+    self.assertEqual(call('a','act',{'rev':v['rev'],'skill':'strike','damage':999})[0],400)
+    for i in range(79):
+     if v['status']!='fight':break
+     skill='guard' if v['turn']%3==2 else 'heal' if v['hp']<=48 and v['energy']>=25 else 'burst' if v['energy']>=20 else 'strike'
+     code,v=call('a','act',{'rev':v['rev'],'skill':skill});self.assertEqual(code,200)
+     self.assertGreaterEqual(v['hp'],0);self.assertLessEqual(v['energy'],60)
+    self.assertEqual(v['status'],'won',v);self.assertEqual(v['best'],stage)
+   self.assertEqual(call('b','status',{})[1]['best'],0)
+   self.assertEqual(call('b','start',{'rev':0,'stage':2})[0],403)
+   code,v=call('a','start',{'rev':v['rev'],'stage':1});self.assertEqual(code,200)
+   code,v=call('a','act',{'rev':v['rev'],'skill':'retreat'});self.assertEqual((code,v['status'],v['best']),(200,'lost',5))
  def test_daily_adventure(self):
   import adventure
   with sqlite3.connect(':memory:') as c:

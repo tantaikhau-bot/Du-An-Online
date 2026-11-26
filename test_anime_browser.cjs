@@ -19,7 +19,10 @@ const fs=require('node:fs'),os=require('node:os'),path=require('node:path'),asse
    const a=await pulse(qa,490);assert.ok(a.players.some(p=>p.id===bi&&p.x===525));assert.ok(Number.isFinite(a.world_ms));
    const leave=await qb.request.post(origin+'/api/social/leave',{data:{}});assert.equal(leave.status(),200);
    assert.ok(!(await pulse(qa,490)).players.some(p=>p.id===bi));
-   console.log('V13.4 independent browser sessions: authenticated presence and leave passed');
+   const ds=await qa.request.post(origin+'/api/dungeon/status',{data:{}});assert.equal(ds.status(),200);const dv=await ds.json();assert.equal(dv.best,0);
+   const started=await qa.request.post(origin+'/api/dungeon/start',{data:{rev:dv.rev,stage:1}});assert.equal(started.status(),200);assert.equal((await started.json()).status,'fight');
+   const other=await qb.request.post(origin+'/api/dungeon/status',{data:{}});assert.equal((await other.json()).status,'ready');
+   console.log('V13.4 independent browser sessions: authenticated presence and leave passed; V13.8 dungeon account isolation passed');
   }finally{await qa.close();await qb.close()}
   const page=await browser.newPage({viewport:{width:1280,height:800},deviceScaleFactor:1});const errors=[];
   page.on('pageerror',e=>errors.push(e.message));

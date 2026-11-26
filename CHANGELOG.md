@@ -1,5 +1,10 @@
 # WISH WORLD — Release history
 
+## V13.8 — Combat & Dungeon (candidate)
+- Server-resolved turn-based solo PvE, five stages and escalating crystal dragon boss. Strike, burst, guard, heal and retreat; visible next enemy damage. Revision rejects stale/replayed actions; account-bound progress, no coins or tradable reward.
+- Responsive modal arena with HP/energy bars and illustrative enemy icons, reachable from quest drawer. Not a real-time 3D dungeon or new character models.
+- Tests cover five-stage progression, locked stages, stale revisions, tampering, account isolation and retreat. No claim of 100 levels, 3D skills, multiplayer combat, visual quality or production persistence.
+
 ## V13.7 — World Expansion II (candidate)
 - Increase playable rectangular bounds from 144×144 to 144×176 world units. Preserve all legacy locations, original central terrain grid and bridge geometry. Add two matching 16-unit terrain strips with distance visibility, updated horizon and raycast.
 - Four candidate frontier landmarks in north/south strips; atlas, minimap, route and visit persistence include them. Sand/grass vertex tint blends at seams; no new asset downloads.
