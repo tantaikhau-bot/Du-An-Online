@@ -23,6 +23,9 @@ const fs=require('node:fs'),os=require('node:os'),path=require('node:path'),asse
   await page.waitForFunction(()=>window.wwGraphics59?.stage==='running'||window.wwGraphics59?.engine==='classic',{},{timeout:90000});
   const info=await page.evaluate(()=>window.wwGraphics59);
   assert.equal(info.engine,'three',JSON.stringify(info));
+  assert.equal(await page.evaluate(()=>Object.keys(WWPerf.profiles).length),5);
+  await page.waitForFunction(()=>Number.isFinite(window.wwGraphics59?.avatarCache1180)&&Number.isFinite(window.wwGraphics59?.animalTicks1180),{},{timeout:30000});
+  console.log('V11.8 runtime performance diagnostics active',await page.evaluate(()=>({fps:wwGraphics59.fps,drawCalls:wwGraphics59.drawCalls,triangles:wwGraphics59.triangles,animalTicks:wwGraphics59.animalTicks1180,animalSkipped:wwGraphics59.animalSkipped1180,avatarCache:wwGraphics59.avatarCache1180})));
   await page.waitForFunction(()=>window.wwGraphics59?.creatureAssets?.length===5,{},{timeout:30000});
   const creatureKinds=await page.evaluate(()=>window.wwGraphics59.creatureAssets);
   assert.deepEqual([...creatureKinds].sort(),['cat','deer','dragon','fox','rabbit']);
