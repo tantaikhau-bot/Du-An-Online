@@ -58,10 +58,10 @@
    return {hip,knee,ankle,arm:-hip*cfg.arms*mix(male?1.02:1.17,male?1.20:1.32,run)+Math.sin(q-.65)*.065*move,elbow:.17+mix(.24,.74,run)*cfg.elbow*move+Math.max(0,hip)*.25}}
   let l=leg(p),r=leg(p+Math.PI);
   let v={hipY:(-.018+.003*breath-.004*Math.abs(shift))*rest+(.5+.5*Math.cos(p*2-.4))*mix(.030,.049,run)*cfg.bounce*move-.016*run,hipSide:.030*idleLean*cfg.sway+counter*.014*move,
-   hipX:mix(.025,.085,run)*move*cfg.lean+.014*rest+accelLean*.45,hipYaw:swing*.095*move+.044*idleLean,hipRoll:(idleLean*.060+counter*.052*move)*cfg.sway+turnLean*.5,
+   hipX:mix(.025,.085,run)*move*cfg.lean+.014*rest+accelLean*.45,hipYaw:swing*.095*move+.044*idleLean,hipRoll:(idleLean*.018+counter*.052*move)*cfg.sway+turnLean*.5,
    spineX:mix(.045,.21,run)*move*cfg.lean+breath*.035*rest+accelLean,spineYaw:-swing*.125*move-.045*idleLean,spineRoll:(-counter*.045*move-.040*idleLean)*cfg.sway+turnLean,
    headX:-.045*run+breath*.020*rest+.035*Math.sin(t*.47)*rest,headY:(.18*Math.sin(t*.61)+.05*Math.sin(t*1.37))*rest-swing*.024*move,headZ:-idleLean*.041+counter*.015*move,shoulderY:swing*.060*move+.025*idleLean,
-   armL:l.arm+.065*idleLean+.032*breath*rest-relax*rest,armR:r.arm-.055*idleLean-.028*breath*rest+relax*rest,elbowL:l.elbow+.09*rest*(1+shift),elbowR:r.elbow+.075*rest*(1-shift),hipL:l.hip-(.078+.023*shift)*rest,hipR:r.hip-(.078-.023*shift)*rest,kneeL:l.knee+(.156+.046*shift)*rest,kneeR:r.knee+(.156-.046*shift)*rest,ankleL:l.ankle-(.078+.023*shift)*rest,ankleR:r.ankle-(.078-.023*shift)*rest,spread:(.09+.10*run)*cfg.spread};
+   armL:l.arm+.065*idleLean+.032*breath*rest-relax*rest,armR:r.arm-.055*idleLean-.028*breath*rest+relax*rest,elbowL:l.elbow+.09*rest*(1+shift),elbowR:r.elbow+.075*rest*(1-shift),hipL:l.hip-(.078+.010*shift)*rest,hipR:r.hip-(.078-.010*shift)*rest,kneeL:l.knee+(.156+.020*shift)*rest,kneeR:r.knee+(.156-.020*shift)*rest,ankleL:l.ankle-(.078+.010*shift)*rest,ankleR:r.ankle-(.078-.010*shift)*rest,spread:(.09+.10*run)*cfg.spread};
   if(phase){
    let amount=phase==='jump_start'?smooth(1-(j.prep||0)/.20):phase==='jump_land'?Math.sin(Math.PI*clamp((j.land||0)/.34))**.85:0;
    let air=phase==='jump_air',launch=phase==='jump_takeoff',crouch=amount,airFlex=air?mix(.13,.39,smooth(1-Math.abs(j.velocity||0)/3.9)):launch?.08:0;
