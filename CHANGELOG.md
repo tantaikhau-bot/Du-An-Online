@@ -1,5 +1,10 @@
 # WISH WORLD — Release history
 
+## V13.2 — Character & Animation (candidate)
+- Smooth entry, exit and switching between VRM action poses. Preserve locomotion and existing foot IK; add bounded bow, cheer, hug, hand and portrait overlays on existing skeletons. Existing consent/nearby matching remains unchanged.
+- Ease facial expression weights rather than snap; preserve existing blinking. Bounded secondary response of custom identity wearables to gait, turning and local wind. Native VRM spring update remains unchanged.
+- Retain current 20 presets, geometry, textures and existing network protocol. Numerical tests cover action weights, expressions and secondary motion. No new model meshes, exact paired hand contact, full cloth physics or hardware QA claim.
+
 ## V13.1 — Graphics & Gameplay (candidate)
 - Three blended lighting styles, preserve ACES renderer and independent graphics budget; original default. No added post-process render passes.
 - Immediate camera obstruction contraction, gradual clearance recovery. Ground collision unchanged.

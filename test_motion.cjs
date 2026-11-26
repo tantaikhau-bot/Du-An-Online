@@ -83,3 +83,16 @@ for(const id of Object.keys(M.profiles)){
  assert.ok(Math.abs(a.pose.kneeL-b.pose.kneeL)<.005,id);assert.ok(Math.abs(a.pose.hipL-b.pose.hipL)<.005,id);
 }
 console.log('V11.9 continuous flight flex across takeoff threshold passed');
+
+// V13.2 bounded action and face transitions, across existing avatar roster.
+for(const id of Object.keys(M.profiles)){
+ const st={};for(let i=0;i<90;i++)M.actionBlend132(st,'wave',1/60);
+ assert.ok(st.weights.wave>.99,id);
+ M.actionBlend132(st,'dance',1/60);assert.ok(st.weights.wave>.8&&st.weights.dance<.2,id);
+ for(let i=0;i<90;i++)M.actionBlend132(st,'idle',1/60);
+ assert.ok(Object.values(st.weights).every(v=>v<.001),id);
+ const face=M.expression132(st,'happy',1/60,1);assert.ok(face.happy>0&&face.happy<.15);
+ for(let i=0;i<90;i++)M.expression132(st,'angry',1/60,2);assert.ok(st.face.angry>.77&&st.face.happy<.001);
+ const secondary={};for(let i=0;i<90;i++)M.secondary132(secondary,1/60,1,3,2.8);assert.ok(secondary.pitch>.59&&secondary.pitch<=.6&&secondary.roll>=-.48&&secondary.wind<=2.8);
+}
+console.log('V13.2 crossfade, expression and wearable motion policy passed across 20 profiles');
