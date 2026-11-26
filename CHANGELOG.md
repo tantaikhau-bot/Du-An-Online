@@ -1,5 +1,10 @@
 # WISH WORLD — Release history
 
+## V12.2 — Living Pets (candidate)
+- Preserve the existing five skinned GLBs and procedural fallback. Distinct follow spacing and acceleration per species, bounded movement step and short collision-checked detours. Local and remote companions use actual movement speed; no automatic snap on every blocked step. Safe reposition on initial spawn or long-distance recovery.
+- Local session commands follow, wait, recall and pet reaction in animal handbook. No new reward economy, no new persistence fields; remote commands are not synchronized yet.
+- Ignore async animal loads after a peer pet has been removed. Add five-species movement regressions, obstruction and safe spawn checks. Full navigation, additional authored clips and hardware visual testing pending.
+
 ## V12.1 — Real-time Multiplayer (candidate)
 - Authenticated presence responses include a server clock and timestamped player snapshots. Public-world clock and weather use the server time estimate; manual weather remains available offline/private. Existing visibility and block filters remain in place.
 - Eight-sample per-peer buffer, 850ms interpolation delay, shortest-angle heading, bounded 150ms extrapolation, stale stop and teleport reset. Preserve existing visible fallback and avatar/pet/vehicle state. Prediction is remote only; no authoritative movement validation.

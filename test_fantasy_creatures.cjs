@@ -20,3 +20,23 @@ for(const kind of C.KINDS){
 }
 assert.equal(new Set(sizes).size,5);
 console.log('Fantasy creatures: unique geometry, shared resources, grounded rest, idle/walk/run/reaction passed',JSON.stringify(results));
+
+// V12.2 movement policy remains independent from visual GLB assets.
+{
+ const P=require('./assets/fantasy-creatures.js'),a=require('node:assert/strict');
+ const free=()=>true,seg=()=>true;
+ for(const kind of P.KINDS){
+  const state=P.follower(),owner={x:0,z:0};let pos={x:-5,z:0};
+  let max=0;
+  for(let i=0;i<240;i++){let prev=pos;pos=P.followStep(state,kind,pos,owner,0,1/60,0,'follow',free,seg);max=Math.max(max,pos.speed);a.ok(Math.hypot(prev.x-pos.x,prev.z-pos.z)<.09);}
+  a.ok(Math.hypot(pos.x-owner.x,pos.z-owner.z)<2);a.ok(max<=P.followProfiles[kind].run+.001);
+  const wait=P.followStep(state,kind,pos,{x:8,z:8},0,.05,4,'wait',free,seg);a.equal(wait.x,pos.x);a.equal(wait.z,pos.z);a.equal(wait.speed,0);
+  const blocked=P.followStep(state,kind,pos,{x:8,z:8},0,.05,4,'follow',free,()=>false);a.equal(blocked.mode,'blocked');a.equal(blocked.x,pos.x);
+  a.equal(P.safeSpawn(kind,owner,0,()=>false),null);
+  a.ok(P.safeSpawn(kind,owner,0,x=>x>0).x>0);
+ }
+ const s=P.follower(),p={x:0,z:0},owner={x:5,z:0};
+ const detour=P.followStep(s,'fox',p,owner,0,.05,3,'follow',free,(_a,b)=>Math.abs(b.z)>.01);
+ a.ok(Math.abs(detour.z)>.01&&detour.speed>0);
+ console.log('V12.2 five pet profiles, acceleration, wait, obstacle detour and safe recall passed');
+}

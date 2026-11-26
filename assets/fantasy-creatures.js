@@ -114,5 +114,39 @@
   // Body stays grounded at rest; bounded lift for hopping/reaction only.
   a.rig.position.y=(a.rig.userData.floor||0)+Math.max(0,lift)+joy*(kind==='rabbit'||kind==='dragon'?.07:.025);return 0;
  }
- const api={KINDS,create,bind,animate,react};if(typeof module!=='undefined')module.exports=api;else global.WWCreatures=api;
+ // V12.2: controller independent of geometry and rendering. Distances are world units.
+ const followProfiles={rabbit:{walk:1.6,run:4.3,gap:1.05},fox:{walk:1.9,run:4.8,gap:1.25},cat:{walk:1.65,run:4.2,gap:1.05},deer:{walk:2.0,run:5.0,gap:1.5},dragon:{walk:1.8,run:4.6,gap:1.35}};
+ function follower(){return {speed:0,side:1,idle:0,mode:'idle',blocked:0}}
+ const dist=(a,b)=>Math.hypot(a.x-b.x,a.z-b.z);
+ function followTarget(kind,owner,heading,side=1){
+  const gap=(followProfiles[kind]||followProfiles.fox).gap;
+  return {x:owner.x-Math.cos(heading)*gap*side+Math.sin(heading)*.65,z:owner.z-Math.sin(heading)*gap*side+Math.cos(heading)*.65};
+ }
+ function safeSpawn(kind,owner,heading,walkable){
+  for(const side of [1,-1]){const p=followTarget(kind,owner,heading,side);if(walkable(p.x,p.z))return p;}
+  for(const radius of [1,1.6,2.2])for(let i=0;i<8;i++){const a=heading+i*Math.PI/4,p={x:owner.x+Math.cos(a)*radius,z:owner.z+Math.sin(a)*radius};if(walkable(p.x,p.z))return p;}
+  return walkable(owner.x,owner.z)?{...owner}:null;
+ }
+ function followStep(state,kind,pos,owner,heading,dt,ownerSpeed,command,walkable,segment){
+  dt=Number.isFinite(dt)?clamp(dt,0,.05):0;const cfg=followProfiles[kind]||followProfiles.fox;
+  const stop=command==='wait',gap=dist(pos,owner);
+  state.idle=ownerSpeed<.12?state.idle+dt:0;
+  let target=followTarget(kind,owner,heading);
+  if(!walkable(target.x,target.z)){const other=followTarget(kind,owner,heading,-1);target=walkable(other.x,other.z)?other:{...owner};}
+  const len=dist(pos,target),want=stop||len<.22?0:Math.min(gap>2.5||ownerSpeed>2.4?cfg.run:cfg.walk,len*2.8+Math.max(0,ownerSpeed)*.6);
+  state.speed=mix(state.speed||0,want,1-Math.exp(-dt/(want>state.speed?.23:.14)));
+  if(stop||len<.10||!dt){state.speed=stop?0:state.speed;state.mode=stop?'wait':'idle';return {...pos,speed:0,mode:state.mode};}
+  const step=Math.min(len,state.speed*dt),a=Math.atan2(target.z-pos.z,target.x-pos.x);
+  // Check direct segment, then a bounded detour; never snap through a wall.
+  const offsets=[0,state.side*.65,-state.side*.65,state.side*1.15,-state.side*1.15];
+  for(const offset of offsets){
+   const candidate={x:pos.x+Math.cos(a+offset)*step,z:pos.z+Math.sin(a+offset)*step};
+   if(!walkable(candidate.x,candidate.z)||!segment(pos,candidate))continue;
+   if(offset)state.side=Math.sign(offset);state.blocked=0;
+   const actual=dist(pos,candidate)/dt;state.mode=actual>.2?(actual>2?'run':'walk'):'idle';
+   return {...candidate,speed:actual,mode:state.mode};
+  }
+  state.blocked+=dt;state.speed*=Math.exp(-dt*8);state.mode='blocked';return {...pos,speed:0,mode:state.mode};
+ }
+ const api={KINDS,create,bind,animate,react,followProfiles,follower,followTarget,safeSpawn,followStep};if(typeof module!=='undefined')module.exports=api;else global.WWCreatures=api;
 })(typeof globalThis!=='undefined'?globalThis:this);
