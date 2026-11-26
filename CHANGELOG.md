@@ -1,5 +1,11 @@
 # WISH WORLD — Release history
 
+## V10.7 — Living Characters
+- Compute mirrored arm-lowering from normalized rest bone direction; verify actual hands below shoulders in idle.
+- Twenty presets (10 male + 10 female) on the same four VRoid meshes; responsive picker with aligned tabs and independently scrollable list.
+- Pool up to three nearby NPC VRMs (one on low detail), including quest guides and citizens. Distant NPCs and remote peers retain old visuals for performance.
+- Replace fox with Quaternius animated CC0 model; smooth animal normals without changing rig or topology. Still stylized, not realistic fur.
+
 ## V10.6 — Avatar Roster
 - Five male and five female named presets using four CC0 VRoid bases with color/height variants; not ten independently modeled meshes.
 - The chooser and world use the same cached VRM object and preset ID; selection is saved in avatar106. Preview must load before selection can be confirmed. Indoor use and seated poses supported; car hides character.
