@@ -33,4 +33,26 @@ function perfWarning118(fps,p95,cap,heap){
  const heapPressure=Number.isFinite(heap)&&heap>=.85;
  return {framePressure,heapPressure};
 }
-if(typeof module!=='undefined')module.exports={clarityStep100,resolution77,WW_PERF118,perfPreset118,perfWarning118};
+// V12.4: preserve map bounds; pick safe points in existing outer regions.
+const WW_LANDMARK124=Object.freeze([
+ {id:'pine-lookout',n:'Vọng cảnh rừng thông',region:'pine',x:-63,z:-47,desc:'Lối ngắm rừng thông và thung lũng sương.'},
+ {id:'ruin-arch',n:'Cổng đá cổ',region:'ruins',x:63,z:-45,desc:'Điểm dừng bên di tích và cổng đá.'},
+ {id:'amber-rest',n:'Trạm nghỉ hổ phách',region:'amber',x:-63,z:47,desc:'Góc nghỉ ngắm sắc lá vàng.'},
+ {id:'snow-beacon',n:'Đèn dẫn lối tuyết',region:'summit',x:63,z:46,desc:'Điểm ngắm cao nguyên tuyết.'}
+].map(Object.freeze));
+function landmarkSite124(spec,walkable,height,biome,excluded=[]){
+ for(const radius of [0,1.5,3,4.5,6])for(let i=0;i<(radius?8:1);i++){
+  const a=i*Math.PI/4,x=Math.round((spec.x+Math.cos(a)*radius)*2)/2,z=Math.round((spec.z+Math.sin(a)*radius)*2)/2;
+  if(Math.abs(x)>69||Math.abs(z)>69||biome(x,z)!==spec.region||excluded.some(q=>(q.x-x)**2+(q.z-z)**2<16))continue;
+  const y=height(x,z);if(!Number.isFinite(y))continue;
+  if([[0,0],[1.1,0],[-1.1,0],[0,1.1],[0,-1.1]].every(([dx,dz])=>walkable(x+dx,z+dz)&&Math.abs(height(x+dx,z+dz)-y)<.6))return {...spec,x,z};
+ }
+ return null;
+}
+function cellVisible124(dx,dz,range,wasVisible,padding=5){
+ if(![dx,dz,range,padding].every(Number.isFinite)||range<0)return false;
+ const limit=range+(wasVisible?Math.max(0,padding):0);
+ return dx*dx+dz*dz<=limit*limit;
+}
+function landmarkVisits124(raw){return Array.isArray(raw)?[...new Set(raw.filter(id=>WW_LANDMARK124.some(p=>p.id===id)))]:[]}
+if(typeof module!=='undefined')module.exports={clarityStep100,resolution77,WW_PERF118,perfPreset118,perfWarning118,WW_LANDMARK124,landmarkSite124,cellVisible124,landmarkVisits124};
