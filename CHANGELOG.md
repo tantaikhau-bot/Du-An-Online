@@ -1,5 +1,11 @@
 # WISH WORLD — Release history
 
+## V13.4 — Adventure & Stability (candidate)
+- Deduplicate repeated presence packets by server sample timestamp, smooth local timestamp mapping and keep bounded predicted position when motion becomes stale. Preserve HTTP fallback and privacy.
+- Weekly account-bound challenge: complete three daily routes within the Vietnam Monday–Sunday week; derived from existing completion history; no currency or tradable rewards.
+- Add two independent authenticated Chromium API sessions to verify reciprocal presence and leave, plus landscape viewport smoke check. Existing synthetic peer visual checks still run. This is not two simultaneous 3D clients or a live production load test.
+- See RELEASE-AUDIT.md for remaining requirements. No claim of production readiness or hardware FPS.
+
 ## V13.3 — Cinematic World (candidate)
 - Existing physical river shader reacts to wind/rain via bounded wave, ripple and Fresnel parameters; lightweight river receives continuous day/night and storm tint. Preserve optional reflector and original water geometry.
 - Decorative low riverbank reeds, shared geometry/material and per-cell instancing, bridge/obstacle/site exclusion. No collision changes, no new texture downloads.

@@ -9,6 +9,18 @@ const fs=require('node:fs'),os=require('node:os'),path=require('node:path'),asse
  try{
   for(let i=0;i<60;i++){try{if((await fetch(origin+'/healthz')).ok)break}catch{}await new Promise(r=>setTimeout(r,250))}
   browser=await chromium.launch({headless:true,args:['--use-gl=angle','--use-angle=swiftshader','--enable-unsafe-swiftshader','--no-sandbox']});
+  // Two separate cookie jars with real authenticated HTTP presence (not a synthetic peer).
+  const qa=await browser.newContext(),qb=await browser.newContext();
+  try{
+   const register=async(ctx,name)=>{const res=await ctx.request.post(origin+'/api/register',{data:{name,password:'test-password-only-134'}});assert.equal(res.status(),200);const me=await ctx.request.get(origin+'/api/me');return (await me.json()).user.id};
+   const ai=await register(qa,'QA_Adventure_A'),bi=await register(qb,'QA_Adventure_B');assert.notEqual(ai,bi);
+   const pulse=async(ctx,x)=>{const res=await ctx.request.post(origin+'/api/social/pulse',{data:{x,y:575,area:0}});assert.equal(res.status(),200);return res.json()};
+   await pulse(qa,490);const b=await pulse(qb,525);assert.ok(b.players.some(p=>p.id===ai&&Number.isFinite(p.sample_ms)));
+   const a=await pulse(qa,490);assert.ok(a.players.some(p=>p.id===bi&&p.x===525));assert.ok(Number.isFinite(a.world_ms));
+   const leave=await qb.request.post(origin+'/api/social/leave',{data:{}});assert.equal(leave.status(),200);
+   assert.ok(!(await pulse(qa,490)).players.some(p=>p.id===bi));
+   console.log('V13.4 independent browser sessions: authenticated presence and leave passed');
+  }finally{await qa.close();await qb.close()}
   const page=await browser.newPage({viewport:{width:1280,height:800},deviceScaleFactor:1});const errors=[];
   page.on('pageerror',e=>errors.push(e.message));
   await page.route('https://cdn.jsdelivr.net/npm/three@0.164.1/**',async route=>{
@@ -124,6 +136,10 @@ const fs=require('node:fs'),os=require('node:os'),path=require('node:path'),asse
   await page.waitForTimeout(500);
   fs.mkdirSync('test-output',{recursive:true});
   await page.screenshot({path:'test-output/anime-desktop.png',timeout:120000});
+  await page.evaluate(()=>document.querySelectorAll('dialog[open]').forEach(d=>d.close()));
+  await page.setViewportSize({width:844,height:390});await page.waitForFunction(()=>window.wwGraphics59?.cssWidth>0&&window.wwGraphics59.cssWidth<=844,{},{timeout:30000});
+  const mobileCanvas=await page.locator('.next-world canvas').first().boundingBox();assert.ok(mobileCanvas&&mobileCanvas.width<=844&&mobileCanvas.height>0);
+  await page.screenshot({path:'test-output/landscape-844x390.png',timeout:120000});
   assert.deepEqual(errors,[]);
   console.log('Three.js rendered and anime atelier preview completed');
  }finally{if(browser)await browser.close();server.kill();await new Promise(r=>server.once('exit',r));fs.rmSync(temp,{recursive:true,force:true});}

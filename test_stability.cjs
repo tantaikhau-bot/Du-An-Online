@@ -14,7 +14,7 @@ assert.ok(battery<=1);
 let limited=resolution(4096,4096,3,2,1,false,true,1024,true);
 assert.ok(limited<=.25);
 assert.equal(resolution(390,780,1,1,1,false,false,4096,true),1);
-assert.match(html,/BUILD62='13\.3-cinematic-world'/);
+assert.match(html,/BUILD62='13\.4-adventure-audit'/);
 console.log('Mobile resolution regression checks passed');
 
 // V11.5.1: no experimental Original entry point in the game.
@@ -82,3 +82,15 @@ assert.ok(banks133.length>0&&banks133.length<=136);
 for(const p of banks133){assert.ok(Math.abs(p.x)<=69&&[-54,0,54].every(b=>Math.abs(p.x-b)>=3.5));assert.ok(Math.abs(p.z+7.2)>2&&Math.abs(p.z+7.2)<3);}
 assert.deepEqual(D.bankSites133([],-7.2,()=>false),[]);
 console.log('V13.3 weather water, quality budgets and bank placement passed');
+
+const state134={},snap134=[],s134={sample_ms:100000,x:0,z:0,jump:0,heading:0,moving:true};
+assert.ok(RT.serverSnapshot134(state134,snap134,s134,100100,500,100));
+assert.equal(RT.serverSnapshot134(state134,snap134,s134,100200,700,100),false);
+assert.ok(RT.serverSnapshot134(state134,snap134,{...s134,sample_ms:100750,x:2},100800,1200,100));
+assert.equal(snap134.length,2);assert.ok(snap134[1].t>snap134[0].t);
+const last134=snap134.at(-1).t;
+const predicted134=RT.sample(snap134,last134+850+400);
+const stale134=RT.sample(snap134,last134+850+3000);
+assert.equal(predicted134.x,stale134.x);assert.equal(stale134.moving,false);
+assert.ok(stale134.x<=2.65);
+console.log('V13.4 server sample deduplication, monotonic time and bounded stale prediction passed');
