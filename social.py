@@ -3,10 +3,10 @@ import time, math, sqlite3, together, guild
 def init(c):
  together.init(c)
  guild.init(c)
- c.executescript('''CREATE TABLE IF NOT EXISTS presence(uid TEXT PRIMARY KEY,x REAL,y REAL,area INTEGER,seen REAL); CREATE TABLE IF NOT EXISTS character61(uid TEXT PRIMARY KEY,body TEXT,skin TEXT,hair TEXT,style TEXT,dye TEXT,action TEXT,target TEXT); CREATE TABLE IF NOT EXISTS character64(uid TEXT PRIMARY KEY,height TEXT,build TEXT,face TEXT,eye TEXT); CREATE TABLE IF NOT EXISTS motion68(uid TEXT PRIMARY KEY,heading REAL,moving INTEGER,jump REAL); CREATE TABLE IF NOT EXISTS pet70(uid TEXT PRIMARY KEY,kind TEXT); CREATE TABLE IF NOT EXISTS outing70(id INTEGER PRIMARY KEY AUTOINCREMENT,sender TEXT,receiver TEXT,place TEXT,status TEXT,created REAL,updated REAL); CREATE INDEX IF NOT EXISTS outing70_receiver ON outing70(receiver,updated); CREATE INDEX IF NOT EXISTS outing70_sender ON outing70(sender,created); CREATE TABLE IF NOT EXISTS near69(id INTEGER PRIMARY KEY AUTOINCREMENT,sender TEXT NOT NULL,body TEXT NOT NULL,x REAL NOT NULL,y REAL NOT NULL,created REAL NOT NULL,hidden INTEGER NOT NULL DEFAULT 0); CREATE INDEX IF NOT EXISTS near69_sender ON near69(sender,created); CREATE TABLE IF NOT EXISTS near69_audience(mid INTEGER,uid TEXT,PRIMARY KEY(mid,uid)); CREATE INDEX IF NOT EXISTS near69_audience_uid ON near69_audience(uid,mid); CREATE TABLE IF NOT EXISTS friends(sender TEXT,receiver TEXT,status TEXT,PRIMARY KEY(sender,receiver)); CREATE TABLE IF NOT EXISTS greetings(sender TEXT,receiver TEXT,kind TEXT,created REAL); CREATE TABLE IF NOT EXISTS reports(reporter TEXT,target TEXT,reason TEXT,created REAL);''')
+ c.executescript('''CREATE TABLE IF NOT EXISTS presence(uid TEXT PRIMARY KEY,x REAL,y REAL,area INTEGER,seen REAL); CREATE TABLE IF NOT EXISTS character61(uid TEXT PRIMARY KEY,body TEXT,skin TEXT,hair TEXT,style TEXT,dye TEXT,action TEXT,target TEXT); CREATE TABLE IF NOT EXISTS character64(uid TEXT PRIMARY KEY,height TEXT,build TEXT,face TEXT,eye TEXT); CREATE TABLE IF NOT EXISTS motion68(uid TEXT PRIMARY KEY,heading REAL,moving INTEGER,jump REAL); CREATE TABLE IF NOT EXISTS pet70(uid TEXT PRIMARY KEY,kind TEXT); CREATE TABLE IF NOT EXISTS vehicle88(uid TEXT PRIMARY KEY,kind TEXT); CREATE INDEX IF NOT EXISTS presence88_seen ON presence(seen); CREATE TABLE IF NOT EXISTS outing70(id INTEGER PRIMARY KEY AUTOINCREMENT,sender TEXT,receiver TEXT,place TEXT,status TEXT,created REAL,updated REAL); CREATE INDEX IF NOT EXISTS outing70_receiver ON outing70(receiver,updated); CREATE INDEX IF NOT EXISTS outing70_sender ON outing70(sender,created); CREATE TABLE IF NOT EXISTS near69(id INTEGER PRIMARY KEY AUTOINCREMENT,sender TEXT NOT NULL,body TEXT NOT NULL,x REAL NOT NULL,y REAL NOT NULL,created REAL NOT NULL,hidden INTEGER NOT NULL DEFAULT 0); CREATE INDEX IF NOT EXISTS near69_sender ON near69(sender,created); CREATE TABLE IF NOT EXISTS near69_audience(mid INTEGER,uid TEXT,PRIMARY KEY(mid,uid)); CREATE INDEX IF NOT EXISTS near69_audience_uid ON near69_audience(uid,mid); CREATE TABLE IF NOT EXISTS friends(sender TEXT,receiver TEXT,status TEXT,PRIMARY KEY(sender,receiver)); CREATE INDEX IF NOT EXISTS friends88_receiver ON friends(receiver,status); CREATE TABLE IF NOT EXISTS greetings(sender TEXT,receiver TEXT,kind TEXT,created REAL); CREATE TABLE IF NOT EXISTS reports(reporter TEXT,target TEXT,reason TEXT,created REAL);''')
 
 def leave(c,uid):
- for table in ('presence','character61','character64','motion68','pet70'):
+ for table in ('presence','character61','character64','motion68','pet70','vehicle88'):
   c.execute('DELETE FROM '+table+' WHERE uid=?',(uid,))
 
 def nearby69(c,uid,now):
@@ -95,6 +95,8 @@ def handle(h,c,u,d):
   jump=num('jump',0,2)
   moving=int(d.get('moving') is True)
   pet=pick('pet',('fox','rabbit','deer','cat','dragon'),'')
+  vehicle=pick('vehicle',('bike','motor'),'') if a==0 else ''
+  c.execute('INSERT OR REPLACE INTO vehicle88 VALUES(?,?)',(uid,vehicle))
   c.execute('INSERT OR REPLACE INTO pet70 VALUES(?,?)',(uid,pet))
   c.execute('INSERT OR REPLACE INTO presence VALUES(?,?,?,?,?)',(uid,x,y,a,now))
   c.execute('INSERT OR REPLACE INTO motion68 VALUES(?,?,?,?)',(uid,heading,moving,jump))
@@ -105,6 +107,7 @@ def handle(h,c,u,d):
   c.execute('DELETE FROM character64 WHERE uid NOT IN (SELECT uid FROM presence)')
   c.execute('DELETE FROM motion68 WHERE uid NOT IN (SELECT uid FROM presence)')
   c.execute('DELETE FROM pet70 WHERE uid NOT IN (SELECT uid FROM presence)')
+  c.execute('DELETE FROM vehicle88 WHERE uid NOT IN (SELECT uid FROM presence)')
   c.commit()
   def mutually_ready(first,second,kind):
    if not second or kind not in ('hand','photo','hug','duet'):return False
@@ -114,9 +117,10 @@ def handle(h,c,u,d):
    origin=c.execute('SELECT x,y,area,seen FROM presence WHERE uid=?',(first,)).fetchone()
    return bool(row and origin and row['seen']>now-4 and origin['seen']>now-4 and row['action']==kind and row['target']==first and row['area']==origin['area'] and math.hypot((row['x']-origin['x'])/35,(row['y']-origin['y'])/14)<3)
   players=[]; incoming=[]
-  for r in c.execute('SELECT p.uid AS id,u.name,p.x,p.y,p.area,q.body,q.skin,q.hair,q.style,q.dye,q.action,q.target,f.height,f.build,f.face,f.eye,m.heading,m.moving,m.jump,k.kind AS pet FROM presence p JOIN users u ON u.id=p.uid LEFT JOIN character61 q ON q.uid=p.uid LEFT JOIN character64 f ON f.uid=p.uid LEFT JOIN motion68 m ON m.uid=p.uid LEFT JOIN pet70 k ON k.uid=p.uid WHERE p.uid!=? AND p.seen>? AND p.uid NOT IN (SELECT uid FROM blocked) AND NOT EXISTS(SELECT 1 FROM ww_blocks b WHERE (b.owner=? AND b.target=p.uid) OR (b.target=? AND b.owner=p.uid)) ORDER BY CASE WHEN p.area=? THEN 0 ELSE 1 END, ((p.x-?)/35.0)*((p.x-?)/35.0)+((p.y-?)/14.0)*((p.y-?)/14.0), p.uid LIMIT 100',(uid,now-12,uid,uid,a,x,x,y,y)):
+  friend_ids={row[0] for row in c.execute("SELECT CASE WHEN sender=? THEN receiver ELSE sender END FROM friends WHERE status='accepted' AND (sender=? OR receiver=?)",(uid,uid,uid))}
+  for r in c.execute('SELECT p.uid AS id,u.name,p.x,p.y,p.area,q.body,q.skin,q.hair,q.style,q.dye,q.action,q.target,f.height,f.build,f.face,f.eye,m.heading,m.moving,m.jump,k.kind AS pet,veh.kind AS vehicle FROM presence p JOIN users u ON u.id=p.uid LEFT JOIN character61 q ON q.uid=p.uid LEFT JOIN character64 f ON f.uid=p.uid LEFT JOIN motion68 m ON m.uid=p.uid LEFT JOIN pet70 k ON k.uid=p.uid LEFT JOIN vehicle88 veh ON veh.uid=p.uid WHERE p.uid!=? AND p.seen>? AND p.uid NOT IN (SELECT uid FROM blocked) AND NOT EXISTS(SELECT 1 FROM ww_blocks b WHERE (b.owner=? AND b.target=p.uid) OR (b.target=? AND b.owner=p.uid)) ORDER BY CASE WHEN p.area=? THEN 0 ELSE 1 END, ((p.x-?)/35.0)*((p.x-?)/35.0)+((p.y-?)/14.0)*((p.y-?)/14.0), p.uid LIMIT 100',(uid,now-12,uid,uid,a,x,x,y,y)):
    v=dict(r)
-   v['friend']=int(bool(c.execute("SELECT 1 FROM friends WHERE status='accepted' AND ((sender=? AND receiver=?) OR (sender=? AND receiver=?))",(uid,v['id'],v['id'],uid)).fetchone()))
+   v['friend']=int(v['id'] in friend_ids)
    if v['friend'] and v['target']==uid and v['action'] in ('hand','photo','hug','duet') and v['area']==a and math.hypot((v['x']-x)/35,(v['y']-y)/14)<3 and c.execute('SELECT 1 FROM presence WHERE uid=? AND seen>?',(v['id'],now-4)).fetchone():
     incoming.append({'id':v['id'],'name':v['name'],'action':v['action']})
    if v['action'] in ('hand','photo','hug','duet') and not mutually_ready(v['id'],v['target'],v['action']):v['action']='idle'
