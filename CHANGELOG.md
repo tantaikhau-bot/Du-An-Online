@@ -1,5 +1,10 @@
 # WISH WORLD — Release history
 
+## V11.5.4 — Bridge & Grounding
+- Keep floating river lanterns out of bridge deck footprints; move fixed bridge lamps outward onto raised stone pedestals.
+- Preserve VRM appearance, use 92% relative scale for female avatars, keep male scale. Match studio camera to adjusted height.
+- Reduce idle pelvis roll and asymmetric knee flex, apply bounded sagittal leg balancing to reduce unequal sole clearance, settle exact root height and add two independent local contact shadows. Full horizontal foot lock is not included. Visual QA pending.
+
 ## V11.5.3 — Sole Contact
 - Sample actual posed shoe geometry (bounded cached vertex set), instead of relying only on rest-pose ankle height; retain ankle fallback when sampling fails. Match rendered terrain triangles, raised roads and bridge deck for idle contact. Near NPCs and peers receive the same correction. Shadow follows support points. Fix cumulative wrist roll. No avatar replacement. Full horizontal foot locking is not included.
 

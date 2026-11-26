@@ -25,17 +25,43 @@
    if(!best){const foot=hum.getRawBoneNode?.(side+'Foot')||hum.getNormalizedBoneNode(side+'Foot');if(foot){foot.getWorldPosition(p);const y=ground(p.x,p.z),sole=a.soleHeight?.[side];if(Number.isFinite(y)&&Number.isFinite(sole)&&Number.isFinite(p.y))best={side,error:y+sole*scale-p.y,x:p.x,z:p.z,y,source:'ankle'}}}if(best)rows.push(best);
   }return rows;
  }
- // Ankle height is calibrated in the rest pose. Align the lowest sole with terrain
- // after humanoid update; never force a nearly straight knee to reach a target.
+ // Balance the two visible soles before moving the root. Only bounded sagittal
+ // hinge adjustments; keep the existing normalized knee plane and foot pitch.
+ function balanceIdle(T,a,ground,rows){
+  const hum=a.vrm.humanoid,sign=a.legSign||1;
+  if(rows.length!==2||!rows.every(r=>r.source==='mesh'))return rows;
+  for(let i=0;i<2;i++){
+   const low=rows[0].error>rows[1].error?rows[0]:rows[1],high=rows.find(r=>r.side!==low.side),diff=low.error-high.error;
+   if(diff<.008||diff>.16)break;
+   const u=hum.getNormalizedBoneNode(low.side+'UpperLeg'),k=hum.getNormalizedBoneNode(low.side+'LowerLeg'),f=hum.getNormalizedBoneNode(low.side+'Foot');
+   if(!u||!k||!f||typeof hum.update!=='function')break;
+   const get=n=>hum.getRawBoneNode?.(low.side+n)||hum.getNormalizedBoneNode(low.side+n);
+   const A=get('UpperLeg').getWorldPosition(new T.Vector3()),B=get('LowerLeg').getWorldPosition(new T.Vector3()),C=get('Foot').getWorldPosition(new T.Vector3());
+   const l1=A.distanceTo(B),l2=B.distanceTo(C),len=A.distanceTo(C),bend=k.rotation.x*sign;
+   if(Math.min(l1,l2)<.05||bend<0||bend>.55)break;
+   const desired=Math.max(Math.abs(l1-l2)+.002,len-diff),cos=clamp((desired*desired-l1*l1-l2*l2)/(2*l1*l2),-1,1);
+   const change=clamp(Math.acos(cos)-bend,0,Math.min(.24,.62-bend));
+   if(change<.002)break;
+   const saved=[u.rotation.x,k.rotation.x,f.rotation.x];
+   u.rotation.x-=sign*change*.5;k.rotation.x+=sign*change;f.rotation.x-=sign*change*.5;
+   hum.update();const candidate=soleContacts(T,a,ground);
+   if(candidate.length===2&&Math.abs(candidate[0].error-candidate[1].error)<diff-.001){rows=candidate;}else{[u.rotation.x,k.rotation.x,f.rotation.x]=saved;hum.update();rows=soleContacts(T,a,ground);break}
+  }
+  return rows;
+ }
+ // Align the actual visible soles after the humanoid pose is updated.
  function groundIdle(T,a,ground,dt,gait,jump,mode){
   const allowed=!!ground&&!jump&&mode==='idle'&&gait<.15&&(a.motion?.run||0)<.10;
   const target=allowed?clamp(1-gait/.15,0,1):0;
   a.idleGroundWeight=jump||!ground||mode!=='idle'||gait>=.76?0:(a.idleGroundWeight||0)+(target-(a.idleGroundWeight||0))*(1-Math.exp(-Math.max(0,dt)/.085));
   if(a.idleGroundWeight<.005||!ground||jump)return null;
-  const root=a.root,rows=soleContacts(T,a,ground);
+  const root=a.root;let rows=soleContacts(T,a,ground);
+  if(allowed&&gait<.035&&a.idleGroundWeight>.92)rows=balanceIdle(T,a,ground,rows);
   if(!rows.length)return null;
   // A small positive clearance avoids visible clipping; use the most penetrating point.
-  const delta=clamp(Math.max(...rows.map(r=>r.error))+.002,-.28,.28)*a.idleGroundWeight;
+  const clearance=.001,limit=rows.every(r=>r.source==='mesh')?.34:.28;
+  const weight=allowed&&gait<.015&&a.idleGroundWeight>.95?1:a.idleGroundWeight;
+  const delta=clamp(Math.max(...rows.map(r=>r.error))+clearance,-limit,limit)*weight;
   if(root.parent){const p=root.getWorldPosition(new T.Vector3());p.y+=delta;root.position.copy(root.parent.worldToLocal(p))}else root.position.y+=delta;
   root.updateWorldMatrix(true,false);root.updateMatrixWorld(true);
   const contacts=rows.map(r=>({...r,gap:delta-r.error}));
