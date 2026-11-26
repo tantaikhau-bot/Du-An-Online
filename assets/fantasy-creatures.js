@@ -120,7 +120,8 @@
  const dist=(a,b)=>Math.hypot(a.x-b.x,a.z-b.z);
  function followTarget(kind,owner,heading,side=1){
   const gap=(followProfiles[kind]||followProfiles.fox).gap;
-  return {x:owner.x-Math.cos(heading)*gap*side+Math.sin(heading)*.65,z:owner.z-Math.sin(heading)*gap*side+Math.cos(heading)*.65};
+  // Avatar forward is (-sin(heading), -cos(heading)); offset behind and to one side.
+  return {x:owner.x+Math.sin(heading)*gap+Math.cos(heading)*.65*side,z:owner.z+Math.cos(heading)*gap-Math.sin(heading)*.65*side};
  }
  function safeSpawn(kind,owner,heading,walkable){
   for(const side of [1,-1]){const p=followTarget(kind,owner,heading,side);if(walkable(p.x,p.z))return p;}
@@ -148,5 +149,25 @@
   }
   state.blocked+=dt;state.speed*=Math.exp(-dt*8);state.mode='blocked';return {...pos,speed:0,mode:state.mode};
  }
- const api={KINDS,create,bind,animate,react,followProfiles,follower,followTarget,safeSpawn,followStep};if(typeof module!=='undefined')module.exports=api;else global.WWCreatures=api;
+ // V13.5: optional cosmetic wellbeing; no starvation, reward multiplier, or loss of pets.
+ const careRates135=Object.freeze({rabbit:5,fox:4,cat:3.5,deer:4.5,dragon:3});
+ function careState135(raw,kind,now=Date.now()){
+  raw=raw&&typeof raw==='object'?raw:{};
+  const validTime=Number.isFinite(now)&&now>=0?now:0;
+  const last=Number.isFinite(raw.updated)&&raw.updated>=0&&raw.updated<=validTime?raw.updated:validTime;
+  const hours=Math.min(12,(validTime-last)/3600000),number=(k,d)=>Number.isFinite(raw[k])?clamp(raw[k],0,100):d;
+  const mark=k=>Number.isFinite(raw[k])&&raw[k]>=0&&raw[k]<=validTime?raw[k]:0;
+  return {fullness:Math.max(30,number('fullness',85)-hours*(careRates135[kind]||4)),energy:Math.min(100,number('energy',90)+hours*6),mood:Math.max(40,number('mood',80)-hours*2),updated:validTime,touchAt:mark('touchAt'),restAt:mark('restAt')};
+ }
+ function careAction135(raw,kind,action,now=Date.now()){
+  const v=careState135(raw,kind,now);
+  if(action==='feed'){v.fullness=Math.min(100,v.fullness+28);v.mood=Math.min(100,v.mood+8)}
+  else if(action==='touch'&&(!v.touchAt||now-v.touchAt>=60000)){v.mood=Math.min(100,v.mood+12);v.touchAt=now}
+  else if(action==='rest'&&(!v.restAt||now-v.restAt>=120000)){v.energy=Math.min(100,v.energy+24);v.restAt=now}
+  return v;
+ }
+ function careTravel135(raw,kind,seconds,now=Date.now()){
+  const v=careState135(raw,kind,now);v.energy=Math.max(35,v.energy-clamp(Number.isFinite(seconds)?seconds:0,0,60)*.09);return v;
+ }
+ const api={KINDS,create,bind,animate,react,followProfiles,follower,followTarget,safeSpawn,followStep,careState135,careAction135,careTravel135};if(typeof module!=='undefined')module.exports=api;else global.WWCreatures=api;
 })(typeof globalThis!=='undefined'?globalThis:this);

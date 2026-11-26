@@ -40,3 +40,22 @@ console.log('Fantasy creatures: unique geometry, shared resources, grounded rest
  a.ok(Math.abs(detour.z)>.01&&detour.speed>0);
  console.log('V12.2 five pet profiles, acceleration, wait, obstacle detour and safe recall passed');
 }
+
+// V13.5 orientation and independent non-punitive care meters.
+for(const kind of C.KINDS){
+ for(const h of [0,Math.PI/2,Math.PI,-Math.PI/2]){
+  const owner={x:3,z:4},q=C.followTarget(kind,owner,h);
+  const behind=(q.x-owner.x)*Math.sin(h)+(q.z-owner.z)*Math.cos(h);
+  assert.ok(Math.abs(behind-C.followProfiles[kind].gap)<1e-6);
+ }
+ const now=1700000000000,initial=C.careState135(null,kind,now);
+ const later=C.careState135(initial,kind,now+86400000*30);
+ assert.ok(later.fullness>=30&&later.energy<=100&&later.mood>=40);
+ const fed=C.careAction135(later,kind,'feed',later.updated);assert.ok(fed.fullness>=later.fullness&&fed.fullness<=100);
+ const moved=C.careTravel135(fed,kind,60,later.updated);assert.ok(moved.energy<fed.energy&&moved.energy>=35);
+ const rest=C.careAction135(moved,kind,'rest',later.updated);assert.ok(rest.energy>moved.energy);
+ assert.equal(C.careAction135(rest,kind,'rest',later.updated+1).restAt,rest.restAt);
+ const touched=C.careAction135(rest,kind,'touch',later.updated);assert.ok(touched.mood>=rest.mood);
+ assert.ok(Object.values(C.careState135({fullness:NaN,energy:Infinity,mood:-500,updated:Infinity},kind,now)).every(Number.isFinite));
+}
+console.log('V13.5 five species care policy and behind-owner orientation passed');
