@@ -1,5 +1,11 @@
 # WISH WORLD — Release history
 
+## V11.2 — Character Identity
+- Sample five CC0 KayKit authored walk/run clips into bounded thigh, knee, upper-arm and elbow channels and blend them with existing VRM motion. No imported root translation or mocap claim; safe procedural fallback if asset fails.
+- Four extra female VRoid beta CC0 base models (Shibu, Vivi, Vita, Victoria Rubin), eight bases total. Existing male bases remain two. Twenty themed accessory designs (capes, scarves, emblems, sword sheaths, ornaments) attached to animated bones; no independently sculpted faces or full outfit skinning.
+- Retain stable avatar IDs and preview/world identity. Bound local avatar cache and source buffers to avoid retaining every model.
+- KayKit Character Animations (Kay Lousberg, CC0): https://kaylousberg.com/game-assets/character-animations; pinned GLB copy from NoLimitNexus/game-models. VRoid beta assets: https://vroid.pixiv.help/hc/en-us/articles/4402614652569-Do-VRoid-Studio-s-sample-models-come-with-conditions-of-use.
+
 ## V11.1 — Natural Arm Motion
 - Replace fixed-axis elbow rotation with direction-based upper/lower-arm posing relative to the torso; keep arms outward and wrists on their own side. This is a clearance heuristic, not full mesh collision or cloth simulation.
 - Preserve twenty movement profiles, seated and gesture poses; measure actual raw arm joint angles and clearance in browser regression.

@@ -1,6 +1,6 @@
-/* V11.1: skinned VRM avatar pipeline. CC0 VRoid sample models, not original game artwork. */
+/* V11.2: skinned VRM avatar pipeline. CC0 VRoid sample models, not original game artwork. */
 (function(){
- const sources={male:'Sakurada_Fumiriya',female:'Sendagaya_Shino',male2:'HairSample_Male',female2:'HairSample_Female'};
+ const sources={male:'Sakurada_Fumiriya',female:'Sendagaya_Shino',male2:'HairSample_Male',female2:'HairSample_Female',female3:'Sendagaya_Shibu',female4:'Vivi',female5:'Vita',female6:'Victoria_Rubin'};
  const roster=[
  {id:'m1',gender:'male',name:'Lữ khách',source:'male',hair:0xffffff,cloth:0xffffff,height:1},
  {id:'m2',gender:'male',name:'Kiếm sĩ',source:'male2',hair:0x3c4259,cloth:0x7395d9,height:1.06},
@@ -9,30 +9,30 @@
  {id:'m5',gender:'male',name:'Dạ Hành',source:'male',hair:0x57556e,cloth:0x717bba,height:1.08},
  {id:'f1',gender:'female',name:'Nguyệt Hoa',source:'female',hair:0xffffff,cloth:0xffffff,height:1},
  {id:'f2',gender:'female',name:'Lam Ngọc',source:'female2',hair:0x7a9bd8,cloth:0x89c4e5,height:1.02},
- {id:'f3',gender:'female',name:'Ánh Mai',source:'female',hair:0xe9b66c,cloth:0xe4c17c,height:.96},
- {id:'f4',gender:'female',name:'Tử Vân',source:'female2',hair:0xb799da,cloth:0xbaa3d8,height:1.04},
- {id:'f5',gender:'female',name:'Bạch Linh',source:'female',hair:0xd0e0ee,cloth:0x93c4bd,height:1.06},
+ {id:'f3',gender:'female',name:'Ánh Mai',source:'female4',hair:0xe9b66c,cloth:0xe4c17c,height:.96},
+ {id:'f4',gender:'female',name:'Tử Vân',source:'female3',hair:0xb799da,cloth:0xbaa3d8,height:1.04},
+ {id:'f5',gender:'female',name:'Bạch Linh',source:'female5',hair:0xd0e0ee,cloth:0x93c4bd,height:1.06},
  {"id":"m6","gender":"male","name":"Băng Kiếm","source":"male2","hair":10337752,"cloth":10012120,"height":1.05},
  {"id":"m7","gender":"male","name":"Lâm Vũ","source":"male","hair":6707015,"cloth":9088629,"height":1.01},
  {"id":"m8","gender":"male","name":"Thiên Quang","source":"male2","hair":14992530,"cloth":14996909,"height":1.09},
  {"id":"m9","gender":"male","name":"Hắc Phong","source":"male","hair":3881288,"cloth":8551569,"height":0.99},
  {"id":"m10","gender":"male","name":"Hải Đăng","source":"male2","hair":8303542,"cloth":8497100,"height":1.04},
- {"id":"f6","gender":"female","name":"Hồng Liên","source":"female2","hair":14385804,"cloth":14261167,"height":0.99},
- {"id":"f7","gender":"female","name":"Thanh Trúc","source":"female","hair":8101509,"cloth":10148279,"height":1.03},
- {"id":"f8","gender":"female","name":"Băng Tâm","source":"female2","hair":13229286,"cloth":11196399,"height":1.07},
- {"id":"f9","gender":"female","name":"Dạ Nguyệt","source":"female","hair":5854323,"cloth":9207995,"height":1.01},
- {"id":"f10","gender":"female","name":"Kim Vũ","source":"female2","hair":14992257,"cloth":15126948,"height":0.97}
+ {"id":"f6","gender":"female","name":"Hồng Liên","source":"female6","hair":14385804,"cloth":14261167,"height":0.99},
+ {"id":"f7","gender":"female","name":"Thanh Trúc","source":"female4","hair":8101509,"cloth":10148279,"height":1.03},
+ {"id":"f8","gender":"female","name":"Băng Tâm","source":"female5","hair":13229286,"cloth":11196399,"height":1.07},
+ {"id":"f9","gender":"female","name":"Dạ Nguyệt","source":"female3","hair":5854323,"cloth":9207995,"height":1.01},
+ {"id":"f10","gender":"female","name":"Kim Vũ","source":"female6","hair":14992257,"cloth":15126948,"height":0.97}
  ];
  function preset(id,gender='male'){return roster.find(p=>p.id===id)||roster.find(p=>p.gender===gender)||roster[0]}
  function applyPreset(T,a,p){
   if(a.applied===p.id)return;
   a.root.scale.setScalar(a.baseScale*p.height);
   for(const {material,base,role} of a.colors){material.color.copy(base);if(role==='hair')material.color.multiply(new T.Color(p.hair));else if(role==='cloth')material.color.multiply(new T.Color(p.cloth))}
-  a.applied=p.id;a.motionProfile=p.id;a.contacts={};a.contactFrame=null;if(typeof WWMotion!=='undefined')a.motion=WWMotion.newState();
+  a.applied=p.id;a.motionProfile=p.id;a.contacts={};a.contactFrame=null;if(typeof WWMotion!=='undefined')a.motion=WWMotion.newState();a.clipWeight=0;if(typeof WWIdentity!=='undefined'&&a.vrm){a.vrm.humanoid.resetNormalizedPose?.();a.vrm.humanoid.update();WWIdentity.apply(T,a,p)}
  }
  const remote='https://raw.githubusercontent.com/madjin/vrm-samples/master/vroid/beta/';
- let lib;const buffers=new Map();async function modelBuffer(kind){if(!buffers.has(kind)){const task=fetch('/assets/'+sources[kind]+'.vrm').then(r=>{if(!r.ok)throw Error('VRM HTTP '+r.status);return r.arrayBuffer()}).catch(e=>{buffers.delete(kind);throw e});buffers.set(kind,task)}return buffers.get(kind)}
- async function load(T,kind){
+ let lib;const buffers=new Map();async function modelBuffer(kind){if(!buffers.has(kind)){const task=fetch('/assets/'+sources[kind]+'.vrm').then(r=>{if(!r.ok)throw Error('VRM HTTP '+r.status);return r.arrayBuffer()}).catch(e=>{buffers.delete(kind);throw e});buffers.set(kind,task);while(buffers.size>4)buffers.delete(buffers.keys().next().value)}return buffers.get(kind)}
+ async function load(T,kind){WWClips.ready(T);
   lib??=Promise.all([import('three/addons/loaders/GLTFLoader.js'),import('/assets/three-vrm.module.js').catch(()=>import('https://cdn.jsdelivr.net/npm/@pixiv/three-vrm@2.1.2/lib/three-vrm.module.js'))]);
   let modules;try{modules=await lib}catch(e){lib=null;throw e}const [{GLTFLoader},{VRMLoaderPlugin,VRMUtils}]=modules;
   const loader=new GLTFLoader();loader.register(parser=>new VRMLoaderPlugin(parser));
@@ -55,7 +55,7 @@
  }
  function animate(a,dt,gait,mode='idle',jump=0,detail=0,ground=null){
   const {vrm}=a;dt=Math.min(.35,Math.max(0,dt));a.elapsed+=dt;a.motion??=WWMotion.newState();let j=typeof jump==='object'?jump:{height:jump,velocity:0},v=WWMotion.step(a.motion,dt,gait,j,mode,a.motionProfile),t=a.elapsed;
-  a.weight=a.motion.walk+a.motion.run;
+  v=WWClips.apply(a,v,j,mode,dt);a.weight=a.motion.walk+a.motion.run;
   function bone(name,x=0,y=0,z=0){let b=vrm.humanoid.getNormalizedBoneNode(name);if(b)b.rotation.set(x,y,z)}
   const left=a.armDown?.left??1,right=a.armDown?.right??-1,sign=a.legSign||1;
   const hips=vrm.humanoid.getNormalizedBoneNode('hips');if(hips&&a.hipsRest){hips.position.copy(a.hipsRest);hips.position.y+=v.hipY}
@@ -73,7 +73,7 @@
   const em=vrm.expressionManager;if(em){for(const k of ['happy','angry','surprised','blink']){let value=k==='blink'?Math.max(0,1-Math.abs((a.elapsed%4.9)-4.65)/.13):k==='happy'&&['happy','smile','wave','cheer','portrait'].includes(mode)?0.75:k===mode?.8:0;if(em.getExpression(k))em.setValue(k,value)}}
   if(detail===0&&ground){vrm.humanoid.update();a.footIK=WWFootIK.apply(a.T,a,ground,dt,gait,WWMotion.phaseOf(j)||a.motion.jump>.12,mode)}else{WWFootIK.reset(a);a.footIK=null}
   if(detail===0){for(let remain=dt;remain>0;){let d=Math.min(.033,remain);vrm.update(d);remain-=d}}else{vrm.humanoid.update();vrm.expressionManager?.update();}
-  a.motionState=a.motion.state;a.poseCheck={profile:a.motionProfile,legSign:sign,hip:[v.hipL,v.hipR],knee:['left','right'].map(side=>(vrm.humanoid.getNormalizedBoneNode(side+'LowerLeg')?.rotation.x||0)*sign),ankle:[v.ankleL,v.ankleR],jumpWeight:a.motion.jump};
+  a.motionState=a.motion.state;a.poseCheck={profile:a.motionProfile,clip:a.clipMotion,identity:a.identityType,legSign:sign,hip:[v.hipL,v.hipR],knee:['left','right'].map(side=>(vrm.humanoid.getNormalizedBoneNode(side+'LowerLeg')?.rotation.x||0)*sign),ankle:[v.ankleL,v.ankleR],jumpWeight:a.motion.jump};
   if(detail===0&&['idle','walk','run'].includes(mode)){
    a.root.updateWorldMatrix(true,true);
    const forward=a.modelForward.clone().applyQuaternion(a.root.getWorldQuaternion(new a.T.Quaternion()));

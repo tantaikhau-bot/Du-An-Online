@@ -32,6 +32,7 @@ jobs:
       - run: npm install --no-save --no-package-lock three@0.164.1 playwright@1.51.1 @pixiv/three-vrm@2.1.2
       - run: node test_foot_ik.cjs
       - run: node test_arm_motion.cjs
+      - run: node test_character_identity.cjs
       - run: npx playwright install --with-deps chromium
       - run: python tools/fetch_vrm.py
       - run: node test_anime_browser.cjs

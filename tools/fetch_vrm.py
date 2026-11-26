@@ -2,7 +2,7 @@
 import urllib.request,json,struct,hashlib
 from pathlib import Path
 ROOT=Path(__file__).resolve().parents[1]/'assets'
-for name in ('Sakurada_Fumiriya','Sendagaya_Shino','HairSample_Male','HairSample_Female'):
+for name in ('Sakurada_Fumiriya','Sendagaya_Shino','HairSample_Male','HairSample_Female','Sendagaya_Shibu','Vivi','Vita','Victoria_Rubin'):
  url='https://raw.githubusercontent.com/madjin/vrm-samples/master/vroid/beta/'+name+'.vrm'
  with urllib.request.urlopen(url,timeout=45) as r:data=r.read(40*1024*1024+1)
  if len(data)>40*1024*1024 or len(data)<20 or data[:4]!=b'glTF' or struct.unpack_from('<I',data,8)[0]!=len(data):raise ValueError('Invalid model '+name)
@@ -12,3 +12,12 @@ for name in ('Sakurada_Fumiriya','Sendagaya_Shino','HairSample_Male','HairSample
  if meta.get('licenseName')!='CC0' or not doc.get('skins'):raise ValueError('Missing VRM skin or metadata')
  print(name,len(data),hashlib.sha256(data).hexdigest(),meta.get('licenseName'),meta.get('title'))
  out=ROOT/(name+'.vrm');tmp=out.with_suffix('.part');tmp.write_bytes(data);tmp.replace(out)
+
+# Licensed, content-pinned movement pack; use the same validated server cache path.
+import sys
+sys.path.insert(0,str(ROOT.parent))
+from static_files import cached_asset
+import shutil
+motion=cached_asset('locomotion-kaykit.glb')
+if motion is None:raise ValueError('Missing licensed movement pack')
+shutil.copyfile(motion,ROOT/'locomotion-kaykit.glb')
