@@ -81,7 +81,7 @@ class Handler(BaseHTTPRequestHandler):
    if self.command!='HEAD':self.wfile.write(b)
    return
   if page=='/api/version':
-   return self.reply(200,{'version':'10.3','build':'10.3-portrait','name':'Anime Portrait','features':['portrait-closeup','secondary-hair-motion','anime-toon-character','facial-expressions','jump-anticipation','head-and-icon','database-connection-cleanup','mobile-clarity-guard','verified-rewards','save-validation','local-asset-support','effects-first-adaptive-quality','river-static-instancing','lightweight-water','near-character-detail','performance-diagnostics','unified-inventory','shared-car','ceremony-rsvp','safe-sync','shared-world','version-check']})
+   return self.reply(200,{'version':'10.4','build':'10.4-skinned-avatar','name':'Skinned Avatar','features':['vrm-skinned-avatar-beta','portrait-closeup','secondary-hair-motion','anime-toon-character','facial-expressions','jump-anticipation','head-and-icon','database-connection-cleanup','mobile-clarity-guard','verified-rewards','save-validation','local-asset-support','effects-first-adaptive-quality','river-static-instancing','lightweight-water','near-character-detail','performance-diagnostics','unified-inventory','shared-car','ceremony-rsvp','safe-sync','shared-world','version-check']})
   if page=='/healthz':
    try:
     with db() as c:c.execute('SELECT 1 FROM users LIMIT 1').fetchone()
