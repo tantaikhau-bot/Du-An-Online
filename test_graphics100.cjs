@@ -4,7 +4,7 @@ const assert=require('node:assert/strict');
 const fs=require('node:fs');
 const h=fs.readFileSync(require('node:path').join(__dirname,'index.html'),'utf8');
 function extract(a,b){const start=h.indexOf(a),end=h.indexOf(b,start+1);assert(start>=0&&end>start);return h.slice(start,end)}
-const {clarityStep100,resolution77}=new Function(extract('function clarityStep100(','function openPerformance100(')+extract('function resolution77(','const gl74=')+'return {clarityStep100,resolution77}')();
+const {clarityStep100,resolution77,WW_PERF118,perfPreset118,perfWarning118}=require('./assets/game-policy.js');
 let n=0;
 let v=clarityStep100({tier:1,scale:1},7,140,45,true,false);assert.equal(v.tier,2);assert.equal(v.scale,1);n++;
 v=clarityStep100(v,7,140,45,true,false);assert(v.scale<1);assert.equal(v.tier,2);n++;
@@ -24,3 +24,15 @@ for (const [w,h] of [[390,844],[844,390]]) {
 assert.equal(clarityStep100({tier:2,scale:1.34},45,25,45,true,false).scale,1.35);
 let scripts=0;for(const m of h.matchAll(/<script\b([^>]*)>([\s\S]*?)<\/script>/gi)){if(/\bsrc\s*=/.test(m[1])||/type\s*=\s*["'](?:module|importmap|application\/ld\+json)/.test(m[1]))continue;new Function(m[2]);scripts++}
 console.log(n+' policy cases and '+scripts+' inline scripts passed');
+
+const q=s=>new URLSearchParams(s);
+assert.equal(Object.keys(WW_PERF118).length,5);
+assert.equal(perfPreset118(q(''),null,4,8,false),'low');
+assert.equal(perfPreset118(q(''),null,8,4,true),'low');
+assert.equal(perfPreset118(q(''),null,undefined,undefined,true),'balanced');
+for(const k of Object.keys(WW_PERF118))assert.equal(perfPreset118(q('gfx='+k),'balanced',2,2,true),k);
+assert.equal(perfPreset118(q('perf=1&hd=1'),'sharp',16,16,false),'battery');
+assert.equal(perfPreset118(q('hd=1'),'low',4,4,true),'sharp');
+assert.deepEqual(perfWarning118(20,65,60,.9),{framePressure:true,heapPressure:true});
+assert.deepEqual(perfWarning118(30,34,30,null),{framePressure:false,heapPressure:false});
+console.log('Five profiles, URL compatibility, device heuristics and pressure cases passed');
