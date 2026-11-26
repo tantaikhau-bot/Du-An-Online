@@ -1,5 +1,10 @@
 # WISH WORLD — Release history
 
+## V11.1 — Natural Arm Motion
+- Replace fixed-axis elbow rotation with direction-based upper/lower-arm posing relative to the torso; keep arms outward and wrists on their own side. This is a clearance heuristic, not full mesh collision or cloth simulation.
+- Preserve twenty movement profiles, seated and gesture poses; measure actual raw arm joint angles and clearance in browser regression.
+- V11.0 live audit found running elbow flex only 0.104–0.119 rad across four models. User video showed straight arms brushing through clothing.
+
 ## V11.0 — Character Locomotion Personalities
 - Replace unrestricted world-space foot locks with bounded vertical-only sagittal corrections. Disable IK on running, jump phases, fast turns and large frame steps; reset contact on preset changes.
 - Twenty unique authored profiles with distinct stride, cadence, arm swing, elbow flex, sway, forward lean and bounce. Normalize forward signs from rig toe direction. Gait key poses and bounded knee/hip/ankle motion; softer four-phase jump and landing.
