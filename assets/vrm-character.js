@@ -1,4 +1,4 @@
-/* V11.0: skinned VRM avatar pipeline. CC0 VRoid sample models, not original game artwork. */
+/* V11.1: skinned VRM avatar pipeline. CC0 VRoid sample models, not original game artwork. */
 (function(){
  const sources={male:'Sakurada_Fumiriya',female:'Sendagaya_Shino',male2:'HairSample_Male',female2:'HairSample_Female'};
  const roster=[
@@ -69,6 +69,7 @@
   if(mode==='sit'||mode==='ride'){bone('leftUpperLeg',-sign*1.1);bone('rightUpperLeg',-sign*1.1);bone('leftLowerLeg',sign*1.2);bone('rightLowerLeg',sign*1.2);bone('leftUpperArm',-.35,0,left*1.25);bone('rightUpperArm',-.35,0,right*1.25)}
   if(mode==='dance'||mode==='duet'){bone('leftUpperArm',Math.sin(t*4)*.4,0,left*.85);bone('rightUpperArm',-Math.sin(t*4)*.4,0,right*.85);bone('spine',0,Math.sin(t*2)*.15,Math.sin(t*4)*.09)}
   if(mode==='wave'){bone('rightUpperArm',-.25,0,-right*.25);bone('rightLowerArm',-.8,0,Math.sin(t*5)*.35)}
+  if(!['sit','ride','dance','duet','wave'].includes(mode))WWArms.apply(a,v);
   const em=vrm.expressionManager;if(em){for(const k of ['happy','angry','surprised','blink']){let value=k==='blink'?Math.max(0,1-Math.abs((a.elapsed%4.9)-4.65)/.13):k==='happy'&&['happy','smile','wave','cheer','portrait'].includes(mode)?0.75:k===mode?.8:0;if(em.getExpression(k))em.setValue(k,value)}}
   if(detail===0&&ground){vrm.humanoid.update();a.footIK=WWFootIK.apply(a.T,a,ground,dt,gait,WWMotion.phaseOf(j)||a.motion.jump>.12,mode)}else{WWFootIK.reset(a);a.footIK=null}
   if(detail===0){for(let remain=dt;remain>0;){let d=Math.min(.033,remain);vrm.update(d);remain-=d}}else{vrm.humanoid.update();vrm.expressionManager?.update();}
@@ -76,7 +77,7 @@
   if(detail===0&&['idle','walk','run'].includes(mode)){
    a.root.updateWorldMatrix(true,true);
    const forward=a.modelForward.clone().applyQuaternion(a.root.getWorldQuaternion(new a.T.Quaternion()));
-   a.poseCheck.rawLeg=['left','right'].map(side=>{
+   a.poseCheck.rawArm=WWArms.measure(a);a.poseCheck.rawLeg=['left','right'].map(side=>{
     const get=n=>vrm.humanoid.getRawBoneNode(side+n)?.getWorldPosition(new a.T.Vector3()),A=get('UpperLeg'),B=get('LowerLeg'),C=get('Foot');if(!A||!B||!C)return null;
     const thigh=B.clone().sub(A),shin=C.clone().sub(B),axis=C.clone().sub(A).normalize(),bend=B.clone().sub(A);bend.addScaledVector(axis,-bend.dot(axis));
     return {flex:thigh.angleTo(shin),forward:bend.dot(forward),lateral:bend.clone().addScaledVector(forward,-bend.dot(forward)).length(),thigh:thigh.length(),shin:shin.length()};
