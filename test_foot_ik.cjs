@@ -29,3 +29,6 @@ const a3={root:r3,baseScale:1,soleHeight:{left:.02,right:.02},motion:{run:0},vrm
 
 // V11.5.4: stationary sole offset must be exact at settled idle and release when airborne.
 for(let i=0;i<90;i++){r3.position.y=.09;c3=IK.groundIdle(T,a3,()=>.035,1/60,0,false,'idle')}assert.ok(c3.maxError<.002);assert.equal(c3.planted,2);r3.position.y=.09;assert.equal(IK.groundIdle(T,a3,()=>.035,1/60,0,true,'idle'),null);
+
+// Settled idle support anchor counteracts small lateral drift and releases on jump.
+r2.position.set(0,0,0);a2.idleAnchor1170=null;a2.idleGroundWeight=1;IK.groundIdle(T,a2,()=>1,1/60,0,false,'idle');assert.ok(a2.idleAnchor1170);const mid=lf.getWorldPosition(new T.Vector3()).add(rf.getWorldPosition(new T.Vector3())).multiplyScalar(.5);r2.position.set(.02,0,0);IK.groundIdle(T,a2,()=>1,1/60,0,false,'idle');const mid2=lf.getWorldPosition(new T.Vector3()).add(rf.getWorldPosition(new T.Vector3())).multiplyScalar(.5);assert.ok(Math.abs(mid.x-mid2.x)<.001);IK.groundIdle(T,a2,()=>1,1/60,0,true,'idle');assert.equal(a2.idleAnchor1170,null);console.log('Idle support midpoint locked and released on jump');
