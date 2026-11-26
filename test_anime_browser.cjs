@@ -31,6 +31,11 @@ const fs=require('node:fs'),os=require('node:os'),path=require('node:path'),asse
   await page.waitForFunction(()=>window.wwGraphics59?.npcVRM>=1,{},{timeout:90000});
   await page.waitForFunction(()=>window.wwGraphics59?.footIK?.planted>=1,{},{timeout:45000});
   const contact=await page.evaluate(()=>window.wwGraphics59.footIK);assert.ok(Number.isFinite(contact.maxError));console.log('Live VRM stance diagnostic',contact);
+  await page.keyboard.down('d');try{await page.waitForFunction(()=>window.wwGraphics59?.motionState==='walk',{},{timeout:30000});}finally{await page.keyboard.up('d')}
+  await page.waitForFunction(()=>window.wwGraphics59?.motionState==='idle',{},{timeout:30000});
+  await page.evaluate(()=>{window.wwGraphics59.motionHistory=[];jumpRequest()});
+  await page.waitForFunction(()=>window.wwGraphics59?.motionHistory?.includes('jump_land'),{},{timeout:45000});
+  const states=await page.evaluate(()=>window.wwGraphics59.motionHistory);for(const phase of ['jump_start','jump_takeoff','jump_air','jump_land'])assert.ok(states.includes(phase),states.join(','));console.log('Browser walking and jump transitions:',states);
   fs.mkdirSync('test-output',{recursive:true});
   await page.screenshot({path:'test-output/vrm-world.png',timeout:120000});
   await page.evaluate(()=>studio12());
