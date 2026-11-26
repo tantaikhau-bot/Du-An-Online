@@ -1,8 +1,9 @@
 """V5.6 Together: authenticated text chat, mutual companionship, blocking and reporting."""
-import time, re, unicodedata
+import time, re, unicodedata, secrets
+from datetime import date, timedelta
 RETENTION=7*86400
 def init(c):
- c.executescript("""CREATE TABLE IF NOT EXISTS ww_gifts80(id INTEGER PRIMARY KEY AUTOINCREMENT,sender TEXT NOT NULL,receiver TEXT NOT NULL,kind TEXT NOT NULL,created INTEGER NOT NULL); CREATE INDEX IF NOT EXISTS ww_gifts80_sender ON ww_gifts80(sender,created); CREATE INDEX IF NOT EXISTS ww_gifts80_receiver ON ww_gifts80(receiver,created); CREATE TABLE IF NOT EXISTS ww_vows80(a TEXT,b TEXT,first TEXT,second TEXT,created INTEGER,PRIMARY KEY(a,b)); CREATE TABLE IF NOT EXISTS ww_blocks(owner TEXT, target TEXT, PRIMARY KEY(owner,target));
+ c.executescript("""CREATE TABLE IF NOT EXISTS ww_pairplan89(a TEXT NOT NULL,b TEXT NOT NULL,proposer TEXT NOT NULL,theme TEXT NOT NULL,day TEXT NOT NULL,revision TEXT NOT NULL,accepted INTEGER NOT NULL DEFAULT 0,PRIMARY KEY(a,b)); CREATE TABLE IF NOT EXISTS ww_gifts80(id INTEGER PRIMARY KEY AUTOINCREMENT,sender TEXT NOT NULL,receiver TEXT NOT NULL,kind TEXT NOT NULL,created INTEGER NOT NULL); CREATE INDEX IF NOT EXISTS ww_gifts80_sender ON ww_gifts80(sender,created); CREATE INDEX IF NOT EXISTS ww_gifts80_receiver ON ww_gifts80(receiver,created); CREATE TABLE IF NOT EXISTS ww_vows80(a TEXT,b TEXT,first TEXT,second TEXT,created INTEGER,PRIMARY KEY(a,b)); CREATE TABLE IF NOT EXISTS ww_blocks(owner TEXT, target TEXT, PRIMARY KEY(owner,target));
  CREATE TABLE IF NOT EXISTS ww_pairs(sender TEXT, receiver TEXT, status TEXT, created INTEGER, PRIMARY KEY(sender,receiver));
  CREATE TABLE IF NOT EXISTS ww_chat(id INTEGER PRIMARY KEY AUTOINCREMENT, sender TEXT NOT NULL, receiver TEXT, body TEXT NOT NULL, created INTEGER NOT NULL, hidden INTEGER NOT NULL DEFAULT 0);
  CREATE INDEX IF NOT EXISTS ww_chat_sender ON ww_chat(sender,created);
@@ -21,6 +22,7 @@ def pair(c,u):
 def other(p,u):
  return p['receiver'] if p['sender']==u else p['sender']
 def end_pair(c,a,b):
+ c.execute('DELETE FROM ww_pairplan89 WHERE a=? AND b=?',tuple(sorted((a,b))))
  c.execute('DELETE FROM ww_vows80 WHERE a=? AND b=?',tuple(sorted((a,b))))
  c.execute('DELETE FROM ww_pairs WHERE (sender=? AND receiver=?) OR (sender=? AND receiver=?)',(a,b,b,a))
 def clean_body(v):
@@ -33,6 +35,37 @@ def clean_body(v):
 def handle(h,c,u,d):
  uid=u['id']; action=h.path.rsplit('/',1)[-1]; now=int(time.time()); reply=h.reply
  def err(status,msg):return reply(status,{'error':msg})
+ if action=='pair89':
+  p=pair(c,uid)
+  if not p:return reply(200,{'pair':None,'plan':None})
+  target=other(p,uid)
+  if not available(c,target) or blocked(c,uid,target) or not friend(c,uid,target):return reply(200,{'pair':None,'plan':None})
+  a,b=sorted((uid,target))
+  peer=dict(c.execute('SELECT id,name FROM users WHERE id=?',(target,)).fetchone())
+  row=c.execute('SELECT proposer,theme,day AS date,revision,accepted FROM ww_pairplan89 WHERE a=? AND b=?',(a,b)).fetchone()
+  return reply(200,{'pair':peer,'plan':dict(row) if row else None})
+ if action in ('propose89','accept89','cancel89'):
+  target=d.get('id')
+  if not isinstance(target,str) or target==uid:return err(400,'Người chơi không hợp lệ')
+  c.execute('BEGIN IMMEDIATE')
+  p=pair(c,uid)
+  if not p or other(p,uid)!=target or not available(c,target) or blocked(c,uid,target) or not friend(c,uid,target):return err(403,'Cần là bạn đồng hành chưa bị chặn')
+  a,b=sorted((uid,target))
+  if action=='cancel89':
+   c.execute('DELETE FROM ww_pairplan89 WHERE a=? AND b=?',(a,b));c.commit();return reply(200,{'ok':True})
+  if action=='propose89':
+   theme=d.get('theme');day=d.get('date')
+   if theme not in ('classic','ocean','rose','forest') or not isinstance(day,str):return err(400,'Phong cách hoặc ngày không hợp lệ')
+   if day:
+    try:
+     chosen=date.fromisoformat(day)
+     if chosen.isoformat()!=day or not date.today()<=chosen<=date.today()+timedelta(days=365):return err(400,'Chọn ngày trong một năm tới')
+    except ValueError:return err(400,'Ngày không hợp lệ')
+   c.execute('INSERT OR REPLACE INTO ww_pairplan89 VALUES(?,?,?,?,?,?,0)',(a,b,uid,theme,day,secrets.token_hex(16)));c.commit();return reply(200,{'ok':True})
+  revision=d.get('revision')
+  if not isinstance(revision,str) or len(revision)!=32:return err(400,'Phiên bản không hợp lệ')
+  if not c.execute('UPDATE ww_pairplan89 SET accepted=1 WHERE a=? AND b=? AND proposer!=? AND revision=? AND accepted=0',(a,b,uid,revision)).rowcount:return err(409,'Đề xuất đã thay đổi hoặc cần người kia xác nhận')
+  c.commit();return reply(200,{'ok':True})
  if action=='life80':
   p=pair(c,uid); peer=None; vow=None
   if p:
