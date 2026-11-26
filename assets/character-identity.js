@@ -7,11 +7,11 @@
  f1:['Nguyệt Hoa · trăng và hoa','moon',0xd3d9f2,0xfff2ca],f2:['Lam Ngọc · ngọc xanh','gem',0x427da6,0xade9fa],f3:['Ánh Mai · hoa mùa xuân','flower',0xf3c36d,0xffefc1],f4:['Tử Vân · mây tím','scarf',0x8274ae,0xe1d2fa],f5:['Bạch Linh · linh quang trắng','crest',0xd2e7ed,0xffffff],
  f6:['Hồng Liên · cánh sen','flower',0xbc5375,0xffbdcf],f7:['Thanh Trúc · trúc xanh','leaf',0x629b78,0xd9f1b9],f8:['Băng Tâm · tinh thể băng','gem',0x9acfe8,0xf1fdff],f9:['Dạ Nguyệt · trăng đêm','moon',0x494464,0xc6c9fc],f10:['Kim Vũ · lông vũ vàng','feather',0xc89a4e,0xffe2a2]
  };
- function clear(a){for(const group of a.identityMeshes||[]){group.removeFromParent();const gs=new Set(),ms=new Set();group.traverse(o=>{if(o.isMesh){gs.add(o.geometry);ms.add(o.material)}});for(const g of gs)g.dispose();for(const m of ms)m.dispose()}a.identityMeshes=[]}
+ function clear(a){for(const group of a.identityMeshes||[]){group.removeFromParent();const gs=new Set(),ms=new Set();group.traverse(o=>{if(o.isMesh){gs.add(o.geometry);ms.add(o.material)}});for(const g of gs)g.dispose();for(const m of ms)m.dispose()}a.identityMeshes=[];a.identityMotion=[];a.identityType=null}
  function apply(T,a,p){
   if(!a.vrm||!a.root?.isObject3D)return;clear(a);
   const d=designs[p.id];if(!d)return;
-  const [,type,color,accent]=d,root=a.root,hum=a.vrm.humanoid;
+  const [,type,color,accent]=d,root=a.root,hum=a.vrm.humanoid;const variant=Number(p.id.slice(1))||1;
   const base=1/Math.max(.001,a.baseScale),get=n=>hum.getRawBoneNode(n);
   const head=get('head'),chest=get('upperChest')||get('chest')||get('spine'),hips=get('hips');
   if(!head||!chest||!hips)return;
@@ -32,7 +32,7 @@
   if(type==='cape'||type==='scarf'||type==='hood'){
    let g=groupAt(chest,0,.13,-.13),w=type==='cape'?.20:.12,h=type==='cape'?.49:type==='hood'?.24:.31;
    let pts=[[-w,0],[-w*.83,-h*.55],[-w*.63,-h],[0,-h*.86],[w*.63,-h],[w*.83,-h*.55],[w,0]];
-   shape(g,pts,fabric);line(g,pts.map(([x,y])=>[x,y,.009]),.004,trim);
+   shape(g,pts,fabric);line(g,pts.map(([x,y])=>[x,y,.009]),.004,trim);a.identityMotion.push({g,rest:g.quaternion.clone(),amplitude:type==='cape'?.12:.07});
    if(type==='scarf'){let g2=groupAt(chest,0,.13,.12);line(g2,[[-.12,.015,0],[-.06,-.01,.04],[.06,-.01,.04],[.12,.015,0]],.025,fabric)}
   }else if(type==='blade'){
    let g=groupAt(chest,0,.16,-.17);g.rotation.z+=(p.id==='m6'?-.34:.34);
@@ -41,11 +41,11 @@
    mesh(g,new T.BoxGeometry(.105,.019,.035),trim,0,.15,0);
    mesh(g,new T.CylinderGeometry(.014,.014,.11,8),fabric,0,.215,0);
   }else if(type==='satchel'){
-   let g=groupAt(hips,0,.055,-.15);
+   let g=groupAt(hips,p.id==='m10'?.08:0,.055,-.15);if(p.id==='m10')g.scale.multiplyScalar(1.15);
    shape(g,[[-.11,.075],[.11,.075],[.10,-.095],[-.10,-.095]],fabric);
    shape(g,[[-.11,.075],[.11,.075],[.095,.015],[0,-.026],[-.095,.015]],trim,.012);
   }else{
-   let g=groupAt(head,-.09,.145,.045);
+   let g=groupAt(head,-.09,.145,.045);if(variant>5){g.scale.multiplyScalar(1.18);g.rotateZ(.25)}
    if(type==='moon'){let pts=[];for(let i=0;i<=16;i++){let t=-1.2+Math.PI*1.8*i/16;pts.push([Math.cos(t)*.058,Math.sin(t)*.058])}for(let i=16;i>=0;i--){let t=-1.2+Math.PI*1.8*i/16;pts.push([.022+Math.cos(t)*.043,Math.sin(t)*.043])}shape(g,pts,trim)}
    else if(type==='flower'){for(let i=0;i<5;i++){let t=i*2*Math.PI/5,m=mesh(g,new T.SphereGeometry(.025,12,8),fabric,Math.sin(t)*.028,Math.cos(t)*.028,0);m.scale.set(.75,1,.28);m.rotation.z=-t}mesh(g,new T.SphereGeometry(.014,10,8),trim,0,0,.013)}
    else if(type==='leaf'||type==='feather'){for(let i=0;i<3;i++){let m=shape(g,[[0,0],[.020,.045],[.010,.10],[-.018,.053]],i===1?trim:fabric);m.rotation.z=(i-1)*.48}}
@@ -55,5 +55,6 @@
   // Each group can reference shared materials; dispose unused ones on next preset.
   a.identityType=type;
  }
- const api={designs,apply,clear};if(typeof module!=='undefined')module.exports=api;else root.WWIdentity=api;
+ function animate(a,t,gait){for(const {g,rest,amplitude} of a.identityMotion||[]){g.quaternion.copy(rest);g.rotateX(Math.sin(t*4.1)*amplitude*(.28+gait*.72));g.rotateZ(Math.sin(t*2.7+.4)*amplitude*.25)}}
+ const api={designs,apply,clear,animate};if(typeof module!=='undefined')module.exports=api;else root.WWIdentity=api;
 })(typeof globalThis!=='undefined'?globalThis:this);
