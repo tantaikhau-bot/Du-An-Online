@@ -1,5 +1,10 @@
 # WISH WORLD — Release history
 
+## V10.3 — Anime Portrait
+- Close-up face preview in atelier, expressive mouth width and secondary motion on hair strands.
+- Fix CI runner compatibility with the pinned browser test.
+- Preview deployment is isolated from production and uses disposable test data.
+
 ## V10.2 — Anime Fantasy
 - Revised male/female procedural character proportions, toon materials, face geometry, eyes, hair and layered outfits.
 - Added facial expressions, softer gait, jump preparation/landing, and atelier preview controls.
