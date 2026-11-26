@@ -1,4 +1,5 @@
-import social, admin, economy, beta, friendship, festival, referral, royal, payment
+import social, admin, economy, beta, friendship, festival, referral, royal, payment, save_guard, verified_rewards
+from static_files import serve_static
 from urllib.parse import urlsplit
 import threading, ipaddress
 from contextlib import contextmanager
@@ -27,6 +28,8 @@ def init():
   referral.init(c)
   royal.init(c)
   payment.init(c)
+  save_guard.init(c)
+  verified_rewards.init(c)
   c.executescript("CREATE INDEX IF NOT EXISTS idx_presence_seen ON presence(seen); CREATE INDEX IF NOT EXISTS idx_wishes_uid_created ON wishes(uid,created); CREATE INDEX IF NOT EXISTS idx_sessions_expiry ON sessions(expiry);")
 def digest(p,s):return hashlib.scrypt(p.encode(),salt=bytes.fromhex(s),n=16384,r=8,p=1).hex()
 def tokenhash(t):return hashlib.sha256(t.encode()).hexdigest()
@@ -65,18 +68,19 @@ class Handler(BaseHTTPRequestHandler):
   return c.execute('SELECT u.*,s.token FROM users u JOIN sessions s ON u.id=s.uid WHERE s.token=? AND s.expiry>? AND u.id NOT IN (SELECT uid FROM blocked)',(tokenhash(t),int(time.time()))).fetchone()
  def do_HEAD(self):
   page=urlsplit(self.path).path
-  if page in ('/','/play','/admin','/privacy','/terms','/healthz','/api/version','/favicon.ico','/favicon.svg'):
+  if page.startswith('/assets/') or page in ('/','/play','/admin','/privacy','/terms','/healthz','/api/version','/favicon.ico','/favicon.svg'):
    return self.do_GET()
   return self.reply(405,{'error':'Phương thức không được hỗ trợ'})
  def do_GET(self):
   page=urlsplit(self.path).path
+  if page.startswith('/assets/'):return serve_static(self,ROOT,page)
   if page in ('/favicon.ico','/favicon.svg'):
    b=b'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" rx="15" fill="#183c36"/><path d="M32 5 38 25 59 32 38 39 32 59 25 39 5 32 25 25Z" fill="#e5cc87"/></svg>'
    self.send_response(200);self.send_header('Content-Type','image/svg+xml');self.send_header('Cache-Control','public, max-age=86400');self.send_header('Content-Length',str(len(b)));self.end_headers()
    if self.command!='HEAD':self.wfile.write(b)
    return
   if page=='/api/version':
-   return self.reply(200,{'version':'10.1','build':'10.1-stability','name':'Stability','features':['head-and-icon','database-connection-cleanup','mobile-clarity-guard','effects-first-adaptive-quality','river-static-instancing','lightweight-water','near-character-detail','performance-diagnostics','unified-inventory','shared-car','ceremony-rsvp','safe-sync','shared-world','version-check']})
+   return self.reply(200,{'version':'10.1','build':'10.1-stability','name':'Stability','features':['head-and-icon','database-connection-cleanup','mobile-clarity-guard','verified-rewards','save-validation','local-asset-support','effects-first-adaptive-quality','river-static-instancing','lightweight-water','near-character-detail','performance-diagnostics','unified-inventory','shared-car','ceremony-rsvp','safe-sync','shared-world','version-check']})
   if page=='/healthz':
    try:
     with db() as c:c.execute('SELECT 1 FROM users LIMIT 1').fetchone()
@@ -92,6 +96,7 @@ class Handler(BaseHTTPRequestHandler):
    u=self.session(c)
    if self.path=='/api/me':return self.reply(200,{'user':{'id':u['id'],'name':u['name'],'revision':u['revision']} if u else None})
    if not u:return self.reply(401,{'error':'Cần đăng nhập'})
+   if self.path.startswith('/api/verified/'):return verified_rewards.handle(self,c,u)
    if self.path.startswith('/api/royal/'):return royal.handle(self,c,u)
    if self.path.startswith('/api/referral/'):return referral.handle(self,c,u)
    if self.path.startswith('/api/festival/'):return festival.handle(self,c,u)
@@ -128,6 +133,7 @@ class Handler(BaseHTTPRequestHandler):
      t=secrets.token_urlsafe(32);c.execute('DELETE FROM sessions WHERE expiry<?',(int(time.time()),));c.execute('INSERT INTO sessions VALUES(?,?,?)',(tokenhash(t),uid,int(time.time())+86400));c.commit();return self.reply(200,{'ok':True},self.cookie(t,86400))
     u=self.session(c)
     if not u:return self.reply(401,{'error':'Cần đăng nhập'})
+    if self.path.startswith('/api/verified/'):return verified_rewards.handle(self,c,u,d)
     if self.path.startswith('/api/royal/'):return royal.handle(self,c,u,d)
     if self.path.startswith('/api/referral/'):return referral.handle(self,c,u,d)
     if self.path.startswith('/api/festival/'):return festival.handle(self,c,u,d)
@@ -142,7 +148,10 @@ class Handler(BaseHTTPRequestHandler):
      v=d.get('state');rev=d.get('revision');
      if 'owner' in d and d['owner']!=u['id']:return self.reply(403,{'error':'Tài khoản bản lưu không khớp'})
      if not isinstance(v,dict) or type(rev) is not int or not 0<=rev<9223372036854775807 or not isinstance(v.get('name'),str) or not all(isinstance(v.get(k),list) for k in ('wishes','lanterns','plants','owned','collection','decor')) or not all(type(v.get(k)) is int and 0<=v[k]<=10000000 for k in ('coins','xp','petXp','streak')) or not isinstance(v.get('daily'),dict) or not isinstance(v['daily'].get('claimed'),list):return self.reply(400,{'error':'Bản lưu không hợp lệ'})
-     r=c.execute('UPDATE users SET save=?,revision=revision+1 WHERE id=? AND revision=?',(json.dumps(v,ensure_ascii=False),u['id'],rev));c.commit()
+     if not save_guard.valid_tree(v):return self.reply(400,{'error':'Cấu trúc bản lưu không hợp lệ'})
+     r=c.execute('UPDATE users SET save=?,revision=revision+1 WHERE id=? AND revision=?',(json.dumps(v,ensure_ascii=False,allow_nan=False),u['id'],rev))
+     if r.rowcount:save_guard.audit(c,u['id'],rev+1,json.loads(u['save']) if u['save'] else None,v)
+     c.commit()
      return self.reply(200,{'revision':rev+1,'owner':u['id']}) if r.rowcount else self.reply(409,{'error':'Bản lưu máy chủ đã thay đổi; tải lại trước khi lưu'})
     if self.path=='/api/wishes':
      body=d.get('body','');now=int(time.time())
