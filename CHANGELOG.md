@@ -1,5 +1,8 @@
 # WISH WORLD — Release history
 
+## V11.6.2 — Cat & Rabbit
+- Replace close-up cat and rabbit with textured skinned GLB assets: British Shorthair and Wild Rabbit, vinish.dev, CC BY 4.0. Credits in game settings and landing footer. Scale and matte material adjustments; blend Idle/Walk/Run/Sit/Sniff/Meow where present. Cache source, share geometry and materials; use lightweight prior model for far-away animals or failed loads. Retain fox, deer, dragon and multiplayer logic. Source URLs: https://vinish.dev/free-3d-models/cats and https://vinish.dev/free-3d-models/rabbits-mice-and-squirrels .
+
 ## V11.6.1 — Creatures & Multiplayer
 - Remote players retain their visible animated fallback until the correct VRM successfully loads and animates; retry failures, discard stale asynchronous results and avoid transparent impostors for peers. Add counts for visible peers, VRM and fallback. Keep privacy and presence filtering unchanged.
 - Prefer rigged fox/deer assets from Quaternius Ultimate Animated Animal Pack (CC0) and optional Dragon from Quaternius Animated Monster Pack via cairnfall-public (CC0); use separate skeleton/mixer per instance and cache source loads. Smooth normals and matte surfaces. Refine original rabbit/cat and fallback geometry, eyes, muzzle, leg overlaps and decorations. No claim of newly sculpted GLB for all five. Assets: https://quaternius.com/packs/ultimateanimatedanimals.html ; https://quaternius.com/packs/animatedmonster.html ; https://github.com/euuuuuuan/cairnfall-public/blob/main/CREDITS.md .

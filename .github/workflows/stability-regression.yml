@@ -19,6 +19,7 @@ jobs:
           node-version: '22'
       - run: python -m compileall -q .
       - run: python -m unittest test_stability test_asset_cache
+      - run: python -c "from static_files import cached_asset; assert cached_asset('cat.glb'); assert cached_asset('rabbit.glb')"
       - run: python test_together.py
       - run: python test_guild.py
       - run: node test_stability.cjs

@@ -33,6 +33,12 @@ const fs=require('node:fs'),os=require('node:os'),path=require('node:path'),asse
   console.log('Skinned fox model and authored animation loaded');
   fs.mkdirSync('test-output',{recursive:true});
   await page.screenshot({path:'test-output/rigged-fox-world.png',timeout:120000});
+  for(const kind of ['cat','rabbit']){
+   await page.evaluate(k=>{s.pet=k},kind);
+   await page.waitForFunction(k=>window.wwGraphics59?.activePetRig118===k,kind,{timeout:90000});
+   console.log('V11.6.2 visible skinned pet:',kind);
+   await page.screenshot({path:'test-output/rigged-'+kind+'-world.png',timeout:120000});
+  }
   await page.evaluate(()=>{s.pet=window.__savedPet117});
 
   // Render an independent lineup from the exact assets used by the world.

@@ -1,9 +1,12 @@
 """Allowlisted static assets with bounded, same-origin upstream cache."""
 from pathlib import Path
-import shutil,urllib.request,hashlib,struct,threading,time,os,json
-FILES={'fantasy-creatures.js':'text/javascript; charset=utf-8','original-avatar.js':'text/javascript; charset=utf-8','character-identity.js':'text/javascript; charset=utf-8','Sendagaya_Shibu.vrm':'model/gltf-binary','Vivi.vrm':'model/gltf-binary','arm-motion.js':'text/javascript; charset=utf-8','foot-ik.js':'text/javascript; charset=utf-8','smooth-motion.js':'text/javascript; charset=utf-8','HairSample_Male.vrm':'model/gltf-binary','HairSample_Female.vrm':'model/gltf-binary','vrm-character.js':'text/javascript; charset=utf-8','three-vrm.module.js':'text/javascript; charset=utf-8','Sakurada_Fumiriya.vrm':'model/gltf-binary','Sendagaya_Shino.vrm':'model/gltf-binary','deer.glb':'model/gltf-binary','dragon.glb':'model/gltf-binary','anime-character.js':'text/javascript; charset=utf-8','game-policy.js':'text/javascript; charset=utf-8','realtime.js':'text/javascript; charset=utf-8','fox.glb':'model/gltf-binary','hero.glb':'model/gltf-binary','forrest_ground_01.jpg':'image/jpeg','medieval_blocks_05.jpg':'image/jpeg','medieval_wood.jpg':'image/jpeg','manifest.json':'application/json'}
+import shutil,urllib.request,hashlib,struct,threading,time,os,json,re,html
+from urllib.parse import urlsplit
+FILES={'fantasy-creatures.js':'text/javascript; charset=utf-8','original-avatar.js':'text/javascript; charset=utf-8','character-identity.js':'text/javascript; charset=utf-8','Sendagaya_Shibu.vrm':'model/gltf-binary','Vivi.vrm':'model/gltf-binary','arm-motion.js':'text/javascript; charset=utf-8','foot-ik.js':'text/javascript; charset=utf-8','smooth-motion.js':'text/javascript; charset=utf-8','HairSample_Male.vrm':'model/gltf-binary','HairSample_Female.vrm':'model/gltf-binary','vrm-character.js':'text/javascript; charset=utf-8','three-vrm.module.js':'text/javascript; charset=utf-8','Sakurada_Fumiriya.vrm':'model/gltf-binary','Sendagaya_Shino.vrm':'model/gltf-binary','deer.glb':'model/gltf-binary','cat.glb':'model/gltf-binary','rabbit.glb':'model/gltf-binary','dragon.glb':'model/gltf-binary','anime-character.js':'text/javascript; charset=utf-8','game-policy.js':'text/javascript; charset=utf-8','realtime.js':'text/javascript; charset=utf-8','fox.glb':'model/gltf-binary','hero.glb':'model/gltf-binary','forrest_ground_01.jpg':'image/jpeg','medieval_blocks_05.jpg':'image/jpeg','medieval_wood.jpg':'image/jpeg','manifest.json':'application/json'}
 VRM='https://raw.githubusercontent.com/madjin/vrm-samples/master/vroid/beta/'
 UPSTREAM={
+ 'cat.glb':('https://vinish-models.pages.dev/cats/british-shorthair.glb',None),
+ 'rabbit.glb':('https://vinish-models.pages.dev/rabbits-mice-and-squirrels/wild-rabbit.glb',None),
  'dragon.glb':('https://raw.githubusercontent.com/euuuuuuan/cairnfall-public/8ee4cfd789282c59632a9339e61564b7d6c1acfe/assets/vendor/quaternius_monsters/Dragon.glb',None),
  'Sendagaya_Shibu.vrm':(VRM+'Sendagaya_Shibu.vrm','git:233c9070f7bc3e13d2e162774dacccf72baaf566'),
  'Vivi.vrm':(VRM+'Vivi.vrm','git:bed294ca40452e8703b530f93db4c5fc015e307d'),
@@ -17,6 +20,36 @@ UPSTREAM={
 }
 LOCKS={k:threading.Lock() for k in UPSTREAM}
 FAILED={}
+PET118={
+ 'cat.glb':('british-shorthair.glb','https://vinish.dev/free-3d-models/cats'),
+ 'rabbit.glb':('wild-rabbit.glb','https://vinish.dev/free-3d-models/rabbits-mice-and-squirrels'),
+}
+def read_pet118(name,url):
+ filename,page=PET118[name]
+ candidates=[url]
+ if name=='rabbit.glb':
+  candidates.extend(['https://vinish-models.pages.dev/'+p+'/wild-rabbit.glb' for p in ('small-animals','rabbits','rabbits-mice-squirrels','rodents')])
+ candidates.extend([u.replace('vinish-models.pages.dev','models.vinish.dev') for u in list(candidates)])
+ try:
+  with urllib.request.urlopen(urllib.request.Request(page,headers={'User-Agent':'Mozilla/5.0'}),timeout=8) as response:
+   markup=html.unescape(response.read(2500000).decode('utf-8','replace')).replace('\\/','/')
+  discovered=[u for u in re.findall(r'https://[^"\s<>]+?\.glb',markup) if urlsplit(u).hostname in ('vinish-models.pages.dev','models.vinish.dev') and urlsplit(u).path.endswith('/'+filename)]
+  candidates=discovered+candidates
+ except Exception:pass
+ for u in dict.fromkeys(candidates):
+  try:
+   with urllib.request.urlopen(urllib.request.Request(u,headers={'User-Agent':'WishWorld/11.6.2'}),timeout=8) as r:data=r.read(8*1024*1024+1)
+   if len(data)>8*1024*1024 or len(data)<20 or data[:4]!=b'glTF' or struct.unpack_from('<I',data,8)[0]!=len(data):raise ValueError('bad GLB')
+   n,k=struct.unpack_from('<II',data,12)
+   if k!=0x4e4f534a:raise ValueError('bad GLB JSON')
+   doc=json.loads(data[20:20+n]);clips={a.get('name','').lower() for a in doc.get('animations',[])}
+   if not doc.get('skins') or not {'idle','walk','run'}<=clips:raise ValueError('missing skin or clips')
+   if any('uri' in b and not b['uri'].startswith('data:') for b in doc.get('buffers',[])):raise ValueError('external buffer')
+   if any('uri' in im and not im['uri'].startswith('data:') for im in doc.get('images',[])):raise ValueError('external image')
+   print('Verified pet asset: '+name+' '+u+' '+str(sorted(clips)),flush=True)
+   return data
+  except Exception as e:print('Pet source unavailable: '+u+' '+str(e)[:90],flush=True)
+ raise ValueError('No verified rigged pet source for '+name)
 def cached_asset(name):
  folder=Path(os.environ.get('WISH_ASSET_CACHE','/tmp/wish-assets-v107'));folder.mkdir(mode=0o700,parents=True,exist_ok=True)
  dest=folder/name
@@ -26,8 +59,10 @@ def cached_asset(name):
   temp=dest.with_suffix(dest.suffix+'.part')
   try:
    url,digest=UPSTREAM[name]
-   with urllib.request.urlopen(urllib.request.Request(url,headers={'User-Agent':'WishWorld/10.5'}),timeout=15) as r:
-    data=r.read(40*1024*1024+1)
+   if name in PET118:data=read_pet118(name,url)
+   else:
+    with urllib.request.urlopen(urllib.request.Request(url,headers={'User-Agent':'WishWorld/10.5'}),timeout=15) as r:
+     data=r.read(40*1024*1024+1)
    if not data or len(data)>40*1024*1024:raise ValueError('asset length')
    if name.endswith(('.vrm','.glb')) and (len(data)<20 or data[:4]!=b'glTF' or struct.unpack_from('<I',data,8)[0]!=len(data)):raise ValueError('bad glTF')
    if name.startswith('HairSample_') or name in ('Sendagaya_Shibu.vrm','Vivi.vrm'):
