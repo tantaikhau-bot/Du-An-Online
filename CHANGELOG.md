@@ -1,5 +1,11 @@
 # WISH WORLD — Release history
 
+## V12.3 — Social Adventure (candidate)
+- Five rotating daily scenic routes, three ordered checkpoints, per-account completion history and non-tradable badge count. Vietnamese local-day boundary; no premium currency or offline coin changes.
+- Authenticated API checks current public-world presence, checkpoint distance, sequence, day and repeat attempts. Presence is still client-reported, not authoritative anti-cheat. No new player location history beyond existing presence.
+- New Hành trình button in exploration HUD with progress, route guidance and check-in; accessible to existing registered players. Add test coverage for incorrect order, missing presence, duplicate, invalid reward field, account isolation and rollover.
+- Existing group/social, crafting, housing and economy remain intact. Co-op quest scoring, new minigames and full server-authoritative movement are not included in this candidate.
+
 ## V12.2 — Living Pets (candidate)
 - Preserve the existing five skinned GLBs and procedural fallback. Distinct follow spacing and acceleration per species, bounded movement step and short collision-checked detours. Local and remote companions use actual movement speed; no automatic snap on every blocked step. Safe reposition on initial spawn or long-distance recovery.
 - Local session commands follow, wait, recall and pet reaction in animal handbook. No new reward economy, no new persistence fields; remote commands are not synchronized yet.

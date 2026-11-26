@@ -1,6 +1,7 @@
-import time, math, sqlite3, together, guild
+import time, math, sqlite3, together, guild, adventure
 
 def init(c):
+ adventure.init(c)
  c.execute('CREATE TABLE IF NOT EXISTS avatar109(uid TEXT PRIMARY KEY,preset TEXT NOT NULL,gait REAL NOT NULL)')
  together.init(c)
  guild.init(c)
@@ -21,6 +22,7 @@ def outings70(c,uid,now):
 
 def handle(h,c,u,d):
  path=h.path; uid=u['id']; now=time.time(); reply=h.reply
+ if path.startswith('/api/social/adventure/'):return adventure.handle(h,c,u,d,now)
  if path.startswith('/api/social/group/'):return guild.handle(h,c,u,d)
  if path.startswith('/api/social/together/'):return together.handle(h,c,u,d)
  if path.startswith('/api/social/outing/'):
