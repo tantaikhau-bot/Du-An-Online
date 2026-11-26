@@ -1,5 +1,10 @@
 # WISH WORLD — Release history
 
+## V10.6 — Avatar Roster
+- Five male and five female named presets using four CC0 VRoid bases with color/height variants; not ten independently modeled meshes.
+- The chooser and world use the same cached VRM object and preset ID; selection is saved in avatar106. Preview must load before selection can be confirmed. Indoor use and seated poses supported; car hides character.
+- Existing inventory and save data retained. Other online players still use legacy remote visuals; no promise of VRM cosmetics in multiplayer.
+
 ## V10.5 — Asset Recovery
 - Cache validated VRM samples on the server, show asset status and retry failed loads.
 - Automatically use rigged Fox and Deer models when available, with original procedural fallback.
