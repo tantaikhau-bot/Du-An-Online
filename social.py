@@ -95,7 +95,7 @@ def handle(h,c,u,d):
   jump=num('jump',0,2)
   moving=int(d.get('moving') is True)
   pet=pick('pet',('fox','rabbit','deer','cat','dragon'),'')
-  vehicle=pick('vehicle',('bike','motor'),'') if a==0 else ''
+  vehicle=pick('vehicle',('bike','motor','car'),'') if a==0 else ''
   c.execute('INSERT OR REPLACE INTO vehicle88 VALUES(?,?)',(uid,vehicle))
   c.execute('INSERT OR REPLACE INTO pet70 VALUES(?,?)',(uid,pet))
   c.execute('INSERT OR REPLACE INTO presence VALUES(?,?,?,?,?)',(uid,x,y,a,now))

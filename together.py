@@ -3,7 +3,7 @@ import time, re, unicodedata, secrets
 from datetime import date, timedelta
 RETENTION=7*86400
 def init(c):
- c.executescript("""CREATE TABLE IF NOT EXISTS ww_pairplan89(a TEXT NOT NULL,b TEXT NOT NULL,proposer TEXT NOT NULL,theme TEXT NOT NULL,day TEXT NOT NULL,revision TEXT NOT NULL,accepted INTEGER NOT NULL DEFAULT 0,PRIMARY KEY(a,b)); CREATE TABLE IF NOT EXISTS ww_gifts80(id INTEGER PRIMARY KEY AUTOINCREMENT,sender TEXT NOT NULL,receiver TEXT NOT NULL,kind TEXT NOT NULL,created INTEGER NOT NULL); CREATE INDEX IF NOT EXISTS ww_gifts80_sender ON ww_gifts80(sender,created); CREATE INDEX IF NOT EXISTS ww_gifts80_receiver ON ww_gifts80(receiver,created); CREATE TABLE IF NOT EXISTS ww_vows80(a TEXT,b TEXT,first TEXT,second TEXT,created INTEGER,PRIMARY KEY(a,b)); CREATE TABLE IF NOT EXISTS ww_blocks(owner TEXT, target TEXT, PRIMARY KEY(owner,target));
+ c.executescript("""CREATE TABLE IF NOT EXISTS ww_guest90(a TEXT NOT NULL,b TEXT NOT NULL,revision TEXT NOT NULL,guest TEXT NOT NULL,inviter TEXT NOT NULL,status TEXT NOT NULL,created INTEGER NOT NULL,PRIMARY KEY(a,b,guest)); CREATE INDEX IF NOT EXISTS ww_guest90_guest ON ww_guest90(guest); CREATE TABLE IF NOT EXISTS ww_pairplan89(a TEXT NOT NULL,b TEXT NOT NULL,proposer TEXT NOT NULL,theme TEXT NOT NULL,day TEXT NOT NULL,revision TEXT NOT NULL,accepted INTEGER NOT NULL DEFAULT 0,PRIMARY KEY(a,b)); CREATE TABLE IF NOT EXISTS ww_gifts80(id INTEGER PRIMARY KEY AUTOINCREMENT,sender TEXT NOT NULL,receiver TEXT NOT NULL,kind TEXT NOT NULL,created INTEGER NOT NULL); CREATE INDEX IF NOT EXISTS ww_gifts80_sender ON ww_gifts80(sender,created); CREATE INDEX IF NOT EXISTS ww_gifts80_receiver ON ww_gifts80(receiver,created); CREATE TABLE IF NOT EXISTS ww_vows80(a TEXT,b TEXT,first TEXT,second TEXT,created INTEGER,PRIMARY KEY(a,b)); CREATE TABLE IF NOT EXISTS ww_blocks(owner TEXT, target TEXT, PRIMARY KEY(owner,target));
  CREATE TABLE IF NOT EXISTS ww_pairs(sender TEXT, receiver TEXT, status TEXT, created INTEGER, PRIMARY KEY(sender,receiver));
  CREATE TABLE IF NOT EXISTS ww_chat(id INTEGER PRIMARY KEY AUTOINCREMENT, sender TEXT NOT NULL, receiver TEXT, body TEXT NOT NULL, created INTEGER NOT NULL, hidden INTEGER NOT NULL DEFAULT 0);
  CREATE INDEX IF NOT EXISTS ww_chat_sender ON ww_chat(sender,created);
@@ -22,6 +22,7 @@ def pair(c,u):
 def other(p,u):
  return p['receiver'] if p['sender']==u else p['sender']
 def end_pair(c,a,b):
+ c.execute('DELETE FROM ww_guest90 WHERE a=? AND b=?',tuple(sorted((a,b))))
  c.execute('DELETE FROM ww_pairplan89 WHERE a=? AND b=?',tuple(sorted((a,b))))
  c.execute('DELETE FROM ww_vows80 WHERE a=? AND b=?',tuple(sorted((a,b))))
  c.execute('DELETE FROM ww_pairs WHERE (sender=? AND receiver=?) OR (sender=? AND receiver=?)',(a,b,b,a))
@@ -32,9 +33,52 @@ def clean_body(v):
  # Lightweight anti-spam and personal-contact guard, not comprehensive moderation.
  if re.search(r'https?://|www\.|[\w.+-]+@[\w.-]+\.[a-z]{2,}|(?:\d[\s.()+-]*){9,}',v,re.I):return None
  return v
+def event_plan90(c,a,b):
+ if not isinstance(a,str) or not isinstance(b,str) or a>=b:return None
+ p=pair(c,a)
+ if not p or other(p,a)!=b or not available(c,a) or not available(c,b) or blocked(c,a,b) or not friend(c,a,b):return None
+ return c.execute("SELECT * FROM ww_pairplan89 WHERE a=? AND b=? AND accepted=1 AND day>=?",(a,b,date.today().isoformat())).fetchone()
+def guest_ok90(c,a,b,guest,inviter):
+ return guest not in (a,b) and inviter in (a,b) and available(c,guest) and friend(c,guest,inviter) and not blocked(c,a,guest) and not blocked(c,b,guest)
 def handle(h,c,u,d):
  uid=u['id']; action=h.path.rsplit('/',1)[-1]; now=int(time.time()); reply=h.reply
  def err(status,msg):return reply(status,{'error':msg})
+ if action=='events90':
+  host=None; guests=[]; incoming=[]
+  p=pair(c,uid)
+  if p:
+   a,b=sorted((uid,other(p,uid)));plan=event_plan90(c,a,b)
+   if plan:
+    host={'date':plan['day'],'revision':plan['revision']}
+    for q in c.execute("SELECT g.guest,g.inviter,g.status,u.name FROM ww_guest90 g JOIN users u ON u.id=g.guest WHERE g.a=? AND g.b=? AND g.revision=? ORDER BY g.created LIMIT 12",(a,b,plan['revision'])):
+     if guest_ok90(c,a,b,q['guest'],q['inviter']):guests.append(dict(q))
+  for q in c.execute("SELECT g.*,p.day,u.name AS first_name,v.name AS second_name FROM ww_guest90 g JOIN ww_pairplan89 p ON p.a=g.a AND p.b=g.b AND p.revision=g.revision JOIN users u ON u.id=g.a JOIN users v ON v.id=g.b WHERE g.guest=? AND p.accepted=1 AND p.day>=? ORDER BY p.day LIMIT 50",(uid,date.today().isoformat())):
+   if event_plan90(c,q['a'],q['b']) and guest_ok90(c,q['a'],q['b'],uid,q['inviter']):incoming.append({k:q[k] for k in ('a','b','revision','day','status','first_name','second_name')})
+  return reply(200,{'host':host,'guests':guests,'incoming':incoming})
+ if action in ('invite90','revoke90','rsvp90'):
+  rev=d.get('revision')
+  if not isinstance(rev,str) or len(rev)!=32:return err(400,'Phiên bản sự kiện không hợp lệ')
+  c.execute('BEGIN IMMEDIATE')
+  if action=='rsvp90':
+   a,b=d.get('a'),d.get('b')
+   if not isinstance(a,str) or not isinstance(b,str):return err(400,'Sự kiện không hợp lệ')
+   plan=event_plan90(c,a,b)
+   q=c.execute('SELECT inviter FROM ww_guest90 WHERE a=? AND b=? AND revision=? AND guest=?',(a,b,rev,uid)).fetchone()
+   if not plan or plan['revision']!=rev or not q or not guest_ok90(c,a,b,uid,q['inviter']):return err(404,'Lời mời đã hết hiệu lực')
+   status=d.get('status')
+   if status not in ('accepted','declined'):return err(400,'Phản hồi không hợp lệ')
+   c.execute('UPDATE ww_guest90 SET status=? WHERE a=? AND b=? AND revision=? AND guest=?',(status,a,b,rev,uid));c.commit();return reply(200,{'ok':True})
+  p=pair(c,uid);guest=d.get('guest')
+  if not p or not isinstance(guest,str):return err(400,'Khách mời không hợp lệ')
+  a,b=sorted((uid,other(p,uid)));plan=event_plan90(c,a,b)
+  if not plan or plan['revision']!=rev:return err(409,'Cần kế hoạch đã được hai người xác nhận và có ngày lễ')
+  if action=='revoke90':
+   c.execute('DELETE FROM ww_guest90 WHERE a=? AND b=? AND revision=? AND guest=?',(a,b,rev,guest));c.commit();return reply(200,{'ok':True})
+  if not guest_ok90(c,a,b,guest,uid):return err(403,'Chỉ mời bạn bè chưa bị chặn')
+  if c.execute('SELECT count(*) FROM ww_guest90 WHERE a=? AND b=?',(a,b)).fetchone()[0]>=12:return err(429,'Tối đa 12 khách mời')
+  if c.execute('SELECT count(*) FROM ww_guest90 WHERE guest=? AND status=?',(guest,'pending')).fetchone()[0]>=30:return err(429,'Người chơi đang có quá nhiều lời mời')
+  if not c.execute("INSERT OR IGNORE INTO ww_guest90 VALUES(?,?,?,?,?,'pending',?)",(a,b,rev,guest,uid,now)).rowcount:return err(409,'Đã gửi lời mời')
+  c.commit();return reply(201,{'ok':True})
  if action=='pair89':
   p=pair(c,uid)
   if not p:return reply(200,{'pair':None,'plan':None})
@@ -52,6 +96,7 @@ def handle(h,c,u,d):
   if not p or other(p,uid)!=target or not available(c,target) or blocked(c,uid,target) or not friend(c,uid,target):return err(403,'Cần là bạn đồng hành chưa bị chặn')
   a,b=sorted((uid,target))
   if action=='cancel89':
+   c.execute('DELETE FROM ww_guest90 WHERE a=? AND b=?',(a,b))
    c.execute('DELETE FROM ww_pairplan89 WHERE a=? AND b=?',(a,b));c.commit();return reply(200,{'ok':True})
   if action=='propose89':
    theme=d.get('theme');day=d.get('date')
@@ -61,6 +106,7 @@ def handle(h,c,u,d):
      chosen=date.fromisoformat(day)
      if chosen.isoformat()!=day or not date.today()<=chosen<=date.today()+timedelta(days=365):return err(400,'Chọn ngày trong một năm tới')
     except ValueError:return err(400,'Ngày không hợp lệ')
+   c.execute('DELETE FROM ww_guest90 WHERE a=? AND b=?',(a,b))
    c.execute('INSERT OR REPLACE INTO ww_pairplan89 VALUES(?,?,?,?,?,?,0)',(a,b,uid,theme,day,secrets.token_hex(16)));c.commit();return reply(200,{'ok':True})
   revision=d.get('revision')
   if not isinstance(revision,str) or len(revision)!=32:return err(400,'Phiên bản không hợp lệ')
