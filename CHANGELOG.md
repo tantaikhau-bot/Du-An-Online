@@ -1,5 +1,13 @@
 # WISH WORLD — Release history
 
+## V13.1 — Graphics & Gameplay (candidate)
+- Three blended lighting styles, preserve ACES renderer and independent graphics budget; original default. No added post-process render passes.
+- Immediate camera obstruction contraction, gradual clearance recovery. Ground collision unchanged.
+- Original synthesized optional step/jump/landing/emote effects routed through existing user-enabled audio master. No external music/assets or autoplay.
+- Expose previously hidden Adventure and Regional Atlas actions in immersive quests drawer, show NPC fallback while VRM is pending. Retain all 20 current avatars and existing five companion models.
+- Add numerical regression and browser look-switch checks; no hardware FPS, new map/character mesh, new combat skills or visual-quality guarantee.
+- References: https://threejs.org/docs/pages/WebGLRenderer ; https://developer.mozilla.org/en-US/docs/Web/API/Web_Audio_API/Best_practices
+
 ## V13.0 — Online Beta (candidate)
 - Strict bounded JSON parser rejects duplicate keys, nonfinite numbers, oversized integers, invalid Unicode and excessive nesting; validate Content-Length and reject cross-site browser POSTs.
 - Per-account separate quotas for presence and other authenticated POSTs, Retry-After header, client presence backoff. SQLite busy/locked responses return HTTP 503. Process-local counters, no request payload or account identifier in metrics.

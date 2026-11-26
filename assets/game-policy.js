@@ -55,4 +55,19 @@ function cellVisible124(dx,dz,range,wasVisible,padding=5){
  return dx*dx+dz*dz<=limit*limit;
 }
 function landmarkVisits124(raw){return Array.isArray(raw)?[...new Set(raw.filter(id=>WW_LANDMARK124.some(p=>p.id===id)))]:[]}
-if(typeof module!=='undefined')module.exports={clarityStep100,resolution77,WW_PERF118,perfPreset118,perfWarning118,WW_LANDMARK124,landmarkSite124,cellVisible124,landmarkVisits124};
+// Visual presets without an additional render pass.
+const WW_LOOK131=Object.freeze({original:Object.freeze({name:'Nguyên bản',exposure:1,ambient:1,sun:1}),cinema:Object.freeze({name:'Điện ảnh',exposure:1.04,ambient:.94,sun:1.09}),clear:Object.freeze({name:'Sáng rõ',exposure:1.10,ambient:1.14,sun:.96})});
+function look131(key){return Object.hasOwn(WW_LOOK131,key)?WW_LOOK131[key]:WW_LOOK131.original}
+function blendLook131(state,key,dt){const v=look131(key),k=1-Math.exp(-Math.max(0,Math.min(.1,dt||0))*4);for(const name of ['exposure','ambient','sun'])state[name]+=(v[name]-state[name])*k;return state}
+function cameraSafe131(previous,limit,dt){
+ limit=Number.isFinite(limit)?Math.max(.13,Math.min(1,limit)):1;
+ previous=Number.isFinite(previous)?Math.max(.13,Math.min(1,previous)):limit;
+ return limit<previous?limit:previous+(limit-previous)*(1-Math.exp(-Math.max(0,Math.min(100,dt||0))/250));
+}
+function stepSound131(state,distance,moving,run){
+ if(!moving){state.distance=0;return false}
+ state.distance+=Math.max(0,Math.min(.25,Number.isFinite(distance)?distance:0));
+ const stride=run?.85:.58;
+ if(state.distance<stride)return false;state.distance%=stride;return true;
+}
+if(typeof module!=='undefined')module.exports={clarityStep100,resolution77,WW_PERF118,perfPreset118,perfWarning118,WW_LANDMARK124,landmarkSite124,cellVisible124,landmarkVisits124,WW_LOOK131,look131,blendLook131,cameraSafe131,stepSound131};
