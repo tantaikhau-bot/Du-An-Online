@@ -23,6 +23,7 @@ jobs:
       - run: python test_together.py
       - run: python test_guild.py
       - run: node test_stability.cjs
+      - run: node test_graphics100.cjs
 
       - run: python -m pip install -r requirements-realtime.txt
       - run: python -m unittest test_infrastructure test_realtime test_world_life

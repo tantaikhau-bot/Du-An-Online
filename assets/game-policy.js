@@ -10,4 +10,27 @@ function clarityStep100(v,rate,p95,cap,mobile,battery){let target=cap|| (mobile?
   return Math.min(Math.max(floor,base*scale),Math.max(1,dpr),ceiling,Math.sqrt(budget/(w*h)),maxBuffer/Math.max(w,h));
  }
 
-if(typeof module!=='undefined')module.exports={clarityStep100,resolution77};
+// Explicit quality ceilings preserve the existing three internal LOD levels.
+const WW_PERF118=Object.freeze({
+ battery:Object.freeze({quality:0,tier:2,scale:0.8,cap:30,label:'Tiết kiệm pin'}),
+ low:Object.freeze({quality:0,tier:1,scale:1,cap:45,label:'Thấp'}),
+ balanced:Object.freeze({quality:1,tier:1,scale:1,cap:0,label:'Cân bằng'}),
+ high:Object.freeze({quality:2,tier:0,scale:1,cap:0,label:'Cao'}),
+ sharp:Object.freeze({quality:2,tier:0,scale:1.2,cap:0,label:'Ultra / HD'})
+});
+function perfPreset118(q,saved,memory,cores,mobile){
+ if(q.get('perf')==='1')return 'battery';
+ if(q.get('hd')==='1')return 'sharp';
+ if(q.get('fx')==='basic')return 'balanced';
+ const requested=q.get('gfx');
+ if(Object.hasOwn(WW_PERF118,requested))return requested;
+ if(Object.hasOwn(WW_PERF118,saved))return saved;
+ return (Number.isFinite(memory)&&memory<=4)||(mobile&&Number.isFinite(cores)&&cores<=4)?'low':'balanced';
+}
+function perfWarning118(fps,p95,cap,heap){
+ const target=cap||60;
+ const framePressure=Number.isFinite(fps)&&fps<target*.65&&Number.isFinite(p95)&&p95>1000/target*1.6;
+ const heapPressure=Number.isFinite(heap)&&heap>=.85;
+ return {framePressure,heapPressure};
+}
+if(typeof module!=='undefined')module.exports={clarityStep100,resolution77,WW_PERF118,perfPreset118,perfWarning118};

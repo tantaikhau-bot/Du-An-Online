@@ -1,5 +1,11 @@
 # WISH WORLD — Release history
 
+## V11.8 — Performance Master (candidate)
+- Five graphics profiles (Battery, Low, Balanced, High, Ultra/HD), retaining the three existing LOD bands and the legacy URL aliases. Automatic first-run low preset on reported low-memory or low-core mobile devices. Explicit profile caps, existing effects-first scaling and mobile pixel floor.
+- Add JS CPU-frame timing, optional Chromium JS heap telemetry and heuristic pressure notices. No direct GPU time or VRAM measurement, no claimed hardware FPS uplift.
+- Reuse camera vectors and avoid square roots / count writes for hidden grass batches. Keep existing avatar, pet, multiplayer, physics and world systems intact.
+- Restore graphics policy regression test to import its actual module and run it in CI; add preset and warning assertions. Full device benchmarking, spatial animation budgets, further batching and resource profiling remain pending.
+
 ## V11.7 — Daylight & Motion
 - Preserve the 420-second game day, with gradual dawn/day/afternoon/sunset/night keyframes, moving light direction and in-game clock. Local session clock, not server-synchronized. Smooth sky, fog, sunlight, environment intensity, stars, river and lantern glow.
 - Keep VRM identities. Stabilize settled idle lower-body pose, anchor support midpoint in world X/Z and align actual sole samples to rendered ground. Release anchor for locomotion or flight; allow height correction during standing takeoff preparation and landing. Not independent full-body per-foot IK.
