@@ -12,6 +12,22 @@
  // Only bounded sagittal hinge corrections on near-ground stance; no running locks.
  const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
  function reset(a){a.contacts={};a.contactFrame=null}
+ // Ankle height is calibrated in the rest pose. Align the lowest sole with terrain
+ // after humanoid update; never force a nearly straight knee to reach a target.
+ function groundIdle(T,a,ground,dt,gait,jump,mode){
+  const allowed=!!ground&&!jump&&mode==='idle'&&gait<.15&&a.motion?.run<.10;
+  const target=allowed?clamp(1-gait/.15,0,1):0;
+  a.idleGroundWeight=jump||!ground||mode!=='idle'?0:(a.idleGroundWeight||0)+(target-(a.idleGroundWeight||0))*(1-Math.exp(-Math.max(0,dt)/.085));
+  if(a.idleGroundWeight<.005||!ground||jump)return null;
+  const root=a.root,hum=a.vrm.humanoid;root.updateWorldMatrix(true,true);
+  const scale=root.getWorldScale(new T.Vector3()).y/Math.max(.001,a.baseScale||1),errors=[];
+  for(const side of ['left','right']){const foot=hum.getRawBoneNode?.(side+'Foot')||hum.getNormalizedBoneNode(side+'Foot');if(!foot)continue;const p=foot.getWorldPosition(new T.Vector3()),y=ground(p.x,p.z),sole=a.soleHeight?.[side];if(Number.isFinite(y)&&Number.isFinite(sole)&&Number.isFinite(p.y))errors.push(y+sole*scale-p.y)}
+  if(!errors.length)return null;
+  const delta=clamp(Math.max(...errors),-.16,.16)*a.idleGroundWeight;
+  if(root.parent){const p=root.getWorldPosition(new T.Vector3());p.y+=delta;root.position.copy(root.parent.worldToLocal(p))}else root.position.y+=delta;
+  root.updateWorldMatrix(true,true);
+  return {planted:errors.filter(e=>Math.abs(e-delta)<.025).length,maxError:Math.max(...errors.map(e=>Math.abs(e-delta))),offset:delta,weight:a.idleGroundWeight,mode:'grounded-idle'};
+ }
  function apply(T,a,ground,dt,gait,jump,mode){
   if(!ground||jump||gait>=.76||a.motion?.run>.18||!['idle','walk','run'].includes(mode)||dt>.085){reset(a);return null}
   const hum=a.vrm.humanoid,st=a.motion,root=a.root;
@@ -45,5 +61,5 @@
   }
   return {planted,maxError:Math.round(maxError*1000)/1000,maxCorrection,weight:w,mode:'vertical-only'};
  }
- const api={solve,apply,reset};if(typeof module!=='undefined')module.exports=api;else root.WWFootIK=api;
+ const api={solve,apply,reset,groundIdle};if(typeof module!=='undefined')module.exports=api;else root.WWFootIK=api;
 })(typeof globalThis!=='undefined'?globalThis:this);

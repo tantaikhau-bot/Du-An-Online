@@ -33,7 +33,8 @@ const fs=require('node:fs'),os=require('node:os'),path=require('node:path'),asse
   const checkArms=async()=>{const a=await page.evaluate(()=>window.wwGraphics59.poseCheck.rawArm);assert.equal(a.length,2);for(const arm of a){assert.ok(arm&&arm.flex>.35&&arm.flex<1.45,JSON.stringify(arm));assert.ok(arm.wristSide>arm.shoulderSide-.015,JSON.stringify(arm));}console.log('Running arm joints',JSON.stringify(a))};
   const checkPose=async(id)=>{const p=await page.evaluate(()=>window.wwGraphics59.poseCheck);assert.equal(p.profile,id);assert.ok(p.knee.every(v=>v>=-.001&&v<=1.17));assert.ok(p.hip.every(v=>Math.abs(v)<=.63));assert.ok(p.ankle.every(v=>Math.abs(v)<=.31));assert.equal(p.rawLeg.length,2);for(const leg of p.rawLeg){assert.ok(leg&&Number.isFinite(leg.flex)&&leg.flex<1.5,JSON.stringify(leg));assert.ok(leg.thigh>.05&&leg.shin>.05);if(leg.flex>.35)assert.ok(leg.forward>-.025,JSON.stringify(leg))}return p};
   await checkPose('m1');
-  const contact=await page.evaluate(()=>window.wwGraphics59.footIK);if(contact){assert.ok(contact.maxCorrection<=.045);assert.equal(contact.mode,'vertical-only')}
+  await page.waitForFunction(()=>window.wwGraphics59?.footIK?.mode==='grounded-idle'&&window.wwGraphics59.footIK.weight>.95,{},{timeout:30000});
+  const contact=await page.evaluate(()=>window.wwGraphics59.footIK);assert.ok(Math.abs(contact.offset)<=.16);assert.ok(contact.planted>=1,JSON.stringify(contact));console.log('Idle ground contact:',JSON.stringify(contact));
   await page.keyboard.down('d');try{await page.waitForFunction(()=>window.wwGraphics59?.motionState==='walk',{},{timeout:30000});}finally{await page.keyboard.up('d')}
   await checkPose('m1');
   await page.keyboard.down('Shift');await page.keyboard.down('a');
