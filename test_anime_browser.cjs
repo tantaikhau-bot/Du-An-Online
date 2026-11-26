@@ -29,6 +29,8 @@ const fs=require('node:fs'),os=require('node:os'),path=require('node:path'),asse
   assert.equal(asset,'VRM male');
   await page.waitForFunction(()=>window.wwGraphics59?.motionState==='idle'&&window.wwGraphics59?.npcBlockFallback===0,{},{timeout:45000});
   await page.waitForFunction(()=>window.wwGraphics59?.npcVRM>=1,{},{timeout:90000});
+  await page.waitForFunction(()=>window.wwGraphics59?.footIK?.planted>=1,{},{timeout:45000});
+  const contact=await page.evaluate(()=>window.wwGraphics59.footIK);assert.ok(Number.isFinite(contact.maxError));console.log('Live VRM stance diagnostic',contact);
   fs.mkdirSync('test-output',{recursive:true});
   await page.screenshot({path:'test-output/vrm-world.png',timeout:120000});
   await page.evaluate(()=>studio12());
