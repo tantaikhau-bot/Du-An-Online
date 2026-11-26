@@ -54,8 +54,16 @@
   const allowed=!!ground&&!jump&&mode==='idle'&&gait<.15&&(a.motion?.run||0)<.10;
   const target=allowed?clamp(1-gait/.15,0,1):0;
   a.idleGroundWeight=jump||!ground||mode!=='idle'||gait>=.76?0:(a.idleGroundWeight||0)+(target-(a.idleGroundWeight||0))*(1-Math.exp(-Math.max(0,dt)/.085));
-  if(a.idleGroundWeight<.005||!ground||jump)return null;
+  if(a.idleGroundWeight<.005||!ground||jump){a.idleAnchor1170=null;return null;}
   const root=a.root;let rows=soleContacts(T,a,ground);
+  // Lock the support midpoint in world X/Z for settled idle; release on movement/turn/teleport.
+  const parent=root.parent,hum=a.vrm.humanoid;
+  if(allowed&&gait<.015&&a.idleGroundWeight>.95&&parent&&!(a.motion?.jump>.08)){
+   const pos=parent.getWorldPosition(new T.Vector3()),rot=parent.getWorldQuaternion(new T.Quaternion()),feet=['left','right'].map(side=>hum.getRawBoneNode?.(side+'Foot')||hum.getNormalizedBoneNode(side+'Foot')).filter(Boolean);
+   if(feet.length===2){const mid=feet[0].getWorldPosition(new T.Vector3()).add(feet[1].getWorldPosition(new T.Vector3())).multiplyScalar(.5);let anchor=a.idleAnchor1170;if(!anchor||anchor.pos.distanceTo(pos)>.018||anchor.rot.angleTo(rot)>.035){anchor=a.idleAnchor1170={pos,rot,mid:mid.clone()}}
+    const d=anchor.mid.clone().sub(mid);d.y=0;if(d.length()<.075){const before=root.position.clone(),p=root.getWorldPosition(new T.Vector3()).add(d);root.position.copy(parent.worldToLocal(p));a.idleOffset1170={x:root.position.x-before.x,z:root.position.z-before.z};rows=soleContacts(T,a,ground)}else a.idleAnchor1170=null;
+   }
+  }else a.idleAnchor1170=null;
   if(allowed&&gait<.035&&a.idleGroundWeight>.92)rows=balanceIdle(T,a,ground,rows);
   if(!rows.length)return null;
   // A small positive clearance avoids visible clipping; use the most penetrating point.
@@ -65,7 +73,7 @@
   if(root.parent){const p=root.getWorldPosition(new T.Vector3());p.y+=delta;root.position.copy(root.parent.worldToLocal(p))}else root.position.y+=delta;
   root.updateWorldMatrix(true,false);root.updateMatrixWorld(true);
   const contacts=rows.map(r=>({...r,gap:delta-r.error}));
-  return {planted:contacts.filter(r=>Math.abs(r.gap)<.025).length,maxError:Math.max(...contacts.map(r=>Math.abs(r.gap))),offset:delta,weight:a.idleGroundWeight,mode:'grounded-idle',source:contacts.every(r=>r.source==='mesh')?'mesh':'ankle-fallback',contacts};
+  return {planted:contacts.filter(r=>Math.abs(r.gap)<.025).length,maxError:Math.max(...contacts.map(r=>Math.abs(r.gap))),offset:delta,weight:a.idleGroundWeight,mode:'grounded-idle',anchorLocked:!!a.idleAnchor1170,source:contacts.every(r=>r.source==='mesh')?'mesh':'ankle-fallback',contacts};
  }
  function apply(T,a,ground,dt,gait,jump,mode){
   if(!ground||jump||gait>=.76||a.motion?.run>.18||!['idle','walk','run'].includes(mode)||dt>.085){reset(a);return null}
