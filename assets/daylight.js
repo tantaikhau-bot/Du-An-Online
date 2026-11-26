@@ -41,5 +41,27 @@
   state.name=target.name;return state;
  }
  function weatherCount(amount,budget){return Math.max(0,Math.min(budget,Math.round(clamp(Number.isFinite(amount)?amount:0)*budget)))}
- const api={duration,hour,mode,label,format,sample,approachHour,weatherProfiles,weatherAt,weatherState,blendWeather,weatherCount};if(typeof module!=='undefined')module.exports=api;else root.WWDay=api;
+ // V13.3: shared continuous material and bounded scenery budgets.
+ function waterLook133(w,night){
+  const rain=clamp(Number.isFinite(w?.rain)?w.rain:0),wind=Math.max(.45,Math.min(2.8,Number.isFinite(w?.wind)?w.wind:1)),dark=clamp(Number.isFinite(night)?night:0);
+  return {wave:.72+wind*.28+rain*.36,rain,roughness:Math.min(.8,.32+wind*.07+rain*.13),reflection:Math.max(.18,.72-rain*.32-wind*.055),night:dark};
+ }
+ function sceneryBudget133(quality,tier,basic){
+  if(basic||tier===2||quality===0)return {reeds:0,mist:0,foam:0};
+  if(tier===1||quality===1)return {reeds:10,mist:4,foam:36};
+  return {reeds:24,mist:12,foam:90};
+ }
+ function bankSites133(bridges,riverZ,accept){
+  const result=[];
+  for(let i=0;i<68;i++){
+   const x=-67+i*2.0;
+   if(bridges.some(b=>Math.abs(x-b)<3.5))continue;
+   for(const side of [-1,1]){
+    const z=riverZ+side*(2.45+.38*Math.sin(i*2.399));
+    if(accept(x,z))result.push({x,z,cell:Math.floor(x/24),size:.28+.16*(.5+.5*Math.sin(i*1.76+side)),angle:i*2.399+side});
+   }
+  }
+  return result;
+ }
+ const api={duration,hour,mode,label,format,sample,approachHour,weatherProfiles,weatherAt,weatherState,blendWeather,weatherCount,waterLook133,sceneryBudget133,bankSites133};if(typeof module!=='undefined')module.exports=api;else root.WWDay=api;
 })(typeof globalThis!=='undefined'?globalThis:this);
