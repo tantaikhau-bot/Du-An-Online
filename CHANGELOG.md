@@ -1,5 +1,12 @@
 # WISH WORLD — Release history
 
+## V12.0 — Living World (candidate)
+- Six local-session weather profiles (clear, rain, fog, wind, snow, storm), automatic 100-second schedule and manual override. Smoothly blend fog, cloud, rain, snow, wind, ambient/direct light and sky tint without abrupt jumps. Storm is heavy rain/wind, not lightning simulation.
+- Reuse existing rain/snow buffers with quality-dependent particle counts; fade terrain wetness and precipitation, apply wind to unbatched tree crowns and fallback hair. Existing VRM spring bones, map geometry and collisions remain untouched.
+- City emissive and nearby lamp intensity follow continuous night factor; wildlife responds to weather. No new asset dependencies, no RTX/ray tracing claim. Local clock and weather are not server synchronized.
+- Add pure policy tests and Chromium weather integration regression. Larger world redesign, broader wind simulation and hardware visual QA still pending.
+- References: https://threejs.org/manual/pages/fog.html ; https://unity.com/blog/how-to-create-atmospheric-environments-on-a-budget ; https://dev.epicgames.com/documentation/unreal-engine/environmental-light-with-fog-clouds-sky-and-atmosphere-in-unreal-engine
+
 ## V11.9 — Natural Motion (candidate)
 - Per-foot stance anchors for near, slow grounded walking, with a bounded sagittal-plane correction, finite-difference direction check, toe-off fade and rollback when ground clearance or joint limits would regress. No lateral lock, no full-body IK and no running lock. Keep existing mesh sole calibration and settled idle solver.
 - Smooth airborne leg flex across takeoff/air velocity threshold; keep existing arm clearance and 20 VRM identities. No mocap or new model assets.
