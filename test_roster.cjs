@@ -11,3 +11,6 @@ const fake={baseScale:2,root:{scale:{setScalar(v){this.v=v}}},colors:[{material:
 applyPreset({Color},fake,preset('m3'));assert.equal(fake.applied,'m3');assert.equal(fake.root.scale.v,2.06);
 applyPreset({Color},fake,preset('m1'));assert.equal(fake.colors[0].material.color.x,0xffffff);assert.equal(fake.root.scale.v,2);
 console.log('Twenty presets, defaults and repeatable shared appearance passed');
+
+assert.equal(new Set(roster.map(p=>p.source)).size,6);
+assert.equal(preset('f3').source,'female4');assert.equal(preset('f4').source,'female3');
