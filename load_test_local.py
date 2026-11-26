@@ -32,6 +32,6 @@ def run(players,rounds):
    if result['errors']:raise SystemExit(1)
   finally:server.DB=old
 if __name__=='__main__':
- p=argparse.ArgumentParser();p.add_argument('--players',type=int,choices=(8,16,32),default=16);p.add_argument('--rounds',type=int,default=5);a=p.parse_args()
+ p=argparse.ArgumentParser();p.add_argument('--players',type=int,choices=(8,16,32,50),default=16);p.add_argument('--rounds',type=int,default=5);a=p.parse_args()
  if not 1<=a.rounds<=30:p.error('rounds 1..30')
  run(a.players,a.rounds)

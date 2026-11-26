@@ -14,7 +14,7 @@ assert.ok(battery<=1);
 let limited=resolution(4096,4096,3,2,1,false,true,1024,true);
 assert.ok(limited<=.25);
 assert.equal(resolution(390,780,1,1,1,false,false,4096,true),1);
-assert.match(html,/BUILD62='12\.0-living-world'/);
+assert.match(html,/BUILD62='12\.1-realtime-multiplayer'/);
 console.log('Mobile resolution regression checks passed');
 
 // V11.5.1: no experimental Original entry point in the game.
@@ -33,3 +33,16 @@ for(let target=0;target<6;target++){
 }
 assert.equal(D.weatherCount(1,120),120);assert.equal(D.weatherCount(0,500),0);assert.equal(D.weatherCount(.5,70),35);
 console.log('V12.0 six weather profiles, continuous blending, weather schedule and particle budgets passed');
+
+const RT=require('./assets/realtime.js'),history=[];
+assert.ok(RT.addSnapshot(history,{t:1000,x:0,z:0,jump:0,heading:3.1,moving:true}));
+assert.ok(RT.addSnapshot(history,{t:1750,x:3,z:0,jump:1,heading:-3.1,moving:true}));
+assert.equal(RT.addSnapshot(history,{t:1600,x:0,z:0,jump:0,heading:0}),false);
+const mid=RT.sample(history,2225);assert.equal(mid.x,1.5);assert.equal(mid.jump,.5);assert.ok(Math.abs(Math.abs(mid.heading)-Math.PI)<.01);
+assert.ok(RT.sample(history,3000).x<=3.65);
+assert.equal(RT.sample(history,5000).moving,false);
+assert.ok(RT.addSnapshot(history,{t:2500,x:25,z:0,jump:0,heading:0,moving:false}));assert.equal(history.length,1);
+const clk=RT.clockReading(1700000000000,100,200);assert.equal(RT.clockSeconds(clk,200),1700000000.2);
+assert.equal(RT.clockReading(1,0,13000),null);
+assert.ok(RT.retryDelay(3,.1)<RT.retryDelay(3,.9));
+console.log('V12.1 interpolation, teleport reset, bounded prediction, server clock and retry tests passed');

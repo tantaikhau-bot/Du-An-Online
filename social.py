@@ -123,15 +123,16 @@ def handle(h,c,u,d):
    return bool(row and origin and row['seen']>now-4 and origin['seen']>now-4 and row['action']==kind and row['target']==first and row['area']==origin['area'] and math.hypot((row['x']-origin['x'])/35,(row['y']-origin['y'])/14)<3)
   players=[]; incoming=[]
   friend_ids={row[0] for row in c.execute("SELECT CASE WHEN sender=? THEN receiver ELSE sender END FROM friends WHERE status='accepted' AND (sender=? OR receiver=?)",(uid,uid,uid))}
-  for r in c.execute('SELECT p.uid AS id,u.name,p.x,p.y,p.area,q.body,q.skin,q.hair,q.style,q.dye,q.action,q.target,f.height,f.build,f.face,f.eye,m.heading,m.moving,m.jump,k.kind AS pet,veh.kind AS vehicle,av.preset AS avatar109,av.gait AS gait109 FROM presence p JOIN users u ON u.id=p.uid LEFT JOIN character61 q ON q.uid=p.uid LEFT JOIN character64 f ON f.uid=p.uid LEFT JOIN motion68 m ON m.uid=p.uid LEFT JOIN pet70 k ON k.uid=p.uid LEFT JOIN vehicle88 veh ON veh.uid=p.uid LEFT JOIN avatar109 av ON av.uid=p.uid WHERE p.uid!=? AND p.seen>? AND p.uid NOT IN (SELECT uid FROM blocked) AND NOT EXISTS(SELECT 1 FROM ww_blocks b WHERE (b.owner=? AND b.target=p.uid) OR (b.target=? AND b.owner=p.uid)) ORDER BY CASE WHEN p.area=? THEN 0 ELSE 1 END, ((p.x-?)/35.0)*((p.x-?)/35.0)+((p.y-?)/14.0)*((p.y-?)/14.0), p.uid LIMIT 100',(uid,now-12,uid,uid,a,x,x,y,y)):
+  for r in c.execute('SELECT p.uid AS id,u.name,p.x,p.y,p.area,p.seen,q.body,q.skin,q.hair,q.style,q.dye,q.action,q.target,f.height,f.build,f.face,f.eye,m.heading,m.moving,m.jump,k.kind AS pet,veh.kind AS vehicle,av.preset AS avatar109,av.gait AS gait109 FROM presence p JOIN users u ON u.id=p.uid LEFT JOIN character61 q ON q.uid=p.uid LEFT JOIN character64 f ON f.uid=p.uid LEFT JOIN motion68 m ON m.uid=p.uid LEFT JOIN pet70 k ON k.uid=p.uid LEFT JOIN vehicle88 veh ON veh.uid=p.uid LEFT JOIN avatar109 av ON av.uid=p.uid WHERE p.uid!=? AND p.seen>? AND p.uid NOT IN (SELECT uid FROM blocked) AND NOT EXISTS(SELECT 1 FROM ww_blocks b WHERE (b.owner=? AND b.target=p.uid) OR (b.target=? AND b.owner=p.uid)) ORDER BY CASE WHEN p.area=? THEN 0 ELSE 1 END, ((p.x-?)/35.0)*((p.x-?)/35.0)+((p.y-?)/14.0)*((p.y-?)/14.0), p.uid LIMIT 100',(uid,now-12,uid,uid,a,x,x,y,y)):
    v=dict(r)
+   v['sample_ms']=int(v.pop('seen')*1000)
    v['friend']=int(v['id'] in friend_ids)
    if v['friend'] and v['target']==uid and v['action'] in ('hand','photo','hug','duet') and v['area']==a and math.hypot((v['x']-x)/35,(v['y']-y)/14)<3 and c.execute('SELECT 1 FROM presence WHERE uid=? AND seen>?',(v['id'],now-4)).fetchone():
     incoming.append({'id':v['id'],'name':v['name'],'action':v['action']})
    if v['action'] in ('hand','photo','hug','duet') and not mutually_ready(v['id'],v['target'],v['action']):v['action']='idle'
    v.pop('target',None)
    players.append(v)
-  return reply(200,{'players':players,'match':target if mutually_ready(uid,target,action) else '', 'incoming':incoming[:10], 'near':nearby69(c,uid,now) if a==0 else [], 'outings':outings70(c,uid,now) if a==0 else []})
+  return reply(200,{'world_ms':int(time.time()*1000),'players':players,'match':target if mutually_ready(uid,target,action) else '', 'incoming':incoming[:10], 'near':nearby69(c,uid,now) if a==0 else [], 'outings':outings70(c,uid,now) if a==0 else []})
  if path=='/api/social/list':
   return reply(200,{'friends':[dict(r) for r in c.execute('SELECT f.sender,f.receiver,f.status,u.name,u.id FROM friends f JOIN users u ON u.id=CASE WHEN f.sender=? THEN f.receiver ELSE f.sender END WHERE f.sender=? OR f.receiver=?',(uid,uid,uid))], 'greetings':[dict(r) for r in c.execute('SELECT u.name,g.kind,g.created FROM greetings g JOIN users u ON u.id=g.sender WHERE g.receiver=? ORDER BY g.created DESC LIMIT 20',(uid,))]})
  if path=='/api/social/search':

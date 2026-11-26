@@ -16,7 +16,12 @@ class WorldLife(unittest.TestCase):
    social.init(c)
    def pulse(uid,**fields):return social.handle(H('/api/social/pulse'),c,{'id':uid},{'x':490,'y':575,'area':0,**fields})
    self.assertEqual(pulse('a',avatar109='f10',moving=True,gait109=1)[0],200)
-   r=pulse('b',body='female',avatar109='invalid',moving=False,gait109=1)[1]['players'][0]
+   packet=pulse('b',body='female',avatar109='invalid',moving=False,gait109=1)[1]
+   r=packet['players'][0]
+   self.assertIsInstance(packet['world_ms'],int)
+   self.assertIsInstance(r['sample_ms'],int)
+   self.assertLessEqual(r['sample_ms'],packet['world_ms'])
+   self.assertNotIn('seen',r)
    self.assertEqual((r['avatar109'],r['gait109']),('f10',1))
    r=pulse('a')[1]['players'][0];self.assertEqual((r['avatar109'],r['gait109']),('f1',0))
  def test_backup_download(self):
