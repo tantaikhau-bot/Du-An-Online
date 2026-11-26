@@ -30,13 +30,14 @@ const fs=require('node:fs'),os=require('node:os'),path=require('node:path'),asse
   await page.waitForFunction(()=>window.wwGraphics59?.motionState==='idle'&&window.wwGraphics59?.npcBlockFallback===0,{},{timeout:45000});
   await page.waitForFunction(()=>window.wwGraphics59?.npcVRM>=1,{},{timeout:90000});
   await page.waitForFunction(()=>window.wwGraphics59?.poseCheck?.profile==='m1',{},{timeout:45000});
+  const checkArms=async()=>{const a=await page.evaluate(()=>window.wwGraphics59.poseCheck.rawArm);assert.equal(a.length,2);for(const arm of a){assert.ok(arm&&arm.flex>.35&&arm.flex<1.45,JSON.stringify(arm));assert.ok(arm.wristSide>arm.shoulderSide-.015,JSON.stringify(arm));}console.log('Running arm joints',JSON.stringify(a))};
   const checkPose=async(id)=>{const p=await page.evaluate(()=>window.wwGraphics59.poseCheck);assert.equal(p.profile,id);assert.ok(p.knee.every(v=>v>=-.001&&v<=1.17));assert.ok(p.hip.every(v=>Math.abs(v)<=.63));assert.ok(p.ankle.every(v=>Math.abs(v)<=.31));assert.equal(p.rawLeg.length,2);for(const leg of p.rawLeg){assert.ok(leg&&Number.isFinite(leg.flex)&&leg.flex<1.5,JSON.stringify(leg));assert.ok(leg.thigh>.05&&leg.shin>.05);if(leg.flex>.35)assert.ok(leg.forward>-.025,JSON.stringify(leg))}return p};
   await checkPose('m1');
   const contact=await page.evaluate(()=>window.wwGraphics59.footIK);if(contact){assert.ok(contact.maxCorrection<=.045);assert.equal(contact.mode,'vertical-only')}
   await page.keyboard.down('d');try{await page.waitForFunction(()=>window.wwGraphics59?.motionState==='walk',{},{timeout:30000});}finally{await page.keyboard.up('d')}
   await checkPose('m1');
   await page.keyboard.down('Shift');await page.keyboard.down('a');
-  try{await page.waitForFunction(()=>window.wwGraphics59?.motionState==='run'&&window.wwGraphics59.footIK===null,{},{timeout:30000});await checkPose('m1');}finally{await page.keyboard.up('a');await page.keyboard.up('Shift')}
+  try{await page.waitForFunction(()=>window.wwGraphics59?.motionState==='run'&&window.wwGraphics59.footIK===null,{},{timeout:30000});await checkPose('m1');await checkArms();}finally{await page.keyboard.up('a');await page.keyboard.up('Shift')}
   await page.waitForFunction(()=>window.wwGraphics59?.motionState==='idle',{},{timeout:30000});
   await page.evaluate(()=>{window.wwGraphics59.motionHistory=[];jumpRequest()});
   await page.waitForFunction(()=>window.wwGraphics59?.motionHistory?.includes('jump_land'),{},{timeout:45000});
@@ -56,7 +57,7 @@ const fs=require('node:fs'),os=require('node:os'),path=require('node:path'),asse
   assert.equal(await page.evaluate(()=>JSON.parse(localStorage.getItem('wishworld-v1')).avatar106),'f1');
   await page.waitForFunction(()=>window.wwGraphics59?.handsDown===true,{},{timeout:30000});
   await checkPose('f1');
-  await page.keyboard.down('Shift');await page.keyboard.down('d');try{await page.waitForFunction(()=>window.wwGraphics59?.motionState==='run'&&window.wwGraphics59.footIK===null,{},{timeout:30000});await checkPose('f1');}finally{await page.keyboard.up('d');await page.keyboard.up('Shift')}
+  await page.keyboard.down('Shift');await page.keyboard.down('d');try{await page.waitForFunction(()=>window.wwGraphics59?.motionState==='run'&&window.wwGraphics59.footIK===null,{},{timeout:30000});await checkPose('f1');await checkArms();}finally{await page.keyboard.up('d');await page.keyboard.up('Shift')}
   await page.evaluate(()=>studio12());
   await page.waitForFunction(()=>window.wwRosterReady==='f1',{},{timeout:90000});
   await page.selectOption('#motionPreview110','1');await page.waitForFunction(()=>window.wwPreviewPose110?.profile==='f1'&&window.wwPreviewPose110.knee.some(k=>k>.2),{},{timeout:30000});
