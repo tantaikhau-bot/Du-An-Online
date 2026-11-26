@@ -14,7 +14,7 @@ assert.ok(battery<=1);
 let limited=resolution(4096,4096,3,2,1,false,true,1024,true);
 assert.ok(limited<=.25);
 assert.equal(resolution(390,780,1,1,1,false,false,4096,true),1);
-assert.match(html,/BUILD62='12\.3-social-adventure'/);
+assert.match(html,/BUILD62='12\.4-world-expansion'/);
 console.log('Mobile resolution regression checks passed');
 
 // V11.5.1: no experimental Original entry point in the game.
@@ -46,3 +46,17 @@ const clk=RT.clockReading(1700000000000,100,200);assert.equal(RT.clockSeconds(cl
 assert.equal(RT.clockReading(1,0,13000),null);
 assert.ok(RT.retryDelay(3,.1)<RT.retryDelay(3,.9));
 console.log('V12.1 interpolation, teleport reset, bounded prediction, server clock and retry tests passed');
+
+const G124=require('./assets/game-policy.js');
+assert.equal(G124.WW_LANDMARK124.length,4);
+for(const spec of G124.WW_LANDMARK124){
+ const p=G124.landmarkSite124(spec,()=>true,()=>0,()=>spec.region);
+ assert.ok(p&&Math.abs(p.x)<=69&&Math.abs(p.z)<=69);
+ assert.equal(G124.landmarkSite124(spec,()=>false,()=>0,()=>spec.region),null);
+ assert.equal(G124.landmarkSite124(spec,()=>true,()=>0,()=>'other'),null);
+}
+assert.equal(G124.cellVisible124(31,0,30,false),false);
+assert.equal(G124.cellVisible124(31,0,30,true),true);
+assert.equal(G124.cellVisible124(36,0,30,true),false);
+assert.deepEqual(G124.landmarkVisits124(['pine-lookout','fake','pine-lookout']),['pine-lookout']);
+console.log('V12.4 safe landmark placement, bounded world coordinates, visit migration and LOD hysteresis passed');

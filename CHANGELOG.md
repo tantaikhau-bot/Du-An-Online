@@ -1,5 +1,11 @@
 # WISH WORLD — Release history
 
+## V12.4 — World Expansion (candidate)
+- Four candidate scenic landmarks within existing playable pine, ruins, amber and summit regions. Deterministic terrain/slope/walkability and existing-site clearance checks; omit a site if no safe location is found. Decorative marker only, not new collision platform.
+- Regional atlas, route navigation, minimap markers and local cosmetic discovery progress. No reward currency or account-wide new achievement claim.
+- Hysteresis for existing building/forest/scenery visibility and new landmark labels, squared-distance checks. This is render culling, not asynchronous terrain streaming.
+- Preserve map bounds, existing terrain, bridges, NPC and saved coordinates. Tests cover placement policy, bounds, invalid visits and culling boundaries. Actual new-site reachability, architecture quality and device FPS still need visual QA.
+
 ## V12.3 — Social Adventure (candidate)
 - Five rotating daily scenic routes, three ordered checkpoints, per-account completion history and non-tradable badge count. Vietnamese local-day boundary; no premium currency or offline coin changes.
 - Authenticated API checks current public-world presence, checkpoint distance, sequence, day and repeat attempts. Presence is still client-reported, not authoritative anti-cheat. No new player location history beyond existing presence.
