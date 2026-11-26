@@ -1,5 +1,9 @@
 # WISH WORLD — Release history
 
+## V11.2.1 — Stability Recovery
+- Restore V11.1 renderer, VRM roster, motion and asset allowlist after user reported V11.2 gameplay failure. Root cause not yet isolated. Keep V11.2 experimental features in Git history; do not enable them until browser verification succeeds.
+- Retain saved avatar IDs and canonical Render service. No database migration.
+
 ## V11.2 — Character Identity
 - Sample five CC0 KayKit authored walk/run clips into bounded thigh, knee, upper-arm and elbow channels and blend them with existing VRM motion. No imported root translation or mocap claim; safe procedural fallback if asset fails.
 - Four extra female VRoid beta CC0 base models (Shibu, Vivi, Vita, Victoria Rubin), eight bases total. Existing male bases remain two. Twenty themed accessory designs (capes, scarves, emblems, sword sheaths, ornaments) attached to animated bones; no independently sculpted faces or full outfit skinning.
