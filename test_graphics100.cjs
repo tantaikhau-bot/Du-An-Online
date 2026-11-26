@@ -52,3 +52,11 @@ console.log('V13.9 mobile render budgets, 30 FPS default, fast degradation, slow
 const P140=require('./assets/game-policy.js');const map140=new Map([['a',1],['b',2],['c',3],['d',4]]),disposed140=[];
 assert.equal(P140.trimModels140(map140,'a',2,v=>disposed140.push(v)),2);assert.deepEqual([...map140.keys()],['a','d']);assert.deepEqual(disposed140,[2,3]);assert.equal(P140.expiredModel140(0,19999),false);assert.equal(P140.expiredModel140(0,20000),true);assert.equal(P140.expiredModel140(undefined,30000),false);
 console.log('V14.0 active-model preservation, eviction and inactivity grace passed');
+
+const P141=require('./assets/game-policy.js');
+for(const dt of [1000/60,1000/30,1000/20,1000/15,100,5000,NaN,-1]){let sum=0,n=P141.physicsSteps141(dt,d=>{assert.ok(d>0&&d<=25);sum+=d});assert.ok(n<=4);assert.ok(Math.abs(sum-P141.physicsDelta141(dt))<1e-9)}
+let near=P141.angle141(Math.PI-.01,-Math.PI+.01,50);assert.ok(near>Math.PI-.01&&near<Math.PI+.01);
+for(const hz of [60,30,20,15,10]){let j={prep:.2,height:0,velocity:0,land:0},peak=0,time=0,landed=false;while(time<2&&!landed){j=P141.jumpStep141(j,1000/hz,true);peak=Math.max(peak,j.height);time+=1/hz;landed=j.landed}assert.ok(landed&&peak>.70&&peak<.79&&time>.90&&time<1.08,JSON.stringify({hz,peak,time}));assert.equal(j.height,0);assert.equal(j.velocity,0)}
+let camera141=P141.orbit141({},0,.3,1,16);P141.orbit141(camera141,1,.5,2,30);assert.ok(camera141.yaw>0&&camera141.yaw<1&&camera141.zoom>1&&camera141.zoom<2);
+assert.equal(P141.orbit141(camera141,2,.5,2,30,true).yaw,2);
+console.log('V14.1 bounded physics, jump timing at 10–60 FPS and camera angle wrapping passed');
