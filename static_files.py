@@ -1,9 +1,11 @@
 """Allowlisted static assets with bounded, same-origin upstream cache."""
 from pathlib import Path
-import shutil,urllib.request,hashlib,struct,threading,time,os
-FILES={'vrm-character.js':'text/javascript; charset=utf-8','three-vrm.module.js':'text/javascript; charset=utf-8','Sakurada_Fumiriya.vrm':'model/gltf-binary','Sendagaya_Shino.vrm':'model/gltf-binary','deer.glb':'model/gltf-binary','anime-character.js':'text/javascript; charset=utf-8','game-policy.js':'text/javascript; charset=utf-8','realtime.js':'text/javascript; charset=utf-8','fox.glb':'model/gltf-binary','hero.glb':'model/gltf-binary','forrest_ground_01.jpg':'image/jpeg','medieval_blocks_05.jpg':'image/jpeg','medieval_wood.jpg':'image/jpeg','manifest.json':'application/json'}
+import shutil,urllib.request,hashlib,struct,threading,time,os,json
+FILES={'HairSample_Male.vrm':'model/gltf-binary','HairSample_Female.vrm':'model/gltf-binary','vrm-character.js':'text/javascript; charset=utf-8','three-vrm.module.js':'text/javascript; charset=utf-8','Sakurada_Fumiriya.vrm':'model/gltf-binary','Sendagaya_Shino.vrm':'model/gltf-binary','deer.glb':'model/gltf-binary','anime-character.js':'text/javascript; charset=utf-8','game-policy.js':'text/javascript; charset=utf-8','realtime.js':'text/javascript; charset=utf-8','fox.glb':'model/gltf-binary','hero.glb':'model/gltf-binary','forrest_ground_01.jpg':'image/jpeg','medieval_blocks_05.jpg':'image/jpeg','medieval_wood.jpg':'image/jpeg','manifest.json':'application/json'}
 VRM='https://raw.githubusercontent.com/madjin/vrm-samples/master/vroid/beta/'
 UPSTREAM={
+ 'HairSample_Male.vrm':(VRM+'HairSample_Male.vrm',None),
+ 'HairSample_Female.vrm':(VRM+'HairSample_Female.vrm',None),
  'Sakurada_Fumiriya.vrm':(VRM+'Sakurada_Fumiriya.vrm','d8fb05f33e377df028cb6b9d58c441ce68326c41fa23f6c735d40c65ae3dc710'),
  'Sendagaya_Shino.vrm':(VRM+'Sendagaya_Shino.vrm','1e177c1a7b14f783a9c48395831db8616260d3bddd4154cb2784b779adca49b5'),
  'three-vrm.module.js':('https://cdn.jsdelivr.net/npm/@pixiv/three-vrm@2.1.2/lib/three-vrm.module.js',None),
@@ -25,6 +27,11 @@ def cached_asset(name):
     data=r.read(40*1024*1024+1)
    if not data or len(data)>40*1024*1024:raise ValueError('asset length')
    if name.endswith(('.vrm','.glb')) and (len(data)<20 or data[:4]!=b'glTF' or struct.unpack_from('<I',data,8)[0]!=len(data)):raise ValueError('bad glTF')
+   if name.startswith('HairSample_'):
+    n,kind=struct.unpack_from('<II',data,12)
+    if kind!=0x4e4f534a:raise ValueError('bad VRM JSON')
+    meta=json.loads(data[20:20+n]).get('extensions',{}).get('VRM',{}).get('meta',{})
+    if meta.get('licenseName')!='CC0':raise ValueError('VRM license not CC0')
    if name.endswith('.js') and (len(data)<1000 or b'VRMLoaderPlugin' not in data):raise ValueError('bad module')
    if digest and digest.startswith('git:'):
     if hashlib.sha1(('blob '+str(len(data))).encode()+bytes([0])+data).hexdigest()!=digest[4:]:raise ValueError('asset hash')

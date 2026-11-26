@@ -32,6 +32,15 @@ const fs=require('node:fs'),os=require('node:os'),path=require('node:path'),asse
   await page.evaluate(()=>studio12());
   await page.waitForFunction(()=>document.getElementById('previewHint52')?.textContent.includes('Anime Fantasy'),{},{timeout:30000});
   await page.selectOption('#expressionAnime','happy');
+  assert.equal(await page.locator('#rosterCards106 button').count(),5);
+  await page.locator('#rosterTabs106 [data-gender="female"]').click();
+  assert.equal(await page.locator('#rosterCards106 button').count(),5);
+  await page.waitForFunction(()=>window.wwRosterReady==='f1',{},{timeout:90000});
+  await page.locator('#saveAvatar106').click();
+  await page.waitForFunction(()=>window.wwGraphics59?.avatarPreset==='f1',{},{timeout:90000});
+  assert.equal(await page.evaluate(()=>JSON.parse(localStorage.getItem('wishworld-v1')).avatar106),'f1');
+  await page.evaluate(()=>studio12());
+  await page.waitForFunction(()=>window.wwRosterReady==='f1',{},{timeout:90000});
   await page.waitForTimeout(500);
   fs.mkdirSync('test-output',{recursive:true});
   await page.screenshot({path:'test-output/anime-desktop.png',timeout:120000});
