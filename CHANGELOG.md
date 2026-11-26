@@ -1,5 +1,10 @@
 # WISH WORLD — Release history
 
+## V13.6 — Co-op Adventure (candidate)
+- Daily two-player scenic route with nearby friend invitation, explicit recipient consent, cancellation and three shared checkpoints. Server checks current public presence for both, order, friendship and blocking. No new coins or tradable rewards.
+- One accepted/completed pair per player/day, three outgoing invitations/day, day rollover and private progress. UI reachable from daily adventure. Tests for consent, isolation, stale/missing presence, repeat check-ins and block visibility.
+- Client-reported coordinates remain non-authoritative; no live multiplayer visual certification. No new minigame or combat.
+
 ## V13.5 — Companion Care (candidate)
 - Separate saved fullness, energy and mood for each of five existing species. Feed uses existing inventory; touch and rest have cooldowns, travel consumes a bounded amount of energy. No pet loss, extra currency, new economy or mandatory care penalty.
 - Fix follower offset using actual avatar forward convention. Preserve bridge/walkability checks, GLBs, animation and remote follower behavior.
