@@ -1,5 +1,11 @@
 # WISH WORLD — Release history
 
+## V11.0 — Character Locomotion Personalities
+- Replace unrestricted world-space foot locks with bounded vertical-only sagittal corrections. Disable IK on running, jump phases, fast turns and large frame steps; reset contact on preset changes.
+- Twenty unique authored profiles with distinct stride, cadence, arm swing, elbow flex, sway, forward lean and bounce. Normalize forward signs from rig toe direction. Gait key poses and bounded knee/hip/ankle motion; softer four-phase jump and landing.
+- Same character preview supports idle/walk/run. Fox and deer use gait hysteresis, smoother clip transitions and playback rates.
+- Procedural authored motion, not motion capture; no guarantee of visual realism. Live SQLite remains ephemeral.
+
 ## V10.9 — World Life
 - Analytic two-bone stance IK for the local humanoid, contact lock in world space, terrain height, release in jump/vehicle/emote. Not motion capture, requires live visual tuning.
 - Remote presence sends validated avatar ID and gait, uses VRM and far sprite; cap concurrent displayed peers to 5/8/12 by quality.

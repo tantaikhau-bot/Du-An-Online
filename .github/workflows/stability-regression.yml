@@ -1,7 +1,7 @@
 name: Stability regression
 on:
   push:
-    branches: [fix/v10.1-stability, fix/v10.5-assets, fix/v10.6-roster, fix/v10.7-living-characters, fix/v10.8-smooth-motion, fix/v10.9-world-life, main]
+    branches: [fix/v10.1-stability, fix/v10.5-assets, fix/v10.6-roster, fix/v10.7-living-characters, fix/v10.8-smooth-motion, fix/v10.9-world-life, fix/v11.0-locomotion, main]
   pull_request:
     branches: [main]
 permissions:

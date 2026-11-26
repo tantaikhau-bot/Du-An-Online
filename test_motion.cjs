@@ -16,3 +16,21 @@ assert.equal(a.state,'idle');assert.ok(a.jump<.01);
 assert.equal(M.npcLOD(3,0).level,0);assert.equal(M.npcLOD(25,0).level,1);assert.equal(M.npcLOD(42,0).level,2);
 assert.equal(M.npcLOD(25,2).level,2);
 console.log('Smooth motion blend, idle/walk/run, 4 jump phases and NPC LOD passed');
+
+assert.equal(Object.keys(M.profiles).length,20);
+const signatures=new Set();
+for(const id of Object.keys(M.profiles)){
+ const cfg=M.profile(id);signatures.add(JSON.stringify([cfg.stride,cfg.cadence,cfg.arms,cfg.elbow,cfg.sway,cfg.lean,cfg.spread,cfg.bounce]));
+ const state=M.newState();
+ for(let n=0;n<450;n++){
+  const gait=n<90?.65:n<210?1:n<280?.65:0,j=n>=280&&n<300?{prep:.09}:n>=300&&n<320?{height:.1,velocity:3.4}:n>=320&&n<350?{height:.4,velocity:-1}:n>=350&&n<375?{land:.18}:{};
+  const v=M.step(state,1/60,gait,j,'idle',id);
+  assert.ok(Object.values(v).every(Number.isFinite));
+  for(const k of ['kneeL','kneeR'])assert.ok(v[k]>=0&&v[k]<=1.12+1e-6,id);
+  for(const k of ['hipL','hipR'])assert.ok(v[k]>=-.620001&&v[k]<=.570001,id);
+ }
+}
+assert.equal(signatures.size,20);
+assert.ok(M.profile('m4').arms>M.profile('f1').arms);
+assert.equal(M.animalState('run',1.65),'run');assert.equal(M.animalState('walk',1.65),'walk');assert.equal(M.animalState('walk',2.1),'run');assert.equal(M.animalState('run',.05),'idle');
+console.log('20 unique profiles, 9000 bounded pose samples and pet gait hysteresis passed');
