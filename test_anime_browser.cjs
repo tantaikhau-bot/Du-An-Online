@@ -1,0 +1,33 @@
+const {chromium}=require('playwright');
+const {spawn}=require('node:child_process');
+const fs=require('node:fs'),os=require('node:os'),path=require('node:path'),assert=require('node:assert/strict');
+(async()=>{
+ const temp=fs.mkdtempSync(path.join(os.tmpdir(),'ww-anime-'));
+ const port=18765,origin='http://127.0.0.1:'+port;
+ const server=spawn('python',['server.py'],{env:{...process.env,WISH_DB:path.join(temp,'test.sqlite3'),HOST:'127.0.0.1',PORT:String(port)},stdio:'inherit'});
+ let browser;
+ try{
+  for(let i=0;i<60;i++){try{if((await fetch(origin+'/healthz')).ok)break}catch{}await new Promise(r=>setTimeout(r,250))}
+  browser=await chromium.launch({headless:true,args:['--use-gl=angle','--use-angle=swiftshader','--enable-unsafe-swiftshader','--no-sandbox']});
+  const page=await browser.newPage({viewport:{width:1280,height:800},deviceScaleFactor:1});const errors=[];
+  page.on('pageerror',e=>errors.push(e.message));
+  await page.route('https://cdn.jsdelivr.net/npm/three@0.164.1/**',async route=>{
+   const rel=new URL(route.request().url()).pathname.split('/three@0.164.1/')[1];
+   const file=path.resolve('node_modules/three',rel);
+   if(!file.startsWith(path.resolve('node_modules/three')+path.sep)||!fs.existsSync(file))return route.abort();
+   await route.fulfill({path:file,contentType:'application/javascript',headers:{'Access-Control-Allow-Origin':'*'}});
+  });
+  await page.goto(origin+'/play?gfx=balanced');
+  await page.waitForFunction(()=>window.wwGraphics59?.stage==='running'||window.wwGraphics59?.engine==='classic',{},{timeout:90000});
+  const info=await page.evaluate(()=>window.wwGraphics59);
+  assert.equal(info.engine,'three',JSON.stringify(info));
+  await page.evaluate(()=>{document.querySelectorAll('dialog[open]').forEach(d=>d.close());studio12()});
+  await page.waitForFunction(()=>document.getElementById('previewHint52')?.textContent.includes('Anime Fantasy'),{},{timeout:30000});
+  await page.selectOption('#expressionAnime','happy');
+  await page.waitForTimeout(500);
+  fs.mkdirSync('test-output',{recursive:true});
+  await page.screenshot({path:'test-output/anime-desktop.png'});
+  assert.deepEqual(errors,[]);
+  console.log('Three.js rendered and anime atelier preview completed');
+ }finally{if(browser)await browser.close();server.kill();await new Promise(r=>server.once('exit',r));fs.rmSync(temp,{recursive:true,force:true});}
+})().catch(e=>{console.error(e);process.exitCode=1});
