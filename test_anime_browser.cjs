@@ -23,6 +23,13 @@ const fs=require('node:fs'),os=require('node:os'),path=require('node:path'),asse
   await page.waitForFunction(()=>window.wwGraphics59?.stage==='running'||window.wwGraphics59?.engine==='classic',{},{timeout:90000});
   const info=await page.evaluate(()=>window.wwGraphics59);
   assert.equal(info.engine,'three',JSON.stringify(info));
+  await page.waitForFunction(()=>window.wwGraphics59?.weather120?.auto===true,{},{timeout:30000});
+  await page.evaluate(()=>{const b=document.getElementById('nWeather');b.click();b.click()});
+  await page.waitForFunction(()=>window.wwGraphics59?.weather120?.index===1&&window.wwGraphics59.weather120.rain>.01,{},{timeout:30000});
+  const wet=await page.evaluate(()=>window.wwGraphics59.weather120);assert.ok(wet.rain<1&&wet.auto===false&&Number.isFinite(wet.fog));
+  await page.evaluate(()=>{const b=document.getElementById('nWeather');for(let i=0;i<5;i++)b.click()});
+  await page.waitForFunction(()=>window.wwGraphics59?.weather120?.auto===true,{},{timeout:30000});
+  console.log('V12.0 manual weather and automatic cycle validated');
   await page.waitForFunction(()=>window.wwGraphics59?.creatureAssets?.length===5,{},{timeout:30000});
   const creatureKinds=await page.evaluate(()=>window.wwGraphics59.creatureAssets);
   assert.deepEqual([...creatureKinds].sort(),['cat','deer','dragon','fox','rabbit']);

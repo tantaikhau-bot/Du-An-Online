@@ -23,5 +23,23 @@
   return {hour:h,colors:[[a[1],b[1]],[a[2],b[2]],[a[3],b[3]]],blend:t,ambient:mix(a[4],b[4],t),direct:mix(a[5],b[5],t),env:mix(a[6],b[6],t),exposure:mix(a[7],b[7],t),night:mix(a[8],b[8],t),glow:mix(a[9],b[9],t),dir};
  }
  function approachHour(current,target,dt){let d=((target-current+36)%24)-12;return wrap(current+d*(1-Math.exp(-Math.max(0,dt)/1.2)))}
- const api={duration,hour,mode,label,format,sample,approachHour};if(typeof module!=='undefined')module.exports=api;else root.WWDay=api;
+ // Local-session weather. Separate target from visual state to avoid lighting jumps.
+ const weatherProfiles=Object.freeze([
+  {name:'Quang đãng',rain:0,snow:0,fog:.012,cloud:.40,wind:1,sun:1,ambient:1,glow:1,gray:0},
+  {name:'Mưa',rain:.72,snow:0,fog:.037,cloud:.92,wind:1.6,sun:.70,ambient:.90,glow:.15,gray:.28},
+  {name:'Sương mù',rain:0,snow:0,fog:.058,cloud:.83,wind:.45,sun:.70,ambient:.95,glow:.20,gray:.36},
+  {name:'Gió mạnh',rain:0,snow:0,fog:.018,cloud:.62,wind:2.4,sun:.88,ambient:1,glow:.65,gray:.10},
+  {name:'Tuyết',rain:0,snow:1,fog:.032,cloud:.88,wind:.9,sun:.77,ambient:.98,glow:.24,gray:.30},
+  {name:'Giông',rain:1,snow:0,fog:.049,cloud:.99,wind:2.8,sun:.48,ambient:.78,glow:.06,gray:.48}
+ ].map(Object.freeze));
+ const schedule=[0,3,1,2,0,5,0,4,0,3,2,0];
+ function weatherAt(seconds){return schedule[Math.floor(Math.max(0,Number.isFinite(seconds)?seconds:0)/100)%schedule.length]}
+ function weatherState(){return {...weatherProfiles[0]}}
+ function blendWeather(state,index,dt){
+  const target=weatherProfiles[index]||weatherProfiles[0],k=1-Math.exp(-Math.max(0,Math.min(.25,Number.isFinite(dt)?dt:0))/2.8);
+  for(const key of Object.keys(target))if(key!=='name')state[key]=mix(Number.isFinite(state[key])?state[key]:weatherProfiles[0][key],target[key],k);
+  state.name=target.name;return state;
+ }
+ function weatherCount(amount,budget){return Math.max(0,Math.min(budget,Math.round(clamp(Number.isFinite(amount)?amount:0)*budget)))}
+ const api={duration,hour,mode,label,format,sample,approachHour,weatherProfiles,weatherAt,weatherState,blendWeather,weatherCount};if(typeof module!=='undefined')module.exports=api;else root.WWDay=api;
 })(typeof globalThis!=='undefined'?globalThis:this);
