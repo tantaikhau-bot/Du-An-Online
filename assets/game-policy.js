@@ -25,7 +25,7 @@ function perfPreset118(q,saved,memory,cores,mobile){
  const requested=q.get('gfx');
  if(Object.hasOwn(WW_PERF118,requested))return requested;
  if(Object.hasOwn(WW_PERF118,saved))return saved;
- return (Number.isFinite(memory)&&memory<=4)||(mobile&&Number.isFinite(cores)&&cores<=4)?'low':'balanced';
+ return mobile||(Number.isFinite(memory)&&memory<=4)?'low':'balanced';
 }
 function perfWarning118(fps,p95,cap,heap){
  const target=cap||60;
@@ -79,4 +79,35 @@ function stepSound131(state,distance,moving,run){
  const stride=run?.85:.58;
  if(state.distance<stride)return false;state.distance%=stride;return true;
 }
-if(typeof module!=='undefined')module.exports={WW_WORLD137,WW_EXPANSION137,insideWorld137,expansionRegion137,clarityStep100,resolution77,WW_PERF118,perfPreset118,perfWarning118,WW_LANDMARK124,landmarkSite124,cellVisible124,landmarkVisits124,WW_LOOK131,look131,blendLook131,cameraSafe131,stepSound131};
+// V13.9: mobile-specific budget; desktop legacy policy remains unchanged.
+function mobileCap139(preset,pref){
+ if(preset==='battery'||preset==='low')return 30;
+ return [30,45,60].includes(pref)?pref:30;
+}
+function mobileResolution139(w,h,dpr,quality,tier,scale,hd,maxBuffer){
+ w=Math.max(1,w);h=Math.max(1,h);
+ const budget=tier===2?420000:tier===1?850000:hd?1800000:1250000;
+ const base=tier===2?.88:tier===1?1.12:hd?1.65:1.35;
+ return Math.min(Math.max(.48,base*Math.max(.50,Math.min(1.25,scale))),Math.max(1,dpr),Math.sqrt(budget/(w*h)),maxBuffer/Math.max(w,h));
+}
+function mobileStep139(v,fps,p95,cap,ceiling,tierFloor,scaleCeiling,manual=false){
+ const severe=fps<cap*.64||p95>100,slow=severe||fps<cap*.86||p95>1000/cap*1.9;
+ const good=fps>=cap*.96&&p95<=1000/cap*1.16;
+ let q={...v,slow:slow?(v.slow||0)+1:0,good:good?(v.good||0)+1:0,changed:false};
+ if(severe||q.slow>=2){
+  if(q.tier<2){q.tier=2;if(!manual)q.quality=Math.max(0,q.quality-1)}
+  else if(q.quality>0&&!manual)q.quality--;
+  else q.scale=Math.max(.50,q.scale*(severe?.78:.90));
+  q.changed=q.tier!==v.tier||q.quality!==v.quality||Math.abs(q.scale-v.scale)>.001;q.slow=0;q.good=0;
+ }else if(q.good>=12&&!manual){
+  if(q.scale<scaleCeiling-.025)q.scale=Math.min(scaleCeiling,q.scale+.06);
+  else if(q.tier>tierFloor)q.tier--;
+  // Do not automatically increase geometry quality during play.
+  q.quality=Math.min(q.quality,ceiling);q.changed=q.tier!==v.tier||q.quality!==v.quality||Math.abs(q.scale-v.scale)>.001;q.good=0;
+ }
+ return q;
+}
+function actorBudget139(mobile,tier,quality){
+ return mobile?{peerCount:tier===2?5:8,peerRange:tier===2?26:38,peerRig:tier===2?9:18,npcRig:tier===2?10:20,npcCount:tier===2?1:2,load:1,mapMs:tier===2?650:450,heavyMs:tier===2?420:280}:{peerCount:[5,8,12][quality],peerRange:[28,38,48][quality],peerRig:Infinity,npcRig:55,npcCount:6,load:2,mapMs:[400,250,160][quality],heavyMs:[250,160,100][quality]};
+}
+if(typeof module!=='undefined')module.exports={mobileCap139,mobileResolution139,mobileStep139,actorBudget139,WW_WORLD137,WW_EXPANSION137,insideWorld137,expansionRegion137,clarityStep100,resolution77,WW_PERF118,perfPreset118,perfWarning118,WW_LANDMARK124,landmarkSite124,cellVisible124,landmarkVisits124,WW_LOOK131,look131,blendLook131,cameraSafe131,stepSound131};
