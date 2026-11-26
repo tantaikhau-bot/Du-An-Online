@@ -27,6 +27,8 @@ const fs=require('node:fs'),os=require('node:os'),path=require('node:path'),asse
   await page.waitForFunction(()=>window.wwGraphics59?.avatarAsset?.startsWith('VRM ')||window.wwGraphics59?.avatarAsset?.startsWith('fallback:'),{},{timeout:90000});
   const asset=await page.evaluate(()=>window.wwGraphics59.avatarAsset);
   assert.equal(asset,'VRM male');
+  await page.waitForFunction(()=>window.wwGraphics59?.motionState==='idle'&&window.wwGraphics59?.npcBlockFallback===0,{},{timeout:45000});
+  await page.waitForFunction(()=>window.wwGraphics59?.npcVRM>=1,{},{timeout:90000});
   fs.mkdirSync('test-output',{recursive:true});
   await page.screenshot({path:'test-output/vrm-world.png',timeout:120000});
   await page.evaluate(()=>studio12());
