@@ -1,5 +1,10 @@
 # WISH WORLD — Release history
 
+## V13.5 — Companion Care (candidate)
+- Separate saved fullness, energy and mood for each of five existing species. Feed uses existing inventory; touch and rest have cooldowns, travel consumes a bounded amount of energy. No pet loss, extra currency, new economy or mandatory care penalty.
+- Fix follower offset using actual avatar forward convention. Preserve bridge/walkability checks, GLBs, animation and remote follower behavior.
+- Tests cover all five profiles, four headings, bounds, old/malformed save data, cooldown and long absence. Device/visual tests and new model evolution remain pending.
+
 ## V13.4 — Adventure & Stability (candidate)
 - Deduplicate repeated presence packets by server sample timestamp, smooth local timestamp mapping and keep bounded predicted position when motion becomes stale. Preserve HTTP fallback and privacy.
 - Weekly account-bound challenge: complete three daily routes within the Vietnam Monday–Sunday week; derived from existing completion history; no currency or tradable rewards.
