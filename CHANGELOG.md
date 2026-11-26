@@ -1,5 +1,11 @@
 # WISH WORLD — Release history
 
+## V10.8 — Smooth Motion
+- Authored procedural locomotion curves and smoothed idle/walk/run transitions; hips, spine, shoulders, knees and ankles move together. No imported motion-capture clips or foot IK yet.
+- Jump has anticipation, takeoff, airborne and landing poses tied to existing physics. Native VRM spring bones update at near detail; blink and breathing supported.
+- NPCs keep a stable VRM preset. Near full animation, middle reduced update frequency, far same-avatar billboard (impostor). Before assets load, label remains without blocky body; if sprite generation fails, use same VRM at reduced update frequency.
+- Fox and deer use actual movement speed for idle/walk/run and optional alternate idle, with clip crossfades. Existing remote multiplayer avatars are not migrated here.
+
 ## V10.7 — Living Characters
 - Compute mirrored arm-lowering from normalized rest bone direction; verify actual hands below shoulders in idle.
 - Twenty presets (10 male + 10 female) on the same four VRoid meshes; responsive picker with aligned tabs and independently scrollable list.
