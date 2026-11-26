@@ -1,4 +1,4 @@
-/* V11.4: asymmetric living idle, weighted steps and velocity-shaped jump. */
+/* V11.5: speed-synchronised gait, acceleration and turning, relaxed male motion. */
 (function(root){
  const clamp=(x,a=0,b=1)=>Math.max(a,Math.min(b,x)),mix=(a,b,t)=>a+(b-a)*t,smooth=x=>{x=clamp(x);return x*x*(3-2*x)};
  const TAU=Math.PI*2;
@@ -27,7 +27,7 @@
  const profiles=Object.fromEntries(Object.entries(rows).map(([id,[name,stride,cadence,arms,elbow,sway,lean,spread,bounce]])=>[id,{id,name,stride,cadence,arms,elbow,sway,lean,spread,bounce}]));
  function profile(id){return profiles[id]||profiles.m1}
  function phaseOf(j){if(j?.prep>0)return 'jump_start';if(j?.height>0||j?.velocity>0)return j.velocity>2.5?'jump_takeoff':'jump_air';if(j?.land>0)return 'jump_land';return null}
- function newState(){return {time:0,cycle:0,walk:0,run:0,jump:0,pose:null,state:'idle'}}
+ function newState(){return {time:0,cycle:0,walk:0,run:0,jump:0,pose:null,state:'idle',speed:0,accel:0,turn:0}}
  // Periodic Hermite interpolation, with monotone tangents to avoid knee/ankle overshoot.
  function sample(keys,t){
   const n=keys.length-1;
@@ -49,22 +49,24 @@
   dt=Number.isFinite(dt)?clamp(dt,0,.35):0;gait=Number.isFinite(gait)?clamp(gait):0;st.time+=dt;let cfg=profile(id),phase=phaseOf(j);
   const rt=smooth((gait-.66)/.34),wt=smooth(gait/.58)*(1-rt),blend=1-Math.exp(-dt/(gait>.12?.09:.14));
   st.walk=mix(st.walk,phase?0:wt,blend);st.run=mix(st.run,phase?0:rt,blend);st.jump=mix(st.jump,phase?1:0,1-Math.exp(-dt/.065));
-  const move=clamp(st.walk+st.run),run=st.run/Math.max(.001,move);
-  st.cycle=(st.cycle+dt*TAU*mix(1.18,1.85,run)*cfg.cadence*move)%TAU;
-  const t=st.time,p=st.cycle,swing=Math.cos(p),counter=Math.sin(p),breath=Math.sin(t*2.3+.20*Math.sin(t*.73)),shift=Math.sin(t*.68+.32*Math.sin(t*.31)),rest=1-move,idleLean=shift*rest;
+  const move=clamp(st.walk+st.run),run=st.run/Math.max(.001,move),male=id.startsWith('m');
+  const measured=Number.isFinite(j.speed)?clamp(j.speed,0,5.5):mix(1.65,3.8,run)*move,oldSpeed=st.speed||0;
+  st.speed=mix(oldSpeed,measured,1-Math.exp(-dt/.11));st.accel=mix(st.accel||0,clamp((st.speed-oldSpeed)/Math.max(dt,.001),-6,6),1-Math.exp(-dt/.12));st.turn=mix(st.turn||0,clamp(j.turn||0,-3,3),1-Math.exp(-dt/.12));
+  st.cycle=(st.cycle+dt*TAU*mix(1.04,1.75,run)*cfg.cadence*move*clamp(st.speed/Math.max(.35,mix(1.65,3.8,run)*move),.55,1.24))%TAU;
+  const t=st.time,p=st.cycle,swing=Math.cos(p),counter=Math.sin(p),breath=Math.sin(t*2.3+.20*Math.sin(t*.73)),shift=Math.sin(t*.68+.32*Math.sin(t*.31)),rest=1-move,idleLean=shift*rest,relax=male?.035:.012,turnLean=clamp(st.turn*.025,-.075,.075)*move,accelLean=clamp(st.accel*.018,-.055,.075)*move;
   function leg(q){let x=((q/TAU)%1+1)%1,a=sample(WALK,x),b=sample(RUN,x),hip=mix(a[0],b[0],run)*cfg.stride*move,knee=mix(a[1],b[1],run)*move,ankle=mix(a[2],b[2],run)*move;
-   return {hip,knee,ankle,arm:-hip*cfg.arms*mix(1.17,1.32,run)+Math.sin(q-.45)*.045*move,elbow:.14+mix(.20,.74,run)*cfg.elbow*move+Math.max(0,hip)*.22}}
+   return {hip,knee,ankle,arm:-hip*cfg.arms*mix(male?1.02:1.17,male?1.20:1.32,run)+Math.sin(q-.65)*.065*move,elbow:.17+mix(.24,.74,run)*cfg.elbow*move+Math.max(0,hip)*.25}}
   let l=leg(p),r=leg(p+Math.PI);
   let v={hipY:(.013*breath-.011*Math.abs(shift))*rest+(.5+.5*Math.cos(p*2-.4))*mix(.030,.049,run)*cfg.bounce*move-.016*run,hipSide:.028*idleLean*cfg.sway+counter*.014*move,
-   hipX:mix(.025,.085,run)*move*cfg.lean+.014*rest,hipYaw:swing*.095*move+.044*idleLean,hipRoll:(idleLean*.060+counter*.052*move)*cfg.sway,
-   spineX:mix(.045,.21,run)*move*cfg.lean+breath*.035*rest,spineYaw:-swing*.125*move-.045*idleLean,spineRoll:(-counter*.045*move-.040*idleLean)*cfg.sway,
+   hipX:mix(.025,.085,run)*move*cfg.lean+.014*rest+accelLean*.45,hipYaw:swing*.095*move+.044*idleLean,hipRoll:(idleLean*.060+counter*.052*move)*cfg.sway+turnLean*.5,
+   spineX:mix(.045,.21,run)*move*cfg.lean+breath*.035*rest+accelLean,spineYaw:-swing*.125*move-.045*idleLean,spineRoll:(-counter*.045*move-.040*idleLean)*cfg.sway+turnLean,
    headX:-.045*run+breath*.020*rest+.035*Math.sin(t*.47)*rest,headY:(.18*Math.sin(t*.61)+.05*Math.sin(t*1.37))*rest-swing*.024*move,headZ:-idleLean*.041+counter*.015*move,shoulderY:swing*.060*move+.025*idleLean,
-   armL:l.arm+.043*idleLean+.025*breath*rest,armR:r.arm-.032*idleLean-.020*breath*rest,elbowL:l.elbow+.055*rest*(1+shift),elbowR:r.elbow+.045*rest*(1-shift),hipL:l.hip-.038*rest*(1+shift),hipR:r.hip-.038*rest*(1-shift),kneeL:l.knee+.060*rest*(1+shift),kneeR:r.knee+.060*rest*(1-shift),ankleL:l.ankle-.022*rest*(1+shift),ankleR:r.ankle-.022*rest*(1-shift),spread:(.09+.10*run)*cfg.spread};
+   armL:l.arm+.065*idleLean+.032*breath*rest-relax*rest,armR:r.arm-.055*idleLean-.028*breath*rest+relax*rest,elbowL:l.elbow+.09*rest*(1+shift),elbowR:r.elbow+.075*rest*(1-shift),hipL:l.hip-.038*rest*(1+shift),hipR:r.hip-.038*rest*(1-shift),kneeL:l.knee+.060*rest*(1+shift),kneeR:r.knee+.060*rest*(1-shift),ankleL:l.ankle-.022*rest*(1+shift),ankleR:r.ankle-.022*rest*(1-shift),spread:(.09+.10*run)*cfg.spread};
   if(phase){
    let amount=phase==='jump_start'?smooth(1-(j.prep||0)/.20):phase==='jump_land'?Math.sin(Math.PI*clamp((j.land||0)/.34))**.85:0;
    let air=phase==='jump_air',launch=phase==='jump_takeoff',crouch=amount,airFlex=air?mix(.13,.39,smooth(1-Math.abs(j.velocity||0)/3.9)):launch?.08:0;
    let q={hipY:-.115*crouch,hipSide:0,hipX:.080*crouch,hipYaw:0,hipRoll:0,spineX:.24*crouch+.035,spineYaw:0,spineRoll:0,headX:-.06*crouch,headY:0,headZ:0,shoulderY:0,
-    armL:(crouch*.36-(air?.30:launch?.48:0))*cfg.arms,armR:(crouch*.36-(air?.26:launch?.43:0))*cfg.arms,elbowL:.18+.28*crouch+(air?.22:0),elbowR:.18+.28*crouch+(air?.22:0),
+    armL:(crouch*.43-(air?.31:launch?.53:0))*cfg.arms,armR:(crouch*.40-(air?.24:launch?.46:0))*cfg.arms,elbowL:.18+.28*crouch+(air?.22:0),elbowR:.18+.28*crouch+(air?.22:0),
     hipL:-.46*crouch-airFlex,hipR:-.43*crouch-airFlex*.65,kneeL:.90*crouch+airFlex*1.35,kneeR:.83*crouch+airFlex*.92,ankleL:-.20*crouch-.10*airFlex,ankleR:-.20*crouch-.10*airFlex,spread:.18*cfg.spread};
    for(const k in v)v[k]=mix(v[k],q[k],st.jump);
   }
