@@ -1,7 +1,7 @@
 """Serve only explicitly allowed public assets; never expose SQLite or source files."""
 from pathlib import Path
 import shutil
-FILES={'game-policy.js':'text/javascript; charset=utf-8','realtime.js':'text/javascript; charset=utf-8','fox.glb':'model/gltf-binary','hero.glb':'model/gltf-binary','forrest_ground_01.jpg':'image/jpeg','medieval_blocks_05.jpg':'image/jpeg','medieval_wood.jpg':'image/jpeg','manifest.json':'application/json'}
+FILES={'anime-character.js':'text/javascript; charset=utf-8','game-policy.js':'text/javascript; charset=utf-8','realtime.js':'text/javascript; charset=utf-8','fox.glb':'model/gltf-binary','hero.glb':'model/gltf-binary','forrest_ground_01.jpg':'image/jpeg','medieval_blocks_05.jpg':'image/jpeg','medieval_wood.jpg':'image/jpeg','manifest.json':'application/json'}
 def serve_static(h,root,page):
  name=page.removeprefix('/assets/')
  if name not in FILES:return h.reply(404,{'error':'Không tìm thấy'})
