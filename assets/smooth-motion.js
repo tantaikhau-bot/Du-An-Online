@@ -1,4 +1,4 @@
-/* V11.0: authored sagittal gait cycles and distinct avatar motion personalities. */
+/* V11.3: continuous cyclic gait, natural counter-rotation and responsive locomotion. */
 (function(root){
  const clamp=(x,a=0,b=1)=>Math.max(a,Math.min(b,x)),mix=(a,b,t)=>a+(b-a)*t,smooth=x=>{x=clamp(x);return x*x*(3-2*x)};
  const TAU=Math.PI*2;
@@ -28,24 +28,37 @@
  function profile(id){return profiles[id]||profiles.m1}
  function phaseOf(j){if(j?.prep>0)return 'jump_start';if(j?.height>0||j?.velocity>0)return j.velocity>2.5?'jump_takeoff':'jump_air';if(j?.land>0)return 'jump_land';return null}
  function newState(){return {time:0,cycle:0,walk:0,run:0,jump:0,pose:null,state:'idle'}}
- function sample(keys,t){for(let i=1;i<keys.length;i++)if(t<=keys[i][0]){let a=keys[i-1],b=keys[i],k=smooth((t-a[0])/(b[0]-a[0]));return a.slice(1).map((v,j)=>mix(v,b[j+1],k))}return keys.at(-1).slice(1)}
+ // Periodic Hermite interpolation, with monotone tangents to avoid knee/ankle overshoot.
+ function sample(keys,t){
+  const n=keys.length-1;
+  for(let i=0;i<n;i++)if(t<=keys[i+1][0]){
+   const a=keys[i],b=keys[i+1],prev=keys[(i+n-1)%n],next=keys[(i+2)%n],span=b[0]-a[0],u=clamp((t-a[0])/span),u2=u*u,u3=u2*u;
+   const pa=i===0?prev[0]-1:prev[0],nb=i+2>=n?next[0]+1:next[0];
+   return a.slice(1).map((v,k)=>{
+    const j=k+1,w=b[j],d=(w-v)/span,dp=(v-prev[j])/(a[0]-pa),dn=(next[j]-w)/(nb-b[0]);
+    const tangent=(x,y)=>x*y>0?2*x*y/(x+y):0;
+    const m=tangent(dp,d)*span,r=tangent(d,dn)*span;
+    return clamp((2*u3-3*u2+1)*v+(u3-2*u2+u)*m+(-2*u3+3*u2)*w+(u3-u2)*r,Math.min(v,w),Math.max(v,w));
+   });
+  }return keys[n].slice(1)
+ }
  // Hip pitch negative=forward, knee flex positive=back, normalized humanoid +Z.
- const WALK=[[0,-.34,.10,-.04],[.12,-.19,.23,-.05],[.38,.14,.12,-.11],[.60,.29,.36,-.23],[.73,.08,.78,-.12],[.88,-.28,.48,.04],[1,-.34,.10,-.04]];
- const RUN=[[0,-.52,.23,.03],[.13,-.27,.43,-.08],[.32,.32,.25,-.20],[.46,.45,.74,-.26],[.64,.02,1.08,-.16],[.83,-.50,.72,.02],[1,-.52,.23,.03]];
+ const WALK=[[0,-.43,.12,.05],[.13,-.25,.24,-.03],[.36,.15,.10,-.10],[.55,.36,.26,-.24],[.70,.13,.85,-.13],[.86,-.31,.48,.06],[1,-.43,.12,.05]];
+ const RUN=[[0,-.57,.25,.06],[.13,-.29,.45,-.09],[.32,.34,.27,-.20],[.47,.49,.78,-.27],[.65,.01,1.10,-.17],[.83,-.54,.70,.03],[1,-.57,.25,.06]];
  function step(st,dt,gait=0,j={},mode='idle',id='m1'){
-  dt=clamp(dt,0,.12);gait=clamp(gait);st.time+=dt;let cfg=profile(id),phase=phaseOf(j);
-  const rt=smooth((gait-.66)/.34),wt=smooth(gait/.58)*(1-rt),blend=1-Math.exp(-dt/.12);
+  dt=Number.isFinite(dt)?clamp(dt,0,.35):0;gait=Number.isFinite(gait)?clamp(gait):0;st.time+=dt;let cfg=profile(id),phase=phaseOf(j);
+  const rt=smooth((gait-.66)/.34),wt=smooth(gait/.58)*(1-rt),blend=1-Math.exp(-dt/(gait>.12?.09:.14));
   st.walk=mix(st.walk,phase?0:wt,blend);st.run=mix(st.run,phase?0:rt,blend);st.jump=mix(st.jump,phase?1:0,1-Math.exp(-dt/.065));
   const move=clamp(st.walk+st.run),run=st.run/Math.max(.001,move);
-  st.cycle=(st.cycle+dt*TAU*mix(1.25,2.05,run)*cfg.cadence*move)%TAU;
+  st.cycle=(st.cycle+dt*TAU*mix(1.18,1.85,run)*cfg.cadence*move)%TAU;
   const t=st.time,p=st.cycle,swing=Math.cos(p),counter=Math.sin(p),breath=Math.sin(t*2),shift=Math.sin(t*.85);
   function leg(q){let x=((q/TAU)%1+1)%1,a=sample(WALK,x),b=sample(RUN,x),hip=mix(a[0],b[0],run)*cfg.stride*move,knee=mix(a[1],b[1],run)*move,ankle=mix(a[2],b[2],run)*move;
-   return {hip,knee,ankle,arm:-hip*cfg.arms*mix(.90,1.23,run),elbow:.12+mix(.18,.71,run)*cfg.elbow*move+Math.max(0,hip)*.17}}
+   return {hip,knee,ankle,arm:-hip*cfg.arms*mix(1.17,1.32,run)+Math.sin(q-.45)*.045*move,elbow:.14+mix(.20,.74,run)*cfg.elbow*move+Math.max(0,hip)*.22}}
   let l=leg(p),r=leg(p+Math.PI);
-  let v={hipY:(.004*breath+.004*shift)*(1-move)+(.5+.5*Math.cos(p*2))*mix(.012,.035,run)*cfg.bounce*move-.012*run,
-   hipX:mix(.012,.065,run)*move*cfg.lean,hipYaw:swing*.045*move,hipRoll:(shift*.012*(1-move)+counter*.025*move)*cfg.sway,
-   spineX:mix(.02,.19,run)*move*cfg.lean+breath*.009*(1-move),spineYaw:-swing*.072*move,spineRoll:-counter*.022*move*cfg.sway,
-   headX:-.035*run,headY:Math.sin(t*.61)*.09*(1-move),headZ:-shift*.012*(1-move),shoulderY:swing*.025*move,
+  let v={hipY:(.009*breath+.006*shift)*(1-move)+(.5+.5*Math.cos(p*2-.4))*mix(.025,.046,run)*cfg.bounce*move-.013*run,
+   hipX:mix(.025,.085,run)*move*cfg.lean,hipYaw:swing*.085*move,hipRoll:(shift*.025*(1-move)+counter*.048*move)*cfg.sway,
+   spineX:mix(.045,.21,run)*move*cfg.lean+breath*.022*(1-move),spineYaw:-swing*.115*move,spineRoll:-counter*.042*move*cfg.sway,
+   headX:-.045*run+breath*.014*(1-move),headY:Math.sin(t*.61)*.13*(1-move)-swing*.024*move,headZ:-shift*.025*(1-move)+counter*.015*move,shoulderY:swing*.055*move,
    armL:l.arm,armR:r.arm,elbowL:l.elbow,elbowR:r.elbow,hipL:l.hip,hipR:r.hip,kneeL:l.knee,kneeR:r.knee,ankleL:l.ankle,ankleR:r.ankle,spread:(.09+.10*run)*cfg.spread};
   if(phase){
    let amount=phase==='jump_start'?smooth(1-(j.prep||0)/.14):phase==='jump_land'?smooth((j.land||0)/.25):0;
@@ -59,7 +72,7 @@
   for(const k of ['hipL','hipR'])v[k]=clamp(v[k],-.62,.57);
   for(const k of ['kneeL','kneeR'])v[k]=clamp(v[k],0,1.12);
   for(const k of ['ankleL','ankleR'])v[k]=clamp(v[k],-.30,.22);
-  if(!st.pose)st.pose={...v};else{let k=1-Math.exp(-dt/.055);for(const key in v)st.pose[key]=mix(st.pose[key],v[key],k)}
+  if(!st.pose)st.pose={...v};else{let k=1-Math.exp(-dt/.035);for(const key in v)st.pose[key]=mix(st.pose[key],v[key],k)}
   st.state=phase||(mode!=='idle'?mode:st.run>.5?'run':move>.16?'walk':'idle');return st.pose;
  }
  function animalState(previous,speed){return previous==='run'?(speed<1.48?(speed<.10?'idle':'walk'):'run'):previous==='walk'?(speed>1.95?'run':speed<.09?'idle':'walk'):speed>.20?'walk':'idle'}

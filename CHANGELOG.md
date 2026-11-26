@@ -1,5 +1,9 @@
 # WISH WORLD — Release history
 
+## V11.3 — Animation Recovery
+- Periodic monotone gait interpolation, clearer strides, arm swing, torso counter-rotation, breathing and neck motion. Existing VRM roster and asset dependencies retained.
+- Unit motion regression across 20 presets and variable frame rates; no new external animation files. Visual browser validation required.
+
 ## V11.2.1 — Stability Recovery
 - Restore V11.1 renderer, VRM roster, motion and asset allowlist after user reported V11.2 gameplay failure. Root cause not yet isolated. Keep V11.2 experimental features in Git history; do not enable them until browser verification succeeds.
 - Retain saved avatar IDs and canonical Render service. No database migration.
