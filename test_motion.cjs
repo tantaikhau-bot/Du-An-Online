@@ -75,3 +75,11 @@ for(const id of Object.keys(M.profiles)){const a=M.newState();for(let i=0;i<360;
 console.log('20 grounded idle profiles passed');
 
 for(const id of Object.keys(M.profiles)){const a=M.newState();for(let i=0;i<60;i++)M.step(a,1/60,0,{},'idle',id);const rest=a.pose.spread;for(let i=0;i<12;i++)M.step(a,1/60,0,{height:.3,velocity:3.8},'idle',id);assert.ok(a.pose.spread>rest+.25);assert.ok(a.pose.elbowL>.60);const lift=a.pose.armL;for(let i=0;i<14;i++)M.step(a,1/60,0,{height:.3,velocity:-3},'idle',id);assert.ok(a.pose.armL>lift+.45);for(let i=0;i<90;i++)M.step(a,1/60,0,{},'idle',id);assert.ok(Math.abs(a.pose.spread-rest)<.01)}console.log('20 avatar jump arm profiles and return to idle passed');
+
+// Airborne pose must remain continuous at takeoff/air classification threshold.
+for(const id of Object.keys(M.profiles)){
+ const a=M.newState(),b=M.newState();
+ for(let i=0;i<120;i++){M.step(a,1/60,0,{height:.5,velocity:2.501},'idle',id);M.step(b,1/60,0,{height:.5,velocity:2.499},'idle',id);}
+ assert.ok(Math.abs(a.pose.kneeL-b.pose.kneeL)<.005,id);assert.ok(Math.abs(a.pose.hipL-b.pose.hipL)<.005,id);
+}
+console.log('V11.9 continuous flight flex across takeoff threshold passed');

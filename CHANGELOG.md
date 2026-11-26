@@ -1,5 +1,11 @@
 # WISH WORLD — Release history
 
+## V11.9 — Natural Motion (candidate)
+- Per-foot stance anchors for near, slow grounded walking, with a bounded sagittal-plane correction, finite-difference direction check, toe-off fade and rollback when ground clearance or joint limits would regress. No lateral lock, no full-body IK and no running lock. Keep existing mesh sole calibration and settled idle solver.
+- Smooth airborne leg flex across takeoff/air velocity threshold; keep existing arm clearance and 20 VRM identities. No mocap or new model assets.
+- Add deterministic stance and jump transition regression checks. Full visual QA and device profiling pending.
+- Technical references: Unity humanoid foot IK and Unreal pose/stride warping; implementation is original and adapted to existing VRM rig.
+
 ## V11.8 — Performance Master (candidate)
 - Five graphics profiles (Battery, Low, Balanced, High, Ultra/HD), retaining the three existing LOD bands and the legacy URL aliases. Automatic first-run low preset on reported low-memory or low-core mobile devices. Explicit profile caps, existing effects-first scaling and mobile pixel floor.
 - Add JS CPU-frame timing, optional Chromium JS heap telemetry and heuristic pressure notices. No direct GPU time or VRAM measurement, no claimed hardware FPS uplift.

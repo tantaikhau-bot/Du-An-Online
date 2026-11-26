@@ -1,4 +1,4 @@
-/* V11.7: speed-synchronised gait, acceleration and turning, relaxed male motion. */
+/* V11.9: speed-synchronised gait, acceleration and turning, relaxed male motion. */
 (function(root){
  const clamp=(x,a=0,b=1)=>Math.max(a,Math.min(b,x)),mix=(a,b,t)=>a+(b-a)*t,smooth=x=>{x=clamp(x);return x*x*(3-2*x)};
  const TAU=Math.PI*2;
@@ -64,7 +64,7 @@
    armL:l.arm+.065*idleLean+.032*breath*rest-relax*rest,armR:r.arm-.055*idleLean-.028*breath*rest+relax*rest,elbowL:l.elbow+.09*rest*(1+shift),elbowR:r.elbow+.075*rest*(1-shift),hipL:l.hip-(.078+.010*shift)*rest,hipR:r.hip-(.078-.010*shift)*rest,kneeL:l.knee+(.156+.020*shift)*rest,kneeR:r.knee+(.156-.020*shift)*rest,ankleL:l.ankle-(.078+.010*shift)*rest,ankleR:r.ankle-(.078-.010*shift)*rest,spread:(.09+.10*run)*cfg.spread};
   if(phase){
    let amount=phase==='jump_start'?smooth(1-(j.prep||0)/.20):phase==='jump_land'?Math.sin(Math.PI*clamp((j.land||0)/.34))**.85:0;
-   let air=phase==='jump_air',launch=phase==='jump_takeoff',crouch=amount,ascend=clamp((j.velocity||0)/4),descend=clamp(-(j.velocity||0)/4),flight=air||launch,airFlex=air?mix(.13,.39,smooth(1-Math.abs(j.velocity||0)/3.9)):launch?.08:0;
+   let air=phase==='jump_air',launch=phase==='jump_takeoff',crouch=amount,ascend=clamp((j.velocity||0)/4),descend=clamp(-(j.velocity||0)/4),flight=air||launch,airFlex=flight?mix(.08,.39,smooth(1-Math.abs(j.velocity||0)/3.9)):0;
    let q={hipY:-.115*crouch,hipSide:0,hipX:.080*crouch,hipYaw:0,hipRoll:0,spineX:.24*crouch+.035,spineYaw:0,spineRoll:0,headX:-.06*crouch,headY:0,headZ:0,shoulderY:0,
     armL:crouch*.48-(flight?(.27+.65*ascend-.36*descend):0),armR:crouch*.43-(flight?(.20+.57*ascend-.33*descend):0),elbowL:.20+.28*crouch+(flight?.26+.36*ascend+.18*descend:0),elbowR:.20+.25*crouch+(flight?.22+.32*ascend+.20*descend:0),
     hipL:-.46*crouch-airFlex,hipR:-.43*crouch-airFlex*.65,kneeL:.90*crouch+airFlex*1.35,kneeR:.83*crouch+airFlex*.92,ankleL:-.20*crouch-.10*airFlex,ankleR:-.20*crouch-.10*airFlex,spread:flight?.32+.18*ascend+.12*descend:.16+.16*crouch};
