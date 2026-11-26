@@ -1,5 +1,11 @@
 # WISH WORLD — Release history
 
+## V10.9 — World Life
+- Analytic two-bone stance IK for the local humanoid, contact lock in world space, terrain height, release in jump/vehicle/emote. Not motion capture, requires live visual tuning.
+- Remote presence sends validated avatar ID and gait, uses VRM and far sprite; cap concurrent displayed peers to 5/8/12 by quality.
+- Exterior porches, warm windows, roof courses, villa railing, interior plank floors and curtains; varied trunk/canopy geometry.
+- Authenticated private SQLite snapshot download with integrity verification. Existing live filesystem is ephemeral; do not merge or deploy until the owner has a recovery plan and existing data is secured. Test fixtures are not live backups.
+
 ## V10.8 — Smooth Motion
 - Authored procedural locomotion curves and smoothed idle/walk/run transitions; hips, spine, shoulders, knees and ankles move together. No imported motion-capture clips or foot IK yet.
 - Jump has anticipation, takeoff, airborne and landing poses tied to existing physics. Native VRM spring bones update at near detail; blink and breathing supported.
