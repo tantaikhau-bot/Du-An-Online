@@ -2,7 +2,7 @@
 import time, re, unicodedata
 RETENTION=7*86400
 def init(c):
- c.executescript("""CREATE TABLE IF NOT EXISTS ww_blocks(owner TEXT, target TEXT, PRIMARY KEY(owner,target));
+ c.executescript("""CREATE TABLE IF NOT EXISTS ww_gifts80(id INTEGER PRIMARY KEY AUTOINCREMENT,sender TEXT NOT NULL,receiver TEXT NOT NULL,kind TEXT NOT NULL,created INTEGER NOT NULL); CREATE INDEX IF NOT EXISTS ww_gifts80_sender ON ww_gifts80(sender,created); CREATE INDEX IF NOT EXISTS ww_gifts80_receiver ON ww_gifts80(receiver,created); CREATE TABLE IF NOT EXISTS ww_vows80(a TEXT,b TEXT,first TEXT,second TEXT,created INTEGER,PRIMARY KEY(a,b)); CREATE TABLE IF NOT EXISTS ww_blocks(owner TEXT, target TEXT, PRIMARY KEY(owner,target));
  CREATE TABLE IF NOT EXISTS ww_pairs(sender TEXT, receiver TEXT, status TEXT, created INTEGER, PRIMARY KEY(sender,receiver));
  CREATE TABLE IF NOT EXISTS ww_chat(id INTEGER PRIMARY KEY AUTOINCREMENT, sender TEXT NOT NULL, receiver TEXT, body TEXT NOT NULL, created INTEGER NOT NULL, hidden INTEGER NOT NULL DEFAULT 0);
  CREATE INDEX IF NOT EXISTS ww_chat_sender ON ww_chat(sender,created);
@@ -21,6 +21,7 @@ def pair(c,u):
 def other(p,u):
  return p['receiver'] if p['sender']==u else p['sender']
 def end_pair(c,a,b):
+ c.execute('DELETE FROM ww_vows80 WHERE a=? AND b=?',tuple(sorted((a,b))))
  c.execute('DELETE FROM ww_pairs WHERE (sender=? AND receiver=?) OR (sender=? AND receiver=?)',(a,b,b,a))
 def clean_body(v):
  if not isinstance(v,str):return None
@@ -32,6 +33,40 @@ def clean_body(v):
 def handle(h,c,u,d):
  uid=u['id']; action=h.path.rsplit('/',1)[-1]; now=int(time.time()); reply=h.reply
  def err(status,msg):return reply(status,{'error':msg})
+ if action=='life80':
+  p=pair(c,uid); peer=None; vow=None
+  if p:
+   target=other(p,uid)
+   if available(c,target) and friend(c,uid,target) and not blocked(c,uid,target):
+    peer=dict(c.execute('SELECT id,name FROM users WHERE id=?',(target,)).fetchone())
+    a,b=sorted((uid,target))
+    row=c.execute('SELECT first,second FROM ww_vows80 WHERE a=? AND b=?',(a,b)).fetchone()
+    vow={'mine':bool(row and uid in (row['first'],row['second'])),'completed':bool(row and row['second'])}
+  gifts=[dict(r) for r in c.execute("""SELECT g.id,g.sender,g.receiver,g.kind,g.created,u.name FROM ww_gifts80 g JOIN users u ON u.id=CASE WHEN g.sender=? THEN g.receiver ELSE g.sender END WHERE (g.sender=? OR g.receiver=?) AND g.created>? AND u.id NOT IN (SELECT uid FROM blocked) AND NOT EXISTS(SELECT 1 FROM ww_blocks b WHERE (b.owner=? AND b.target=u.id) OR (b.owner=u.id AND b.target=?)) ORDER BY g.id DESC LIMIT 30""",(uid,uid,uid,now-30*86400,uid,uid))]
+  return reply(200,{'pair':peer,'vow':vow,'gifts':gifts})
+ if action in ('gift80','vow80','unvow80'):
+  target=d.get('id')
+  if not isinstance(target,str) or target==uid:return err(400,'Người chơi không hợp lệ')
+  c.execute('BEGIN IMMEDIATE')
+  if not available(c,target) or blocked(c,uid,target) or not friend(c,uid,target):return err(403,'Chỉ tương tác với bạn bè chưa bị chặn')
+  if action=='gift80':
+   kind=d.get('gift')
+   if kind not in ('flower','star','card'):return err(400,'Quà không hợp lệ')
+   if c.execute('SELECT count(*) FROM ww_gifts80 WHERE sender=? AND created>?',(uid,now-86400)).fetchone()[0]>=5:return err(429,'Tối đa 5 quà lưu niệm trong 24 giờ')
+   c.execute('DELETE FROM ww_gifts80 WHERE created<?',(now-30*86400,))
+   c.execute('INSERT INTO ww_gifts80(sender,receiver,kind,created) VALUES(?,?,?,?)',(uid,target,kind,now));c.commit();return reply(201,{'ok':True})
+  p=pair(c,uid)
+  if not p or other(p,uid)!=target:return err(403,'Cần kết đôi đồng hành trước')
+  a,b=sorted((uid,target))
+  if action=='unvow80':
+   c.execute('DELETE FROM ww_vows80 WHERE a=? AND b=?',(a,b));c.commit();return reply(200,{'ok':True})
+  positions=c.execute('SELECT uid,x,y FROM presence WHERE uid IN (?,?) AND area=0 AND seen>?',(uid,target,now-12)).fetchall()
+  if len(positions)!=2 or ((positions[0]['x']-positions[1]['x'])/35)**2+((positions[0]['y']-positions[1]['y'])/14)**2>25:return err(409,'Hai bạn cần đứng gần nhau ngoài thế giới chung')
+  row=c.execute('SELECT first,second FROM ww_vows80 WHERE a=? AND b=?',(a,b)).fetchone()
+  if not row:c.execute('INSERT INTO ww_vows80 VALUES(?,?,?,NULL,?)',(a,b,uid,now))
+  elif row['first']==uid or row['second']:return err(409,'Bạn đã xác nhận hẹn ước')
+  else:c.execute('UPDATE ww_vows80 SET second=? WHERE a=? AND b=?',(uid,a,b))
+  c.commit();return reply(200,{'ok':True})
  if action=='state':
   links=[dict(x) for x in c.execute("SELECT p.sender,p.receiver,p.status,p.created,u.id,u.name FROM ww_pairs p JOIN users u ON u.id=CASE WHEN p.sender=? THEN p.receiver ELSE p.sender END WHERE (p.sender=? OR p.receiver=?) AND u.id NOT IN (SELECT uid FROM blocked) LIMIT 20",(uid,uid,uid)) if not blocked(c,uid,x['id'])]
   blocks=[dict(x) for x in c.execute('SELECT u.id,u.name FROM ww_blocks b JOIN users u ON u.id=b.target WHERE b.owner=? LIMIT 200',(uid,))]
@@ -94,6 +129,7 @@ def handle(h,c,u,d):
   if pair(c,uid) or pair(c,target):return err(409,'Một trong hai đã có bạn đồng hành')
   if not c.execute("UPDATE ww_pairs SET status='accepted' WHERE sender=? AND receiver=? AND status='pending'",(target,uid)).rowcount:return err(404,'Không có lời mời')
   c.execute("DELETE FROM ww_pairs WHERE status='pending' AND (sender IN (?,?) OR receiver IN (?,?))",(uid,target,uid,target))
+  c.execute('DELETE FROM ww_vows80 WHERE a=? AND b=?',tuple(sorted((uid,target))))
  elif action=='activity':
   p=pair(c,uid)
   if not p or other(p,uid)!=target:return err(403,'Cần kết đôi đồng hành trước')
