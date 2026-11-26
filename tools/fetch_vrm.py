@@ -2,7 +2,7 @@
 import urllib.request,json,struct,hashlib
 from pathlib import Path
 ROOT=Path(__file__).resolve().parents[1]/'assets'
-for name in ('Sakurada_Fumiriya','Sendagaya_Shino','HairSample_Male','HairSample_Female'):
+for name in ('Sakurada_Fumiriya','Sendagaya_Shino','HairSample_Male','HairSample_Female','Sendagaya_Shibu','Vivi'):
  url='https://raw.githubusercontent.com/madjin/vrm-samples/master/vroid/beta/'+name+'.vrm'
  with urllib.request.urlopen(url,timeout=45) as r:data=r.read(40*1024*1024+1)
  if len(data)>40*1024*1024 or len(data)<20 or data[:4]!=b'glTF' or struct.unpack_from('<I',data,8)[0]!=len(data):raise ValueError('Invalid model '+name)

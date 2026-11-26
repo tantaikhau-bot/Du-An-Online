@@ -1,5 +1,10 @@
 # WISH WORLD — Release history
 
+## V11.4 — Living Characters
+- Asymmetric idle weight shift, more pronounced breath and torso movement, velocity-shaped airborne pose and deeper landing. Longer anticipation and landing windows.
+- Six VRM base choices, two new optional female models with safe existing-base fallback, bone-attached themed wearable meshes and secondary cape movement. No independently sculpted faces or fully skinned custom outfits.
+- Matte fox/deer material with subtle fiber bump on UV meshes, idle breathing. Existing authored animal clips retained. Full visual validation pending.
+
 ## V11.3 — Animation Recovery
 - Periodic monotone gait interpolation, clearer strides, arm swing, torso counter-rotation, breathing and neck motion. Existing VRM roster and asset dependencies retained.
 - Unit motion regression across 20 presets and variable frame rates; no new external animation files. Visual browser validation required.
