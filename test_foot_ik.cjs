@@ -1,0 +1,12 @@
+const assert=require('node:assert/strict'),T=require('three'),IK=require('./assets/foot-ik.js');
+const A=new T.Vector3(0,1,0),B=new T.Vector3(0,.55,-.15),C=new T.Vector3(0,.10,0),target=new T.Vector3(.12,.16,.15);
+const r=IK.solve(T,A,B,C,target);
+assert.ok(r.foot.distanceTo(target)<1e-6);
+assert.ok(Math.abs(A.distanceTo(r.knee)-A.distanceTo(B))<1e-6);
+assert.ok(Math.abs(r.knee.distanceTo(r.foot)-B.distanceTo(C))<1e-6);
+const far=IK.solve(T,A,B,C,new T.Vector3(20,0,0));assert.ok(far.foot.distanceTo(A)<A.distanceTo(B)+B.distanceTo(C));
+const root=new T.Group(),u=new T.Bone(),k=new T.Bone(),f=new T.Bone();root.add(u);u.position.copy(A);u.add(k);k.position.copy(B.clone().sub(A));k.add(f);f.position.copy(C.clone().sub(B));root.updateMatrixWorld(true);
+const a={root,motion:{cycle:Math.PI},soleHeight:{left:.10},vrm:{humanoid:{getNormalizedBoneNode:n=>({leftUpperLeg:u,leftLowerLeg:k,leftFoot:f})[n]}}};
+const contact=IK.apply(T,a,()=>0,.033,0,false,'idle');assert.equal(contact.planted,1);assert.ok(contact.maxError<.01);
+root.position.x=.1;const lock=IK.apply(T,a,()=>0,.033,0,false,'idle');assert.ok(lock.maxError<.02);assert.equal(IK.apply(T,a,()=>0,.033,0,true,'idle'),null);
+console.log('Two-bone geometry, reach clamp, moving root contact lock and jump release passed');
