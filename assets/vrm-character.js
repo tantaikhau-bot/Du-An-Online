@@ -1,4 +1,4 @@
-/* V11.5: skinned VRM avatar pipeline. CC0 VRoid sample models, not original game artwork. */
+/* V11.5.2: skinned VRM avatar pipeline. CC0 VRoid sample models, not original game artwork. */
 (function(){
  const sources={male:'Sakurada_Fumiriya',female:'Sendagaya_Shino',male2:'HairSample_Male',female2:'HairSample_Female',female3:'Sendagaya_Shibu',female4:'Vivi'};
  const roster=[
@@ -29,7 +29,7 @@
   a.root.scale.setScalar(a.baseScale*p.height);
   for(const {material,base,role} of a.colors){material.color.copy(base);if(role==='hair')material.color.multiply(new T.Color(p.hair));else if(role==='cloth')material.color.multiply(new T.Color(p.cloth))}
   if(a.vrm&&!a.original&&typeof WWIdentity!=='undefined'){try{a.vrm.humanoid.resetNormalizedPose?.();a.vrm.humanoid.update();WWIdentity.apply(T,a,p)}catch(e){WWIdentity.clear(a);console.warn('Optional wearable fallback',e)}}
-  a.applied=p.id;a.motionProfile=p.id;a.contacts={};a.contactFrame=null;if(typeof WWMotion!=='undefined')a.motion=WWMotion.newState();
+  a.applied=p.id;a.motionProfile=p.id;a.idleGroundWeight=0;a.contacts={};a.contactFrame=null;if(typeof WWMotion!=='undefined')a.motion=WWMotion.newState();
  }
  const remote='https://raw.githubusercontent.com/madjin/vrm-samples/master/vroid/beta/';
  let lib;const buffers=new Map();async function modelBuffer(kind){if(!buffers.has(kind)){const task=fetch('/assets/'+sources[kind]+'.vrm').then(r=>{if(!r.ok)throw Error('VRM HTTP '+r.status);return r.arrayBuffer()}).catch(e=>{buffers.delete(kind);throw e});buffers.set(kind,task)}return buffers.get(kind)}
@@ -52,7 +52,7 @@
   let legSign=1;for(const side of ['left','right']){let toe=vrm.humanoid.getNormalizedBoneNode(side+'Toes');if(toe&&Math.abs(toe.position.z)>.015){legSign=Math.sign(toe.position.z);break}}
   let modelForward=new T.Vector3(0,0,1);
   for(const side of ['left','right']){const foot=vrm.humanoid.getRawBoneNode(side+'Foot'),toe=vrm.humanoid.getRawBoneNode(side+'Toes');if(foot&&toe){const d=root.worldToLocal(toe.getWorldPosition(new T.Vector3())).sub(root.worldToLocal(foot.getWorldPosition(new T.Vector3())));d.y=0;if(d.length()>.015){modelForward=d.normalize();break}}}
-  const soleHeight=Object.fromEntries(['left','right'].map(side=>{let n=vrm.humanoid.getRawBoneNode(side+'Foot');return [side,n?Math.max(.025,Math.min(.16,n.getWorldPosition(new T.Vector3()).y)):.06]}));
+  const soleHeight=Object.fromEntries(['left','right'].map(side=>{let n=vrm.humanoid.getRawBoneNode(side+'Foot');return [side,n?Math.max(.015,Math.min(.24,n.getWorldPosition(new T.Vector3()).y)):.06]}));
   return {root,vrm,kind,phase:0,weight:0,elapsed:0,baseScale:root.scale.x,colors,armDown,legSign,modelForward,motionProfile:kind.startsWith('female')?'f1':'m1',motion:WWMotion.newState(),hipsRest:vrm.humanoid.getNormalizedBoneNode('hips')?.position.clone(),springReady:false,T,dispose:()=>VRMUtils.deepDispose(vrm.scene),soleHeight};
  }
  function animate(a,dt,gait,mode='idle',jump=0,detail=0,ground=null){
@@ -77,9 +77,11 @@
   if(!['sit','ride','dance','duet','wave'].includes(mode)){WWArms.apply(a,v);for(const side of ['left','right']){const hand=vrm.humanoid.getNormalizedBoneNode(side+'Hand');if(hand){hand.rotateZ((side==='left'?1:-1)*Math.sin(t*1.8)*.045*(1-a.weight));}}}
   if(typeof WWIdentity!=='undefined')WWIdentity.animate(a,t,a.weight);
   const em=vrm.expressionManager;if(em){for(const k of ['happy','angry','surprised','blink']){let value=k==='blink'?Math.max(0,1-Math.abs(((a.elapsed+.32*Math.sin(a.elapsed*.71))%4.9)-4.65)/.13):k==='happy'&&['happy','smile','wave','cheer','portrait'].includes(mode)?0.75:k===mode?.8:0;if(em.getExpression(k))em.setValue(k,value)}}
-  if(detail===0&&ground){vrm.humanoid.update();a.footIK=WWFootIK.apply(a.T,a,ground,dt,gait,WWMotion.phaseOf(j)||a.motion.jump>.12,mode)}else{WWFootIK.reset(a);a.footIK=null}
+  const airborne=!!(WWMotion.phaseOf(j)||a.motion.jump>.12);
+  if(detail===0&&ground&&!(mode==='idle'&&gait<.15)){vrm.humanoid.update();a.footIK=WWFootIK.apply(a.T,a,ground,dt,gait,airborne,mode)}else{WWFootIK.reset(a);a.footIK=null}
   if(detail===0){for(let remain=dt;remain>0;){let d=Math.min(.033,remain);vrm.update(d);remain-=d}}else{vrm.humanoid.update();vrm.expressionManager?.update();}
-  a.motionState=a.motion.state;a.poseCheck={motionVersion:'11.5',original:!!a.original,measuredSpeed:a.motion.speed,turn:a.motion.turn,identity:a.identityType||null,fallbackBase:a.fallbackBase||null,cycle:a.motion.cycle,walkWeight:a.motion.walk,runWeight:a.motion.run,profile:a.motionProfile,legSign:sign,hip:[v.hipL,v.hipR],knee:['left','right'].map(side=>(vrm.humanoid.getNormalizedBoneNode(side+'LowerLeg')?.rotation.x||0)*sign),ankle:[v.ankleL,v.ankleR],jumpWeight:a.motion.jump};
+  if(detail===0){const contact=WWFootIK.groundIdle(a.T,a,ground,dt,gait,airborne,mode);if(contact)a.footIK=contact;}
+  a.motionState=a.motion.state;a.poseCheck={motionVersion:'11.5.2',original:!!a.original,measuredSpeed:a.motion.speed,turn:a.motion.turn,identity:a.identityType||null,fallbackBase:a.fallbackBase||null,cycle:a.motion.cycle,walkWeight:a.motion.walk,runWeight:a.motion.run,profile:a.motionProfile,legSign:sign,hip:[v.hipL,v.hipR],knee:['left','right'].map(side=>(vrm.humanoid.getNormalizedBoneNode(side+'LowerLeg')?.rotation.x||0)*sign),ankle:[v.ankleL,v.ankleR],jumpWeight:a.motion.jump};
   if(detail===0&&['idle','walk','run'].includes(mode)){
    a.root.updateWorldMatrix(true,true);
    const forward=a.modelForward.clone().applyQuaternion(a.root.getWorldQuaternion(new a.T.Quaternion()));
