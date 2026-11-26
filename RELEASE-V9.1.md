@@ -1,0 +1,7 @@
+# WISH WORLD V9.1 — Living Scenery (beta)
+
+- Replaces the legacy guide/keeper primitives with original detailed procedural humanoids: shaped face, eyes, hair, lips, fitted clothing, articulated arms, belt and accessories. Idle breathing, blinking, facing nearby players and floating quest marker. Fixed guide locations and quest collision rules retained.
+- Distance LOD swaps shared sphere geometry for a low-poly shared sphere for remote avatars, remote pets, residents and wild animals. Three detail distances (11/17/24 world units) with 3-unit exit hysteresis. No new per-frame geometry allocation. Non-sphere mesh geometry unchanged. Existing local custom avatar and optional GLB loaders retained; not a new professional skeletal asset pack.
+- Static building/lamp batches partitioned into 18-unit spatial cells, allowing smaller frustum bounds and distance culling in follow-camera mode; no collision map changes. Softer day/night lighting, larger contact shadows for vehicles. Diagnostics include geometry count and peer LOD counts. No claim of higher FPS until device measurement.
+- 15 inline JavaScript scripts parsed and 15 synthetic LOD threshold checks passed. No real browser/GPU/device test. Backend change limited to version metadata; no migration. Existing gameplay, garage, ceremony RSVP and cloud sync kept. Export saves before free Render deployment.
+- Shared 3D housing, boats/passengers, larger map, WebSocket and durable database not implemented by this release.
