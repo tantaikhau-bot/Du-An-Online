@@ -1,5 +1,11 @@
 # WISH WORLD — Release history
 
+## V12.1 — Real-time Multiplayer (candidate)
+- Authenticated presence responses include a server clock and timestamped player snapshots. Public-world clock and weather use the server time estimate; manual weather remains available offline/private. Existing visibility and block filters remain in place.
+- Eight-sample per-peer buffer, 850ms interpolation delay, shortest-angle heading, bounded 150ms extrapolation, stale stop and teleport reset. Preserve existing visible fallback and avatar/pet/vehicle state. Prediction is remote only; no authoritative movement validation.
+- Retry jitter, online event reconnect and HTTP/socket diagnostics. WebSocket remains opt-in and requires separately configured gateway; current Render HTTP runtime is unchanged.
+- Add pure interpolation/clock tests, presence timestamp test and isolated 16/32/50-client load tests. No production concurrency or device FPS claims.
+
 ## V12.0 — Living World (candidate)
 - Six local-session weather profiles (clear, rain, fog, wind, snow, storm), automatic 100-second schedule and manual override. Smoothly blend fog, cloud, rain, snow, wind, ambient/direct light and sky tint without abrupt jumps. Storm is heavy rain/wind, not lightning simulation.
 - Reuse existing rain/snow buffers with quality-dependent particle counts; fade terrain wetness and precipitation, apply wind to unbatched tree crowns and fallback hair. Existing VRM spring bones, map geometry and collisions remain untouched.
