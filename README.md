@@ -66,3 +66,7 @@ Terrain, forest and architecture use a common per-frame construction budget (one
 
 ### V24.4 Seamless World
 High-detail terrain border vertices follow the coarse edge interpolation, with a 2.2-unit smooth transition strip. Actor ground interpolation uses the same terrain vertex heights. Static scenery construction uses canonical detailed ground, while runtime grounding follows the visible LOD. Resident priority bias reduces model churn near streaming thresholds; hard caps and current tile priority remain. Numeric edge tests are not a real WebGL seam or FPS test.
+
+
+### V24.5 World Testing
+Run `node test_world245.cjs` alongside `node test_engine235.cjs`. The world suite checks shared terrain edges for both densities, 900 simulated moving frames per device class with changing quality tiers, construction and resident budgets, architecture legacy selection and safe high forest LOD eviction. High forest instance buffers are released when no longer eligible or distant, without disposing shared geometry/materials. These offline tests are not GPU, multiplayer, or real-device benchmarks.
