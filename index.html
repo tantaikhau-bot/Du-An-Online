@@ -2860,8 +2860,7 @@ let walkPhase62=0;const blend62=new WeakMap();
       v[8].subVectors(v[4],v[3]);if(v[8].dot(v[7])<0)v[7].negate();
       // Handle centered within the curled fingers, not at the wrist.
       g.position.copy(v[0]).lerp(v[3],.70).addScaledVector(v[7],Math.min(.021,palmLength*.28));
-      if(id==='bow'){v[5].copy(v[6]);v[5].negate();v[6].crossVectors(v[5],v[7]).normalize();}
-      else{v[6].crossVectors(v[5],v[7]).normalize();}
+      v[6].crossVectors(v[5],v[7]).normalize();
       v[7].crossVectors(v[6],v[5]).normalize();basis.makeBasis(v[6],v[5],v[7]);g.quaternion.setFromRotationMatrix(basis);
       g.scale.setScalar(id==='great'?1:id==='staff'?1:.92);return;
      }
