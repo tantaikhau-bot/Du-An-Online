@@ -1,5 +1,11 @@
 # WISH WORLD — Release history
 
+## V15.3.2 — Dragon Visibility & HD Portraits
+- Replace original 80px concept crops with 224px crops from the approved concept artwork, cache-bust CSS; use readable Vietnamese headings and cap detail portrait to native size.
+- Enable rigged dragon by default when equipped (no special URL). In-menu loading/error status, recall/retry without page reload, initial animation before hiding the old model, raise hovering height and restore previous geometry if animation fails. Other companions unchanged.
+- Syntax and asset package checked; actual live rendering and FPS remain unverified.
+
+
 ## V15.3.1 — Dragon Loader Fix
 - The pilot GLB requires EXT_meshopt_compression. Register the Three.js r164-compatible Meshopt decoder before parsing; serve the MIT-licensed decoder locally to avoid a separate CDN dependency. Retry failed loads after 45 seconds and show the actual error. Existing companion fallback stays available.
 - GLB header, required extensions and JS syntax checked. Actual browser decoding and visual appearance remain unverified.
