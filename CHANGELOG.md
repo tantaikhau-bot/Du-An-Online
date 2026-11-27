@@ -1,5 +1,10 @@
 # WISH WORLD — Release history
 
+## V15.0 — Spirit Companions (candidate)
+- Continuous tapered torso profiles, species-specific fur ruffs, ear tufts, leaf antler accents, cheek fins and subtle jewel marks. Distinct secondary body motion for all five pets.
+- Local active companion elemental particles: moon diamonds, fire embers, star crosses, leaves and lightning. Summon, feed, pet and preview bursts; one point batch, max 32 desktop / 16 reduced tier, disabled on low FX. Visual effects only, no combat or economic changes.
+- JavaScript syntax and mocked particle budget/finite-position checks passed for all five species. GPU rendering, model aesthetics and real-device FPS remain unverified.
+
 ## V14.9 — Living Motion & Fur (candidate)
 - Smoothed rider gait pose transitions, independent pelvis pitch/roll, lumbar and chest counter-motion, relaxed wrist and rein targets, subtle seated suspension. Horse gait crossfade preserves cycle phase and adjusts playback rate.
 - Shared 128px procedural fur and scale color/bump maps, low-specular physical materials, vertex shading gradients, fur clump and dragon cheek silhouette refinements. No per-frame texture generation.
