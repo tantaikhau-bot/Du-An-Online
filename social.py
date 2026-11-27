@@ -2,13 +2,14 @@ import time, math, sqlite3, together, guild, adventure
 
 def init(c):
  adventure.init(c)
+ c.execute('CREATE TABLE IF NOT EXISTS combat_fx298(uid TEXT PRIMARY KEY,seq TEXT NOT NULL,kind TEXT NOT NULL,x REAL NOT NULL,y REAL NOT NULL,heading REAL NOT NULL,created REAL NOT NULL)')
  c.execute('CREATE TABLE IF NOT EXISTS avatar109(uid TEXT PRIMARY KEY,preset TEXT NOT NULL,gait REAL NOT NULL)')
  together.init(c)
  guild.init(c)
  c.executescript('''CREATE TABLE IF NOT EXISTS presence(uid TEXT PRIMARY KEY,x REAL,y REAL,area INTEGER,seen REAL); CREATE TABLE IF NOT EXISTS character61(uid TEXT PRIMARY KEY,body TEXT,skin TEXT,hair TEXT,style TEXT,dye TEXT,action TEXT,target TEXT); CREATE TABLE IF NOT EXISTS character64(uid TEXT PRIMARY KEY,height TEXT,build TEXT,face TEXT,eye TEXT); CREATE TABLE IF NOT EXISTS motion68(uid TEXT PRIMARY KEY,heading REAL,moving INTEGER,jump REAL); CREATE TABLE IF NOT EXISTS pet70(uid TEXT PRIMARY KEY,kind TEXT); CREATE TABLE IF NOT EXISTS vehicle88(uid TEXT PRIMARY KEY,kind TEXT); CREATE INDEX IF NOT EXISTS presence88_seen ON presence(seen); CREATE TABLE IF NOT EXISTS outing70(id INTEGER PRIMARY KEY AUTOINCREMENT,sender TEXT,receiver TEXT,place TEXT,status TEXT,created REAL,updated REAL); CREATE INDEX IF NOT EXISTS outing70_receiver ON outing70(receiver,updated); CREATE INDEX IF NOT EXISTS outing70_sender ON outing70(sender,created); CREATE TABLE IF NOT EXISTS near69(id INTEGER PRIMARY KEY AUTOINCREMENT,sender TEXT NOT NULL,body TEXT NOT NULL,x REAL NOT NULL,y REAL NOT NULL,created REAL NOT NULL,hidden INTEGER NOT NULL DEFAULT 0); CREATE INDEX IF NOT EXISTS near69_sender ON near69(sender,created); CREATE TABLE IF NOT EXISTS near69_audience(mid INTEGER,uid TEXT,PRIMARY KEY(mid,uid)); CREATE INDEX IF NOT EXISTS near69_audience_uid ON near69_audience(uid,mid); CREATE TABLE IF NOT EXISTS friends(sender TEXT,receiver TEXT,status TEXT,PRIMARY KEY(sender,receiver)); CREATE INDEX IF NOT EXISTS friends88_receiver ON friends(receiver,status); CREATE TABLE IF NOT EXISTS greetings(sender TEXT,receiver TEXT,kind TEXT,created REAL); CREATE TABLE IF NOT EXISTS reports(reporter TEXT,target TEXT,reason TEXT,created REAL);''')
 
 def leave(c,uid):
- for table in ('presence','character61','character64','motion68','pet70','vehicle88','avatar109'):
+ for table in ('presence','character61','character64','motion68','pet70','vehicle88','avatar109','combat_fx298'):
   c.execute('DELETE FROM '+table+' WHERE uid=?',(uid,))
 
 def nearby69(c,uid,now):
@@ -72,6 +73,18 @@ def handle(h,c,u,d):
   c.commit();return reply(201,{'ok':True})
  if path=='/api/social/leave':
   leave(c,uid);c.commit();return reply(200,{'ok':True})
+ if path=='/api/social/combat-fx':
+  origin=c.execute('SELECT x,y FROM presence WHERE uid=? AND area=0 AND seen>?',(uid,now-5)).fetchone()
+  if not origin:return reply(409,{'error':'Cần online trong thế giới chung'})
+  kind=d.get('kind');seq=d.get('seq');heading=d.get('heading')
+  cds={'strike':.48,'spin':3.5,'fire':5,'storm':8.5,'dodge':2.2,'ultimate':16}
+  if not isinstance(kind,str) or kind not in cds or not isinstance(seq,str) or not 1<=len(seq)<=64 or type(heading) not in (int,float) or not math.isfinite(heading) or abs(heading)>7:return reply(400,{'error':'Kỹ năng không hợp lệ'})
+  c.execute('BEGIN IMMEDIATE')
+  old=c.execute('SELECT seq,created FROM combat_fx298 WHERE uid=?',(uid,)).fetchone()
+  if old and (old['seq']==seq or now-old['created']<.42):return reply(429,{'error':'Kỹ năng đang hồi'})
+  c.execute('INSERT OR REPLACE INTO combat_fx298 VALUES(?,?,?,?,?,?,?)',(uid,seq,kind,origin['x'],origin['y'],heading,now))
+  c.execute('DELETE FROM combat_fx298 WHERE created<?',(now-8,))
+  c.commit();return reply(200,{'ok':True})
  if path=='/api/social/pulse':
   x,y,a=d.get('x'),d.get('y'),d.get('area')
   if type(x) not in (int,float) or type(y) not in (int,float) or not math.isfinite(x) or not math.isfinite(y) or not -3710<=x<=4690 or not -1329<=y<=2479 or type(a)!=int or not 0<=a<=7:return reply(400,{'error':'Vị trí không hợp lệ'})
@@ -146,7 +159,8 @@ def handle(h,c,u,d):
    if v['action'] in ('hand','photo','hug','duet') and not mutually_ready(v['id'],v['target'],v['action']):v['action']='idle'
    v.pop('target',None)
    players.append(v)
-  return reply(200,{'protocol270':3,'world_ms':int(time.time()*1000),'players':players,'match':target if mutually_ready(uid,target,action) else '', 'incoming':incoming[:10], 'near':nearby69(c,uid,now) if a==0 else [], 'outings':outings70(c,uid,now) if a==0 else []})
+  fx=[dict(r) for r in c.execute("""SELECT f.uid,f.seq,f.kind,f.x,f.y,f.heading,f.created FROM combat_fx298 f JOIN presence p ON p.uid=f.uid WHERE f.uid!=? AND f.created>? AND p.area=0 AND p.seen>? AND f.uid NOT IN (SELECT uid FROM blocked) AND NOT EXISTS(SELECT 1 FROM ww_blocks b WHERE (b.owner=? AND b.target=f.uid) OR (b.owner=f.uid AND b.target=?)) AND ((f.x-?)/35.0)*((f.x-?)/35.0)+((f.y-?)/14.0)*((f.y-?)/14.0)<=400 ORDER BY f.created DESC LIMIT 12""",(uid,now-2,now-5,uid,uid,x,x,y,y))]
+  return reply(200,{'combat_fx298':fx,'protocol270':3,'world_ms':int(time.time()*1000),'players':players,'match':target if mutually_ready(uid,target,action) else '', 'incoming':incoming[:10], 'near':nearby69(c,uid,now) if a==0 else [], 'outings':outings70(c,uid,now) if a==0 else []})
  if path=='/api/social/list':
   return reply(200,{'friends':[dict(r) for r in c.execute('SELECT f.sender,f.receiver,f.status,u.name,u.id FROM friends f JOIN users u ON u.id=CASE WHEN f.sender=? THEN f.receiver ELSE f.sender END WHERE f.sender=? OR f.receiver=?',(uid,uid,uid))], 'greetings':[dict(r) for r in c.execute('SELECT u.name,g.kind,g.created FROM greetings g JOIN users u ON u.id=g.sender WHERE g.receiver=? ORDER BY g.created DESC LIMIT 20',(uid,))]})
  if path=='/api/social/search':
