@@ -41,7 +41,7 @@ class Combat281Tests(unittest.TestCase):
         self.assertEqual(v['weapon'],'greatsword')
         self.assertEqual(v['combo'],0)
         self.assertEqual(v['stamina'],100)
-        self.assertEqual(v['combat_version'],'28.1')
+        self.assertEqual(v['combat_version'],'28.2')
         self.assertEqual(next(q for q in v['skills'] if q['id']=='strike')['damage'],23)
     @patch('dungeon.secrets.randbelow',return_value=99)
     def test_combo_and_guard_reset(self, _):
@@ -66,6 +66,38 @@ class Combat281Tests(unittest.TestCase):
         v=self.act(v,'dodge')
         self.assertEqual(v['hp'],100)
         self.assertEqual(v['stamina'],84)
+
+    def test_magic_burn_and_cooldown(self):
+        v=self.start()
+        v=self.act(v,'fire')
+        self.assertEqual((v['enemy'],v['burn']),(36,1))
+        self.assertEqual(next(q for q in v['skills'] if q['id']=='fire')['cooldown'],2)
+        code,_=self.call('act',{'rev':v['rev'],'skill':'fire'})
+        self.assertEqual(code,409)
+        v=self.act(v,'guard')
+        self.assertEqual((v['enemy'],v['burn']),(24,0))
+        self.assertEqual(next(q for q in v['skills'] if q['id']=='fire')['cooldown'],1)
+        v=self.act(v,'dodge')
+        self.assertEqual(next(q for q in v['skills'] if q['id']=='fire')['cooldown'],0)
+    def test_ice_reduces_damage(self):
+        v=self.start()
+        v=self.act(v,'ice')
+        self.assertEqual(v['hp'],97)
+    def test_lightning_charged_bonus(self):
+        v=self.start()
+        v=self.act(v,'dodge')
+        v=self.act(v,'guard')
+        self.assertEqual(next(q for q in v['skills'] if q['id']=='lightning')['damage'],40)
+        v=self.act(v,'lightning')
+        self.assertEqual(v['enemy'],18)
+    def test_magic_effects_reset_on_new_round(self):
+        v=self.start()
+        v=self.act(v,'fire')
+        v=self.act(v,'retreat')
+        code,v=self.call('start',{'rev':v['rev'],'stage':1,'weapon':'staff'})
+        self.assertEqual(code,200)
+        self.assertEqual(v['burn'],0)
+        self.assertTrue(all(q['cooldown']==0 for q in v['skills']))
 
 if __name__=='__main__':
     unittest.main()
