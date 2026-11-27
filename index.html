@@ -2610,7 +2610,8 @@ let walkPhase62=0;const blend62=new WeakMap();
   const candidates=[{x:-26,z:24},{x:-22,z:20},{x:-30,z:20},{x:-22,z:28},{x:-30,z:28}];let chosen=null,spots=[];
   for(const c of candidates){const q=nearestWalk4(c);if(!q)continue;const a=[];for(let i=0;i<12;i++){const t=i*Math.PI/6,p={x:q.x+Math.cos(t)*3.5,z:q.z+Math.sin(t)*3.5};if(walkable4(p.x,p.z)&&a.every(o=>Math.hypot(o.x-p.x,o.z-p.z)>2.4))a.push(p);if(a.length===3)break}if(a.length===3){chosen=q;spots=a;break}}
   combat290.site=chosen;
-  // A failed spawn search must not remove the action HUD; free practice still works.const root=new T.Group();root.visible=false;scene.add(root);combat290.root=root;
+  // A failed spawn search must not remove the action HUD; free practice still works.
+  const root=new T.Group();root.visible=false;scene.add(root);combat290.root=root;
   const bodyGeo=new T.SphereGeometry(.38,12,8),eyeGeo=new T.SphereGeometry(.055,6,4),hornGeo=new T.ConeGeometry(.10,.30,6),ringGeo=new T.RingGeometry(.48,.55,24);
   const bodyMat=mat(0x4d7f62,.65),eyeMat=new T.MeshBasicMaterial({color:0xffdc82}),hornMat=mat(0x394c46,.8),ringMat=new T.MeshBasicMaterial({color:0xd79c45,side:T.DoubleSide,transparent:true,opacity:.7,depthWrite:false});
   for(const p of spots){const g=new T.Group();root.add(g);const b=new T.Mesh(bodyGeo,bodyMat);b.scale.set(1.15,.85,1);b.position.y=.36;g.add(b);for(const sign of [-1,1]){const eye=new T.Mesh(eyeGeo,eyeMat);eye.position.set(sign*.15,.46,.30);g.add(eye);const horn=new T.Mesh(hornGeo,hornMat);horn.position.set(sign*.21,.69,0);horn.rotation.z=-sign*.25;g.add(horn)}const ring=new T.Mesh(ringGeo,ringMat);ring.rotation.x=-Math.PI/2;ring.position.y=.04;g.add(ring);combat290.mobs.push({g,body:b,x:p.x,z:p.z,sx:p.x,sz:p.z,hp:60,respawn:0,hit:0,next:0})}
