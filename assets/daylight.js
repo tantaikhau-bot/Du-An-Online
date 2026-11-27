@@ -89,5 +89,14 @@
  function environment265(mobile,tier,basic){return {grass:!basic&&tier<2,ripples:basic||tier===2?0:mobile?2:4,interval:mobile?66:33}}
  function groundTrack265(snow,sand,rain,blocked){return blocked?'':snow?'snow':sand?'sand':rain>=.38?'mud':''}
  function bankRipple265(x,z,riverZ,bridges){if(![x,z,riverZ].every(Number.isFinite)||Math.abs(x)>119||Math.abs(z-riverZ)<2.05||Math.abs(z-riverZ)>3.4||bridges.some(b=>Math.abs(x-b)<2.4))return null;return {x,z:riverZ+Math.sign(z-riverZ)*1.15}}
- const api={duration,hour,mode,label,format,sample,routine263,environment265,groundTrack265,bankRipple265,celestial262,cloudAdvance262,approachHour,weatherProfiles,weatherAt,weatherState,blendWeather,weatherCount,waterLook133,sceneryBudget133,bankSites133};if(typeof module!=='undefined')module.exports=api;else root.WWDay=api;
+ // V26.6: recurring world-clock festival, independent of account rewards.
+ function festival266(hour){
+ const h=wrap(Number.isFinite(hour)?hour:12);
+ if(h>=15&&h<17)return {id:'prepare',label:'Chuẩn bị lễ hội',next:17,active:false,gather:true,lanterns:0,glow:.35};
+ if(h>=17&&h<19)return {id:'dance',label:'Lễ hội ánh sáng',next:19,active:true,gather:true,lanterns:2,glow:1};
+ if(h>=19&&h<22)return {id:'lantern',label:'Đêm hoa đăng',next:22,active:true,gather:true,lanterns:4,glow:1.35};
+ if(h>=22&&h<23)return {id:'closing',label:'Kết thúc lễ hội',next:23,active:false,gather:false,lanterns:1,glow:.35};
+ return {id:'quiet',label:'Chờ lễ hội',next:15,active:false,gather:false,lanterns:0,glow:0};
+}
+ const api={duration,hour,mode,label,format,sample,routine263,festival266,environment265,groundTrack265,bankRipple265,celestial262,cloudAdvance262,approachHour,weatherProfiles,weatherAt,weatherState,blendWeather,weatherCount,waterLook133,sceneryBudget133,bankSites133};if(typeof module!=='undefined')module.exports=api;else root.WWDay=api;
 })(typeof globalThis!=='undefined'?globalThis:this);
