@@ -1,0 +1,19 @@
+name: Combat regression
+on:
+  push:
+    branches: [main]
+    paths: ['dungeon.py', 'test_combat281.py', 'server.py', 'index.html', '.github/workflows/combat-regression.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  combat:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m py_compile dungeon.py server.py test_combat281.py
+      - run: python -m unittest -v test_combat281
