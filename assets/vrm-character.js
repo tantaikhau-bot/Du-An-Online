@@ -76,14 +76,14 @@
  const digits163=['Index','Middle','Ring','Little'];
  function fingerTargets163(mode,gait,jump,time,side,turn=0){
   const clamp=(x,l=0,h=1)=>Math.max(l,Math.min(h,x)),g=clamp(Number(gait)||0),j=clamp(Number(jump)||0),t=Number(time)||0;
-  let grip=.24+.17*g+.12*j,spread=.025;
-  if(mode==='ride'){grip=.83+.035*Math.sin(t*3+(side==='left'?.4:1.1))+.04*clamp(Math.abs(turn));spread=.008}
+  let grip=.17+.15*g+.10*j,spread=.030;
+  if(mode==='ride'){grip=.76+.012*Math.sin(t*2+(side==='left'?.4:1.1))+.09*clamp(Math.abs(turn));spread=.012}
   else if(mode==='wave'||mode==='cheer'){grip=mode==='wave'&&side==='left'?.28:.09;spread=.065}
   else if(mode==='hand'||mode==='hug')grip=.40;
   else if(mode==='dance'||mode==='duet')grip=.17+.09*Math.sin(t*3);
   else if(mode==='sit')grip=.22;
-  const result={};for(let i=0;i<4;i++){const digit=digits163[i],k=clamp(grip+(i-1.5)*.045);result[digit+'Proximal']=[k*.98,spread*(i-1.5)];result[digit+'Intermediate']=[k*1.25,0];result[digit+'Distal']=[k*.70,0]}
-  result.ThumbMetacarpal=[grip*.34,grip*.20];result.ThumbProximal=[grip*.54,0];result.ThumbDistal=[grip*.42,0];return result
+  const result={};for(let i=0;i<4;i++){const digit=digits163[i],k=clamp(grip+(i-1.5)*.045);result[digit+'Proximal']=[k*.88,spread*(i-1.5)];result[digit+'Intermediate']=[k*1.16,0];result[digit+'Distal']=[k*.67,0]}
+  result.ThumbMetacarpal=[grip*.44,grip*.24];result.ThumbProximal=[grip*.62,0];result.ThumbDistal=[grip*.47,0];return result
  }
  function setupFingers163(a){
   const {T,vrm}=a,h=vrm.humanoid,out={left:[],right:[]};
@@ -100,7 +100,7 @@
   }return out
  }
  function animateFingers163(a,dt,mode,gait,jump,time,turn){
-  a.fingers163??=setupFingers163(a);const {T}=a,alpha=1-Math.exp(-Math.max(0,Math.min(.1,dt))* (mode==='ride'?12:8));let count=0,grip=0;const rot=a.fingerQuat163??=new T.Quaternion();
+  a.fingers163??=setupFingers163(a);const {T}=a,alpha=1-Math.exp(-Math.max(0,Math.min(.1,dt))* (mode==='ride'?7:6));let count=0,grip=0;const rot=a.fingerQuat163??=new T.Quaternion();
   for(const side of ['left','right']){const target=fingerTargets163(mode,gait,jump,time,side,turn);for(const f of a.fingers163[side]){const [curl,spread]=target[f.name];f.curl+=(curl-f.curl)*alpha;f.spread+=(spread-f.spread)*alpha;f.node.quaternion.copy(f.rest).multiply(rot.setFromAxisAngle(f.spreadAxis,f.spread)).multiply(rot.setFromAxisAngle(f.axis,f.curl));count++;grip+=f.curl}}
   return {joints:count,meanCurl:count?grip/count:0,mode}
  }
@@ -136,13 +136,13 @@
    const poses={ride_idle:[.025,.025,.012,.025,.015,.66,.86,.72],ride_walk:[.055,.11,.055,.085,.06,.69,.89,.76],ride_trot:[.12,.19,.075,.14,.10,.76,.96,.79],ride_gallop:[.29,.24,.095,.19,.13,.88,1.04,.88],mount_start:[.20,.04,.03,.06,.03,.75,.94,.76],dismount:[.18,.04,.03,.06,.03,.72,.91,.74]};
    const target=poses[state]||poses.ride_idle,sm=a.mountMotion149??={pose:target.slice(),pitch:0,roll:0,breath:0};const alpha=1-Math.exp(-dt*7);
    sm.pose=sm.pose.map((x,i)=>x+(target[i]-x)*alpha);const m=sm.pose;
-   const p=Math.sin(phase),p2=Math.sin(phase*2-.35),turn=Math.max(-1,Math.min(1,Number(j.turn)||0));
+   const p=Math.sin(phase),p2=Math.sin(phase*2-.35),turn=Math.max(-1,Math.min(1,Number(j.mountTurn??j.turn)||0)),brake=Math.max(0,Math.min(1,Number(j.mountBrake)||0));
    const pelvisPitch=p*m[1]*gait,pelvisRoll=Math.cos(phase)*m[2]*gait;
    sm.pitch+=(pelvisPitch-sm.pitch)*(1-Math.exp(-dt*13));sm.roll+=(pelvisRoll-sm.roll)*(1-Math.exp(-dt*11));
    const breath=Math.sin(t*2.1)*.016*(1-gait*.6),lumbar=-sm.pitch*.62+Math.sin(phase-.55)*m[3]*gait,chest=-lumbar*.45+Math.sin(phase*2-.8)*m[4]*gait*.45;
    overlay('hips',sign*(sm.pitch-.025)*blend,Math.sin(phase)*.045*gait,sm.roll*blend,1);
-   overlay('spine',sign*(m[0]*blend+lumbar+breath),-turn*.055,-sm.roll*.7+turn*.06,1);
-   overlay('chest',sign*(chest+breath*.8),turn*.04,-sm.roll*.25,1);
+   overlay('spine',sign*(m[0]*blend+lumbar+breath-brake*.19),-turn*.12,-sm.roll*.7+turn*.12,1);
+   overlay('chest',sign*(chest+breath*.8-brake*.055),turn*.08,-sm.roll*.25,1);
    overlay('upperChest',-sign*chest*.35,0,sm.roll*.12,1);
    overlay('neck',-sign*(lumbar+chest)*.32,turn*.045,sm.roll*.1,1);
    overlay('head',-sign*(lumbar+chest)*.42,turn*.08,sm.roll*.25,1);
@@ -151,7 +151,7 @@
     overlay(side+'LowerLeg',sign*(m[6]+.065*p2*gait)*blend,0,0,1);
     overlay(side+'UpperArm',-sign*(.50+m[0]*.75+.065*shift)*blend,0,down*(1.30+.045*shift)*blend,1);
     overlay(side+'LowerArm',-sign*(m[7]+.12*p2*gait+breath)*blend,0,0,1);
-    overlay(side+'Hand',sign*.045*shift,0,lateral*.035*shift,1);
+    overlay(side+'Hand',sign*(.035*shift-brake*.10),turn*.06,lateral*.035*shift,1);
     overlay(side+'Foot',-sign*(.08+.065*p2*gait),0,0,1)
    }
    if(state==='mount_start'||state==='dismount'){overlay('rightUpperLeg',-sign*(.5+Math.sin(Math.PI*blend)*.85),0,-Math.sin(Math.PI*blend)*.8,1);overlay('spine',sign*(.15+.28*Math.sin(Math.PI*blend)),0,.12*Math.sin(Math.PI*blend),1)}
@@ -170,11 +170,11 @@
   if(typeof WWIdentity!=='undefined')WWIdentity.animate(a,t,a.weight,secondary);
   const em=vrm.expressionManager,face=WWMotion.expression132(a.action132,mode,dt,t);
   if(em){for(const k of ['happy','angry','surprised','blink'])if(em.getExpression(k))em.setValue(k,face[k])}
-  const fingers=animateFingers163(a,dt,mode,a.weight,a.motion.jump,t,j.turn);const airborne=!!(WWMotion.phaseOf(j)||a.motion.jump>.12),offGround=(j.height||0)>.006||(j.velocity||0)>.01;
+  const fingers=animateFingers163(a,dt,mode,a.weight,a.motion.jump,t,j.mountHorse?Math.max(Math.abs(j.mountTurn||0),j.mountBrake||0):j.turn);const airborne=!!(WWMotion.phaseOf(j)||a.motion.jump>.12),offGround=(j.height||0)>.006||(j.velocity||0)>.01;
   if(detail===0&&ground&&!(mode==='idle'&&gait<.15)){vrm.humanoid.update();a.footIK=WWFootIK.apply(a.T,a,ground,dt,gait,airborne,mode)}else{WWFootIK.reset(a);a.footIK=null}
   if(detail===0){for(let remain=dt;remain>0;){let d=Math.min(.033,remain);vrm.update(d);remain-=d}}else{vrm.humanoid.update();vrm.expressionManager?.update();}
   if(detail<=1){const contact=WWFootIK.groundIdle(a.T,a,ground,dt,gait,offGround,mode);if(contact)a.footIK=contact;}
-  a.motionState=a.motion.state;a.poseCheck={motionVersion:'16.3',fingers163:fingers,actionWeights:{...weights},secondary:{...secondary},targetHeight:1.68*heightFactor(preset(a.motionProfile)),original:!!a.original,measuredSpeed:a.motion.speed,turn:a.motion.turn,identity:a.identityType||null,fallbackBase:a.fallbackBase||null,cycle:a.motion.cycle,walkWeight:a.motion.walk,runWeight:a.motion.run,profile:a.motionProfile,legSign:sign,hip:[v.hipL,v.hipR],knee:['left','right'].map(side=>(vrm.humanoid.getNormalizedBoneNode(side+'LowerLeg')?.rotation.x||0)*sign),ankle:[v.ankleL,v.ankleR],jumpWeight:a.motion.jump};
+  a.motionState=a.motion.state;a.poseCheck={motionVersion:'22.3',fingers163:fingers,actionWeights:{...weights},secondary:{...secondary},targetHeight:1.68*heightFactor(preset(a.motionProfile)),original:!!a.original,measuredSpeed:a.motion.speed,turn:a.motion.turn,identity:a.identityType||null,fallbackBase:a.fallbackBase||null,cycle:a.motion.cycle,walkWeight:a.motion.walk,runWeight:a.motion.run,profile:a.motionProfile,legSign:sign,hip:[v.hipL,v.hipR],knee:['left','right'].map(side=>(vrm.humanoid.getNormalizedBoneNode(side+'LowerLeg')?.rotation.x||0)*sign),ankle:[v.ankleL,v.ankleR],jumpWeight:a.motion.jump};
   const measure140=!a.diagnosticInterval140||!Number.isFinite(a.lastDiagnostic140)||t-a.lastDiagnostic140>=a.diagnosticInterval140||a.lastMode140!==a.motion.state;const previousRaw140=a.rawDiagnostics140;if(previousRaw140){a.poseCheck.rawArm=previousRaw140.arm;a.poseCheck.rawLeg=previousRaw140.leg}
   if(detail===0&&measure140&&['idle','walk','run'].includes(mode)){a.lastDiagnostic140=t;a.lastMode140=a.motion.state;
    a.root.updateWorldMatrix(true,true);
