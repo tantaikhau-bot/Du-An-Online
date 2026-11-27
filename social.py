@@ -105,6 +105,7 @@ def handle(h,c,u,d):
   c.execute('INSERT INTO avatar109(uid,preset,gait) VALUES(?,?,?) ON CONFLICT(uid) DO UPDATE SET preset=excluded.preset,gait=excluded.gait WHERE avatar109.preset IS NOT excluded.preset OR avatar109.gait IS NOT excluded.gait',(uid,preset,gait))
   pet=pick('pet',('fox','rabbit','deer','cat','dragon'),'')
   vehicle=pick('vehicle',('bike','motor','car','horse'),'') if a==0 else ''
+  if action in ('hand','photo','hug','duet') and (moving or jump>.05 or vehicle):action='idle';target=''
   c.execute('INSERT INTO vehicle88(uid,kind) VALUES(?,?) ON CONFLICT(uid) DO UPDATE SET kind=excluded.kind WHERE vehicle88.kind IS NOT excluded.kind',(uid,vehicle))
   c.execute('INSERT INTO pet70(uid,kind) VALUES(?,?) ON CONFLICT(uid) DO UPDATE SET kind=excluded.kind WHERE pet70.kind IS NOT excluded.kind',(uid,pet))
   c.execute('INSERT OR REPLACE INTO presence VALUES(?,?,?,?,?)',(uid,x,y,a,now))
@@ -127,11 +128,12 @@ def handle(h,c,u,d):
    return match_cache[key]
   def check_mutual(first,second,kind):
    if not second or kind not in ('hand','photo','hug','duet'):return False
-   if together.blocked(c,first,second) or not together.available(c,second):return False
+   if together.blocked(c,first,second) or not together.available(c,first) or not together.available(c,second):return False
    if not c.execute("SELECT 1 FROM friends WHERE status='accepted' AND ((sender=? AND receiver=?) OR (sender=? AND receiver=?))",(first,second,second,first)).fetchone():return False
-   row=c.execute('SELECT p.x,p.y,p.area,p.seen,q.action,q.target FROM presence p JOIN character61 q ON q.uid=p.uid WHERE p.uid=?',(second,)).fetchone()
-   origin=c.execute('SELECT x,y,area,seen FROM presence WHERE uid=?',(first,)).fetchone()
-   return bool(row and origin and row['seen']>now-4 and origin['seen']>now-4 and row['action']==kind and row['target']==first and row['area']==origin['area'] and math.hypot((row['x']-origin['x'])/35,(row['y']-origin['y'])/14)<3)
+   query="SELECT p.x,p.y,p.area,p.seen,q.action,q.target,m.moving,m.jump,v.kind AS vehicle FROM presence p JOIN character61 q ON q.uid=p.uid LEFT JOIN motion68 m ON m.uid=p.uid LEFT JOIN vehicle88 v ON v.uid=p.uid WHERE p.uid=?"
+   row=c.execute(query,(second,)).fetchone()
+   origin=c.execute(query,(first,)).fetchone()
+   return bool(row and origin and row['seen']>now-4 and origin['seen']>now-4 and row['action']==origin['action']==kind and row['target']==first and origin['target']==second and row['area']==origin['area']==0 and not row['moving'] and not origin['moving'] and (row['jump'] or 0)<=.05 and (origin['jump'] or 0)<=.05 and not row['vehicle'] and not origin['vehicle'] and math.hypot((row['x']-origin['x'])/35,(row['y']-origin['y'])/14)<3)
   players=[]; incoming=[]
   friend_ids={row[0] for row in c.execute("SELECT CASE WHEN sender=? THEN receiver ELSE sender END FROM friends WHERE status='accepted' AND (sender=? OR receiver=?)",(uid,uid,uid))}
   for r in c.execute('SELECT p.uid AS id,u.name,p.x,p.y,p.area,p.seen,q.body,q.skin,q.hair,q.style,q.dye,q.action,q.target,f.height,f.build,f.face,f.eye,m.heading,m.moving,m.jump,k.kind AS pet,veh.kind AS vehicle,av.preset AS avatar109,av.gait AS gait109 FROM presence p JOIN users u ON u.id=p.uid LEFT JOIN character61 q ON q.uid=p.uid LEFT JOIN character64 f ON f.uid=p.uid LEFT JOIN motion68 m ON m.uid=p.uid LEFT JOIN pet70 k ON k.uid=p.uid LEFT JOIN vehicle88 veh ON veh.uid=p.uid LEFT JOIN avatar109 av ON av.uid=p.uid WHERE p.uid!=? AND p.area=0 AND p.seen>? AND p.uid NOT IN (SELECT uid FROM blocked) AND NOT EXISTS(SELECT 1 FROM ww_blocks b WHERE (b.owner=? AND b.target=p.uid) OR (b.target=? AND b.owner=p.uid)) ORDER BY CASE WHEN p.area=? THEN 0 ELSE 1 END, ((p.x-?)/35.0)*((p.x-?)/35.0)+((p.y-?)/14.0)*((p.y-?)/14.0), p.uid LIMIT 100',(uid,now-12,uid,uid,a,x,x,y,y)):
@@ -140,6 +142,7 @@ def handle(h,c,u,d):
    v['friend']=int(v['id'] in friend_ids)
    if v['friend'] and v['target']==uid and v['action'] in ('hand','photo','hug','duet') and v['area']==a and math.hypot((v['x']-x)/35,(v['y']-y)/14)<3 and seen>now-4:
     incoming.append({'id':v['id'],'name':v['name'],'action':v['action']})
+   v['pair275']=bool(v['action'] in ('hand','photo','hug','duet') and v['target']==uid and mutually_ready(v['id'],uid,v['action']))
    if v['action'] in ('hand','photo','hug','duet') and not mutually_ready(v['id'],v['target'],v['action']):v['action']='idle'
    v.pop('target',None)
    players.append(v)
