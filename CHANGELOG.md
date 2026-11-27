@@ -1,5 +1,10 @@
 # WISH WORLD — Release history
 
+## V15.5 — Jade & HUD (preview)
+- Refine existing rigged CC0 dragon with larger weighted head, horns and wings, more pronounced belly and scale relief, a bone-attached blue crest and optional gold/jade chest pendant. Source remains the two-clip Quaternius mesh; not a new quadruped sculpt.
+- Main HUD redesign: teal/gold player card, collapsible quest panel, compact icon action controls, direct companion hotbar and player shortcut, clearer location/status and mobile control styling. Existing actions retained.
+- JavaScript syntax checked; visual quality, accessory placement and device performance remain unverified. No paid assets.
+
 ## V15.4 — Dragon Remastered (preview)
 - Refine existing CC0 Quaternius skinned dragon mesh: weighted head/horn and wing proportions, vertex-painted teal/blue/cream and violet gradients, generated UV and shared 128px scale bump map. Retain joint weights, source normals and two flying clips. This is not a new professional sculpt or AI-generated model.
 - Add on-demand real-model preview with animation selector, drag rotation and wheel zoom. Separate capped renderer disposed on exit. Center companion drawer, hide overlapping audio button, preserve portrait aspect ratio.
