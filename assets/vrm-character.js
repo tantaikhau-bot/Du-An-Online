@@ -187,7 +187,7 @@
   // V29.1: combat overlay on the actual skinned avatar, before humanoid/IK update.
   const combat=j.combat291;
   if(combat&&!socialBlocked256){
-   const p=Math.max(0,Math.min(1,combat.progress)),w=Math.min(1,p*10,(1-p)*7),sweep=Math.sin(Math.PI*Math.min(1,p/.82)),wind=Math.sin(Math.PI*Math.min(1,p/.34)),cast=combat.kind==='fire'||combat.kind==='storm';
+   const p=Math.max(0,Math.min(1,combat.progress)),w=Math.min(1,p*10,(1-p)*7),sweep=Math.sin(Math.PI*Math.min(1,p/.82)),wind=Math.sin(Math.PI*Math.min(1,p/.34)),cast=combat.kind==='fire'||combat.kind==='ice'||combat.kind==='storm';
    if(combat.kind==='ultimate'){
     const rise=Math.sin(Math.PI*Math.min(1,p/.58)),release=Math.max(0,Math.sin(Math.PI*Math.max(0,(p-.48)/.52)));
     overlay('rightUpperArm',-sign*(.65+rise*.90+release*.48),-.30*release,right*(.65-.32*rise),w);
