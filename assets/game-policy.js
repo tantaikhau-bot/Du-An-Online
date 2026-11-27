@@ -157,7 +157,7 @@ function stepSound131(state,distance,moving,run){
 // V13.9: mobile-specific budget; desktop legacy policy remains unchanged.
 function mobileCap139(preset,pref){
  if(preset==='battery'||preset==='low')return 30;
- return [30,45,60].includes(pref)?pref:30;
+ return [30,45,60,90].includes(pref)?pref:60;
 }
 // V17.1: independent resolution and effects budgets; DPR expressed relative to CSS pixels.
 const MOBILE_CLARITY171=Object.freeze({
@@ -177,9 +177,9 @@ function mobileStep139(v,fps,p95,cap,ceiling,tierFloor,scaleCeiling,manual=false
  const good=fps>=cap*.96&&p95<=1000/cap*1.16;
  let q={...v,slow:slow?(v.slow||0)+1:0,good:good?(v.good||0)+1:0,changed:false};
  if(severe||q.slow>=2){
-  if(q.tier<2){q.tier++;if(severe&&!manual)q.quality=Math.max(0,q.quality-1)}
+  if(q.tier<2){q.tier=severe?2:q.tier+1;if(severe&&!manual)q.quality=0}
   else if(q.quality>0&&!manual)q.quality--;
-  else if(!manual)q.scale=Math.max((MOBILE_CLARITY171[preset]||MOBILE_CLARITY171.balanced).scaleFloor,q.scale*(severe?.90:.96));
+  else if(!manual)q.scale=Math.max((MOBILE_CLARITY171[preset]||MOBILE_CLARITY171.balanced).scaleFloor,q.scale*(severe?.86:.96));
   q.changed=q.tier!==v.tier||q.quality!==v.quality||Math.abs(q.scale-v.scale)>.001;q.slow=0;q.good=0;
  }else if(q.good>=12&&!manual){
   if(q.scale<scaleCeiling-.025)q.scale=Math.min(scaleCeiling,q.scale+.06);
@@ -190,7 +190,7 @@ function mobileStep139(v,fps,p95,cap,ceiling,tierFloor,scaleCeiling,manual=false
  return q;
 }
 function actorBudget139(mobile,tier,quality){
- return mobile?{peerCount:tier===2?5:8,peerRange:tier===2?26:38,peerRig:tier===2?9:18,npcRig:tier===2?10:20,npcCount:tier===2?1:2,load:1,mapMs:tier===2?650:450,heavyMs:tier===2?420:280}:{peerCount:[5,8,12][quality],peerRange:[28,38,48][quality],peerRig:Infinity,npcRig:55,npcCount:6,load:2,mapMs:[400,250,160][quality],heavyMs:[250,160,100][quality]};
+ return mobile?{peerCount:tier===2?4:8,peerRange:tier===2?24:38,peerRig:tier===2?7:16,npcRig:tier===2?7:18,npcCount:tier===2?1:2,load:1,mapMs:tier===2?650:450,heavyMs:tier===2?420:280}:{peerCount:[5,8,12][quality],peerRange:[28,38,48][quality],peerRig:Infinity,npcRig:55,npcCount:6,load:2,mapMs:[400,250,160][quality],heavyMs:[250,160,100][quality]};
 }
 function trimModels140(cache,keep,limit,dispose){for(const [key,value] of cache){if(cache.size<=limit)break;if(key===keep)continue;cache.delete(key);dispose(value)}return cache.size}
 function expiredModel140(last,now,ttl=20000){return Number.isFinite(last)&&Number.isFinite(now)&&now-last>=ttl}
