@@ -1,0 +1,4 @@
+const assert=require('node:assert/strict'),P=require('./assets/game-policy.js');
+for(const density of [1,1.5]){const tiles=P.terrainTiles162(density);assert.equal(tiles.length,64);assert.equal(tiles.reduce((s,q)=>s+q.w*q.d,0),248*280);for(let x=-120;x<=120;x+=3)for(let z=-136;z<=136;z+=3){const q=P.tileAt162(x,z,tiles);assert.ok(q);assert.ok(Number.isFinite(P.frontierHeight162(x,z)));assert.ok(P.tileVisible162(q,x,z,0))}assert.ok(tiles.filter(q=>P.tileVisible162(q,0,0,45)).length<tiles.length);assert.ok(tiles.filter(q=>P.tileVisible162(q,118,134,45)).length<tiles.length)}
+assert.equal(P.frontierHeight162(0,0),0);assert.equal(P.frontierHeight162(118,-7.2),0);assert.ok(P.frontierHeight162(-105,-112)>0);assert.equal(P.WW_EXPANSION137.length,12);
+console.log('V16.2 world coverage, seam grid, frontier heights, river and tile visibility passed');

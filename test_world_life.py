@@ -30,13 +30,13 @@ class WorldLife(unittest.TestCase):
    c.executescript("CREATE TABLE users(id TEXT PRIMARY KEY,name TEXT);CREATE TABLE blocked(uid TEXT PRIMARY KEY);INSERT INTO users VALUES('a','A'),('b','B');")
    social.init(c)
    def pulse(uid,x,y):return social.handle(H('/api/social/pulse'),c,{'id':uid},{'x':x,'y':y,'area':0})
-   self.assertEqual(pulse('a',490,-657)[0],200)
-   code,res=pulse('b',490,-640);self.assertEqual(code,200)
-   self.assertTrue(any(p['id']=='a' and p['y']==-657 for p in res['players']))
-   self.assertEqual(pulse('a',490,1807)[0],200)
-   self.assertEqual(pulse('a',490,1808)[0],400)
-   self.assertEqual(pulse('a',490,-658)[0],400)
-   self.assertEqual(pulse('a',3011,575)[0],400)
+   self.assertEqual(pulse('a',490,-1329)[0],200)
+   code,res=pulse('b',490,-1312);self.assertEqual(code,200)
+   self.assertTrue(any(p['id']=='a' and p['y']==-1329 for p in res['players']))
+   self.assertEqual(pulse('a',490,2479)[0],200)
+   self.assertEqual(pulse('a',490,2480)[0],400)
+   self.assertEqual(pulse('a',490,-1330)[0],400)
+   self.assertEqual(pulse('a',4691,575)[0],400)
  def test_dungeon(self):
   import dungeon
   with sqlite3.connect(':memory:') as c:

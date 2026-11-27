@@ -96,13 +96,13 @@ assert.ok(stale134.x<=2.65);
 console.log('V13.4 server sample deduplication, monotonic time and bounded stale prediction passed');
 
 const G137=require('./assets/game-policy.js');
-assert.equal(G137.WW_WORLD137.halfZ,88);
-assert.ok(G137.insideWorld137(72,88)&&G137.insideWorld137(-72,-88));
-assert.ok(!G137.insideWorld137(73,0)&&!G137.insideWorld137(0,89)&&!G137.insideWorld137(NaN,0));
+assert.equal(G137.WW_WORLD137.halfZ,136);assert.equal(G137.WW_WORLD137.halfX,120);
+assert.ok(G137.insideWorld137(120,136)&&G137.insideWorld137(-120,-136));
+assert.ok(!G137.insideWorld137(121,0)&&!G137.insideWorld137(0,137)&&!G137.insideWorld137(NaN,0));
 for(const q of G137.WW_EXPANSION137){
- assert.ok(Math.abs(q.z)>76&&G137.insideWorld137(q.x,q.z));
- assert.equal(G137.expansionRegion137(q.z),q.region);
- assert.ok(G137.landmarkSite124(q,G137.insideWorld137,()=>0,(_x,z)=>G137.expansionRegion137(z)));
+ assert.ok((Math.abs(q.z)>76||Math.abs(q.x)>72)&&G137.insideWorld137(q.x,q.z));
+ assert.equal(G137.expansionRegion137(q.z,q.x),q.region);
+ assert.ok(G137.landmarkSite124(q,G137.insideWorld137,()=>0,(x,z)=>G137.expansionRegion137(z,x)));
 }
 assert.deepEqual(G137.landmarkVisits124(['north-dunes','north-dunes','pine-lookout','fake']),['north-dunes','pine-lookout']);
 console.log('V13.7 expanded bounds, frontier landmarks and saved visit migration passed');
