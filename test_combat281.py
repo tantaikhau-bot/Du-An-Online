@@ -1,4 +1,4 @@
-"""V28.6 regression checks for the authoritative turn-based combat API."""
+"""V28.7 regression checks for the authoritative turn-based combat API."""
 import sqlite3
 import unittest
 from unittest.mock import patch
@@ -43,7 +43,7 @@ class Combat281Tests(unittest.TestCase):
         self.assertEqual(v['weapon'],'greatsword')
         self.assertEqual(v['combo'],0)
         self.assertEqual(v['stamina'],100)
-        self.assertEqual(v['combat_version'],'28.6')
+        self.assertEqual(v['combat_version'],'28.7')
         self.assertEqual(next(q for q in v['skills'] if q['id']=='strike')['damage'],23)
     @patch('dungeon.secrets.randbelow',return_value=99)
     def test_combo_and_guard_reset(self, _):
@@ -261,6 +261,45 @@ class Combat281Tests(unittest.TestCase):
         self.world_call('b','world-strike',{'event':1},7201)
         code,v=self.world_call('b','world-strike',{'event':1},7205)
         self.assertEqual(v['leaders'],[{'name':'B','damage':60},{'name':'A','damage':30}])
+
+    def test_party_guard_and_leader_transfer(self):
+        code,v=self.world_call('a','party-create',{'stage':1,'role':'tank'},100)
+        invite=v['party']['code']
+        self.world_call('b','party-join',{'code':invite,'role':'damage'},101)
+        self.world_call('c','party-join',{'code':invite,'role':'support'},102)
+        code,v=self.world_call('a','party-start',{},103)
+        code,v=self.world_call('a','party-act',{'skill':'guard','rev':v['party']['rev']},104)
+        self.assertEqual((code,v['party']['hp'],v['party']['shield']),(200,299,1))
+        code,v=self.world_call('b','party-act',{'skill':'strike','rev':v['party']['rev']},105)
+        self.assertEqual((code,v['party']['hp'],v['party']['shield']),(200,296,0))
+        self.world_call('a','party-leave',{},106)
+        code,v=self.world_call('b','party-status',{},107)
+        self.assertTrue(v['party']['leader'])
+        self.assertEqual(v['party']['status'],'fight')
+        self.assertEqual(len(v['party']['members']),2)
+        self.world_call('c','party-leave',{},108)
+        code,v=self.world_call('b','party-status',{},109)
+        self.assertEqual(v['party']['status'],'lost')
+
+    def test_invalid_payload_and_error_rollback(self):
+        code,_=dungeon.handle(Handler('status'),self.c,{'id':'test'},[],100)
+        self.assertEqual(code,400)
+        code,_=dungeon.handle(Handler('start'),self.c,{'id':'test'},{'rev':99,'stage':1},101)
+        self.assertEqual(code,409)
+        self.assertFalse(self.c.in_transaction)
+        self.assertEqual(self.start()['status'],'fight')
+
+    def test_noop_heal_and_party_action_cap(self):
+        code,v=self.world_call('a','party-create',{'stage':1,'role':'support'},100)
+        invite=v['party']['code']
+        self.world_call('b','party-join',{'code':invite,'role':'tank'},101)
+        code,v=self.world_call('a','party-start',{},102)
+        code,_=self.world_call('a','party-act',{'skill':'heal','rev':v['party']['rev']},103)
+        self.assertEqual(code,409)
+        self.c.execute('UPDATE ww_party286 SET actions=159 WHERE code=?',(invite,))
+        self.c.commit()
+        code,v=self.world_call('b','party-act',{'skill':'guard','rev':v['party']['rev']},104)
+        self.assertEqual((code,v['party']['status'],v['party']['actions']),(200,'lost',160))
 
 if __name__=='__main__':
     unittest.main()
