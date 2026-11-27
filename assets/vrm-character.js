@@ -111,9 +111,9 @@
   const rate=(mode==='ride'?8:6)*(closing?1:.82)*(f.name.endsWith('Distal')?.80:f.name.endsWith('Intermediate')?.91:1);
   f.curl+=(curl-f.curl)*(1-Math.exp(-seconds*rate));f.spread+=(spread-f.spread)*(1-Math.exp(-seconds*5.5));return f;
  }
- function animateFingers163(a,dt,mode,gait,jump,time,turn){
+ function animateFingers163(a,dt,mode,gait,jump,time,turn,weapon=null){
   a.fingers163??=setupFingers163(a);const {T}=a;let count=0,grip=0;const rot=a.fingerQuat163??=new T.Quaternion();
-  for(const side of ['left','right']){const target=fingerTargets163(mode,gait,jump,time,side,turn);for(const f of a.fingers163[side]){const [curl,spread]=target[f.name];fingerResponse251(f,curl,spread,dt,mode);f.node.quaternion.copy(f.rest).multiply(rot.setFromAxisAngle(f.spreadAxis,f.spread)).multiply(rot.setFromAxisAngle(f.axis,f.curl));count++;grip+=f.curl}}
+  for(const side of ['left','right']){const holding=weapon&&(weapon==='dual'||(weapon==='bow'?side==='left':side==='right')),target=fingerTargets163(holding?'ride':mode,gait,jump,time,side,turn);if(holding){for(const digit of digits163){target[digit+'Proximal']=[.88,0];target[digit+'Intermediate']=[1.18,0];target[digit+'Distal']=[.70,0]}target.ThumbMetacarpal=[.42,.21];target.ThumbProximal=[.60,0];target.ThumbDistal=[.43,0]}for(const f of a.fingers163[side]){const [curl,spread]=target[f.name];fingerResponse251(f,curl,spread,holding?Math.max(dt,.045):dt,holding?'ride':mode);f.node.quaternion.copy(f.rest).multiply(rot.setFromAxisAngle(f.spreadAxis,f.spread)).multiply(rot.setFromAxisAngle(f.axis,f.curl));count++;grip+=f.curl}}
   return {joints:count,meanCurl:count?grip/count:0,mode}
  }
 
@@ -258,7 +258,7 @@
   if(typeof WWIdentity!=='undefined')WWIdentity.animate(a,t,a.weight,secondary);
   const em=vrm.expressionManager,seed255=a.expressionSeed255??=Array.from(a.motionProfile||'m1').reduce((n,c)=>n+c.charCodeAt(0),0)%13,face=WWMotion.expression132(a.action132,mode,dt,t,seed255);
   if(em){for(const k of ['happy','angry','surprised','blink','relaxed'])if(em.getExpression(k))em.setValue(k,face[k]||0)}
-  const fingers=animateFingers163(a,dt,mode,a.weight,a.motion.jump,t,j.mountHorse?Math.max(Math.abs(j.mountTurn||0),j.mountBrake||0):j.turn);const airborne=!!(WWMotion.phaseOf(j)||a.motion.jump>.12),offGround=(j.height||0)>.006||(j.velocity||0)>.01;
+  const fingers=animateFingers163(a,dt,mode,a.weight,a.motion.jump,t,j.mountHorse?Math.max(Math.abs(j.mountTurn||0),j.mountBrake||0):j.turn,mode==='ride'?null:j.weapon307);const airborne=!!(WWMotion.phaseOf(j)||a.motion.jump>.12),offGround=(j.height||0)>.006||(j.velocity||0)>.01;
   if(detail===0&&ground&&!(mode==='idle'&&gait<.15)){vrm.humanoid.update();a.footIK=WWFootIK.apply(a.T,a,ground,dt,gait,airborne,mode)}else{WWFootIK.reset(a);a.footIK=null}
   if(detail===0){for(let remain=dt;remain>0;){let d=Math.min(.033,remain);vrm.update(d);remain-=d}}else{vrm.humanoid.update();vrm.expressionManager?.update();}
   if(detail<=1){const contact=WWFootIK.groundIdle(a.T,a,ground,dt,gait,offGround,mode);if(contact)a.footIK=contact;}
