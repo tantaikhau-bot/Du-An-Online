@@ -45,6 +45,8 @@
  // Hip pitch negative=forward, knee flex positive=back, normalized humanoid +Z.
  const WALK=[[0,-.43,.12,.05],[.13,-.25,.24,-.03],[.36,.15,.10,-.10],[.55,.36,.26,-.24],[.70,.13,.85,-.13],[.86,-.31,.48,.06],[1,-.43,.12,.05]];
  const RUN=[[0,-.57,.25,.06],[.13,-.29,.45,-.09],[.32,.34,.27,-.20],[.47,.49,.78,-.27],[.65,.01,1.10,-.17],[.83,-.54,.70,.03],[1,-.57,.25,.06]];
+ // V25.2: early landing compression followed by a longer, smooth recovery.
+ function landingEnvelope252(remaining){const p=clamp(1-(Number(remaining)||0)/.34),peak=.24;return p<peak?smooth(p/peak):1-smooth((p-peak)/(1-peak))}
  function step(st,dt,gait=0,j={},mode='idle',id='m1'){
   dt=Number.isFinite(dt)?clamp(dt,0,.35):0;gait=Number.isFinite(gait)?clamp(gait):0;st.time+=dt;let cfg=profile(id),phase=phaseOf(j);
   // V25.0: locomotion follows actual movement when available. Preview and remote fallback retain gait input.
@@ -72,9 +74,9 @@
    headX:-.045*run+breath*.020*rest+.035*Math.sin(t*.47)*rest,headY:(.13*Math.sin(t*.61)+.04*Math.sin(t*1.37))*rest-swing*.024*move+.085*st.turnBody250,headZ:-idleLean*.041+counter*.015*move-.018*st.turnBody250,shoulderY:swing*.060*move+.025*idleLean+.025*st.turnBody250,
    armL:l.arm+.065*idleLean+.032*breath*rest-relax*rest,armR:r.arm-.055*idleLean-.028*breath*rest+relax*rest,elbowL:l.elbow+.09*rest*(1+shift),elbowR:r.elbow+.075*rest*(1-shift),hipL:l.hip-(.078+.010*shift)*rest,hipR:r.hip-(.078-.010*shift)*rest,kneeL:l.knee+(.156+.020*shift)*rest,kneeR:r.knee+(.156-.020*shift)*rest,ankleL:l.ankle-(.078+.010*shift)*rest,ankleR:r.ankle-(.078-.010*shift)*rest,spread:(.09+.10*run)*cfg.spread};
   if(phase){
-   let amount=phase==='jump_start'?smooth(1-(j.prep||0)/.20):phase==='jump_land'?Math.sin(Math.PI*clamp((j.land||0)/.34))**.85:0;
+   let amount=phase==='jump_start'?smooth(1-(j.prep||0)/.20):phase==='jump_land'?landingEnvelope252(j.land):0;
    let air=phase==='jump_air',launch=phase==='jump_takeoff',crouch=amount,ascend=clamp((j.velocity||0)/4),descend=clamp(-(j.velocity||0)/4),flight=air||launch,airFlex=flight?mix(.08,.39,smooth(1-Math.abs(j.velocity||0)/3.9)):0;
-   let q={hipY:-.115*crouch,hipSide:0,hipX:.080*crouch,hipYaw:0,hipRoll:0,spineX:.24*crouch+.035,spineYaw:0,spineRoll:0,headX:-.06*crouch,headY:0,headZ:0,shoulderY:0,
+   let q={hipY:-.125*crouch,hipSide:0,hipX:.095*crouch,hipYaw:0,hipRoll:0,spineX:.24*crouch+.035,spineYaw:0,spineRoll:0,headX:-.06*crouch,headY:0,headZ:0,shoulderY:0,
     armL:crouch*.48-(flight?(.27+.65*ascend-.36*descend):0),armR:crouch*.43-(flight?(.20+.57*ascend-.33*descend):0),elbowL:.20+.28*crouch+(flight?.26+.36*ascend+.18*descend:0),elbowR:.20+.25*crouch+(flight?.22+.32*ascend+.20*descend:0),
     hipL:-.46*crouch-airFlex,hipR:-.43*crouch-airFlex*.65,kneeL:.90*crouch+airFlex*1.35,kneeR:.83*crouch+airFlex*.92,ankleL:-.20*crouch-.10*airFlex,ankleR:-.20*crouch-.10*airFlex,spread:flight?.32+.18*ascend+.12*descend:.16+.16*crouch};
    for(const k in v)v[k]=mix(v[k],q[k],st.jump);
@@ -83,7 +85,7 @@
   for(const k of ['hipL','hipR'])v[k]=clamp(v[k],-.62,.57);
   for(const k of ['kneeL','kneeR'])v[k]=clamp(v[k],0,1.12);
   for(const k of ['ankleL','ankleR'])v[k]=clamp(v[k],-.30,.22);
-  if(!st.pose)st.pose={...v};else{let k=1-Math.exp(-dt/.035);for(const key in v)st.pose[key]=mix(st.pose[key],v[key],k)}
+  if(!st.pose)st.pose={...v};else{let k=1-Math.exp(-dt/(phase==='jump_land'?.022:.035));for(const key in v)st.pose[key]=mix(st.pose[key],v[key],k)}
   const moving250=st.state==='walk'||st.state==='run'?move>.09:move>.18, running250=st.state==='run'?st.run>.40:st.run>.57;
   st.state=phase||(mode!=='idle'?mode:running250?'run':moving250?'walk':'idle');return st.pose;
  }
@@ -108,5 +110,5 @@
  function secondary132(st,dt,gait,turn,wind){
   const k=1-Math.exp(-clamp(dt,0,.35)/.19);st.pitch=mix(st.pitch||0,clamp(gait,0,1)*.6,k);st.roll=mix(st.roll||0,clamp(turn||0,-3,3)*-.16,k);st.wind=mix(st.wind||1,clamp(Number.isFinite(wind)?wind:1,.45,2.8),k);return st;
  }
- const api={newState,step,phaseOf,npcLOD,profile,profiles,animalState,actionBlend132,expression132,secondary132};if(typeof module!=='undefined')module.exports=api;else root.WWMotion=api;
+ const api={newState,step,phaseOf,landingEnvelope252,npcLOD,profile,profiles,animalState,actionBlend132,expression132,secondary132};if(typeof module!=='undefined')module.exports=api;else root.WWMotion=api;
 })(typeof globalThis!=='undefined'?globalThis:this);

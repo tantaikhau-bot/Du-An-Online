@@ -99,19 +99,21 @@
   }
   return {anchor,corrected:Math.abs(correction),error:next};
  }
+ // Short running support window: vertical-only, no world-space foot locks.
+ function support252(phase,gait,run){const running=gait>=.76||run>.18,limit=running?.28:.56;return {running,active:gait<.10||phase<=limit,weight:running?.065:gait<.10?.42:gait<.42?.22:.10}}
  function apply(T,a,ground,dt,gait,jump,mode){
-  if(!ground||jump||gait>=.76||a.motion?.run>.18||!['idle','walk','run'].includes(mode)||dt>.085){reset(a);return null}
+  if(!ground||jump||!['idle','walk','run'].includes(mode)||dt>.085){reset(a);return null}
   const hum=a.vrm.humanoid,st=a.motion,root=a.root;
   root.updateWorldMatrix(true,true);
   const pos=root.getWorldPosition(new T.Vector3()),rot=root.getWorldQuaternion(new T.Quaternion()),previous=a.contactFrame;
   a.contactFrame={pos:pos.clone(),rot:rot.clone()};
   a.contacts??={};
   if(previous&&(previous.pos.distanceTo(pos)>.12||previous.rot.angleTo(rot)>.20)){a.contacts={};return null}
-  const w=gait<.10?.42:gait<.42?.22:.10,sign=a.legSign||1;
+  const support=support252(0,gait,a.motion?.run||0),w=support.weight,sign=a.legSign||1;
   let planted=0,maxError=0,maxCorrection=0,stanceFeet=0,stanceError=0;
   for(const [side,offset] of [['left',0],['right',Math.PI]]){
    let phase=((st.cycle+offset)/(2*Math.PI)%1+1)%1;
-   if(gait>=.10&&phase>.56){delete a.contacts[side];continue}
+   if(!support252(phase,gait,a.motion?.run||0).active){delete a.contacts[side];continue}
    const u=hum.getNormalizedBoneNode(side+'UpperLeg'),k=hum.getNormalizedBoneNode(side+'LowerLeg'),f=hum.getNormalizedBoneNode(side+'Foot');
    const raw=hum.getRawBoneNode?.(side+'Foot')||f;
    if(!u||!k||!f||!raw)continue;
@@ -123,14 +125,15 @@
    // Near straight legs have a singular vertical Jacobian; skip instead of forcing a knee bend.
    let correction=0;
    if(bend>.12&&bend<.96){
-    correction=clamp(delta*2.2*w,-.045,.045);
+    const cap=support.running?.012:.045;correction=clamp(delta*2.2*w,-cap,cap);
     const next=clamp(bend+correction,0,1.10),change=next-bend;
     u.rotation.x-=sign*change*.5;k.rotation.x=sign*next;
     f.rotation.x=sign*clamp(f.rotation.x*sign-change*.5,-.30,.22);
    }
-   const stance=stance119(T,a,side,u,k,f,raw,ground,phase,gait);a.contacts[side]={y:y+sole,...(stance?{anchor:stance.anchor}:{})};if(stance){stanceFeet++;stanceError=Math.max(stanceError,stance.error)}planted++;maxError=Math.max(maxError,Math.abs(y+sole-C.y));maxCorrection=Math.max(maxCorrection,Math.abs(correction));
+   if(correction){hum.update();root.updateWorldMatrix(true,true)}
+   const stance=support.running?null:stance119(T,a,side,u,k,f,raw,ground,phase,gait);a.contacts[side]={y:y+sole,...(stance?{anchor:stance.anchor}:{})};if(stance){stanceFeet++;stanceError=Math.max(stanceError,stance.error)}planted++;maxError=Math.max(maxError,Math.abs(y+sole-C.y));maxCorrection=Math.max(maxCorrection,Math.abs(correction));
   }
-  return {planted,maxError:Math.round(maxError*1000)/1000,maxCorrection,weight:w,mode:stanceFeet?'bounded-sagittal-stance':'vertical-only',stanceFeet,stanceError};
+  return {planted,maxError:Math.round(maxError*1000)/1000,maxCorrection,weight:w,mode:support.running?'running-vertical-support':stanceFeet?'bounded-sagittal-stance':'vertical-only',stanceFeet,stanceError};
  }
- const api={solve,apply,reset,groundIdle,calibrateSoles,soleContacts,stance119};if(typeof module!=='undefined')module.exports=api;else root.WWFootIK=api;
+ const api={solve,apply,reset,support252,groundIdle,calibrateSoles,soleContacts,stance119};if(typeof module!=='undefined')module.exports=api;else root.WWFootIK=api;
 })(typeof globalThis!=='undefined'?globalThis:this);

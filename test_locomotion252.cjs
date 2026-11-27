@@ -1,0 +1,8 @@
+/* Run: node test_locomotion252.cjs */
+const M=require('./assets/smooth-motion.js'),I=require('./assets/foot-ik.js'),check=(ok,msg)=>{if(!ok)throw Error(msg);console.log('PASS '+msg)};
+const peak=.34*(1-.24);check(M.landingEnvelope252(.34)===0&&M.landingEnvelope252(0)===0&&Math.abs(M.landingEnvelope252(peak)-1)<1e-9,'landing envelope endpoints and early compression');
+let last=0;for(let i=0;i<=24;i++){const x=M.landingEnvelope252(.34*(1-i/100));if(x+1e-9<last)throw Error('compression');last=x}for(let i=25;i<=100;i++){const x=M.landingEnvelope252(.34*(1-i/100));if(x>last+1e-9)throw Error('recovery');last=x}check(true,'monotonic compression and recovery');
+check(I.support252(.12,.95,.8).active&&!I.support252(.4,.95,.8).active&&I.support252(.12,.95,.8).weight<.1,'short running support and low correction weight');
+check(I.support252(.4,.62,0).active&&!I.support252(.8,.62,0).active,'walking support window retained');
+for(const id of Object.keys(M.profiles)){const st=M.newState();let p;for(let i=0;i<60;i++)M.step(st,1/60,.62,{speed:1.65},'idle',id);for(let i=0;i<12;i++)M.step(st,1/60,.62,{prep:.2-i/60,speed:1.65},'idle',id);for(let i=0;i<44;i++)M.step(st,1/60,.62,{height:.7,velocity:3.8-i*.17,speed:1.65},'idle',id);let maxK=0;for(let i=0;i<21;i++){p=M.step(st,1/60,0,{land:Math.max(0,.34-i/60),speed:0},'idle',id);maxK=Math.max(maxK,p.kneeL);if(!Object.values(p).every(Number.isFinite)||p.kneeL<0||p.kneeR>1.12||p.ankleL<-.30)throw Error('landing '+id)}if(maxK<.55)throw Error('compression '+id);for(let i=0;i<90;i++)M.step(st,1/60,0,{speed:0},'idle',id);if(st.state!=='idle'||st.jump>.01)throw Error('settle '+id)}
+check(true,'20 character profiles complete jump and landing recovery');

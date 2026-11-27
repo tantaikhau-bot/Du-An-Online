@@ -78,3 +78,7 @@ Measured local speed gates locomotion phase and blends when available, reducing 
 
 ### V25.1 Hand Motion
 Body-local arm targets are eased before the directional arm solver. Each finger uses joint-specific closing/release response, and wrist follow-through is bounded. Riding keeps the existing rein IK; grip targets are refined but actual palm/rein contact and clothing clipping need real skeleton visual tests. Run `node test_hands251.cjs` for numerical regression checks.
+
+
+### V25.2 Locomotion
+Landing compression peaks earlier and recovers more gradually without changing jump physics. Running now uses a short, low-weight vertical support window without horizontal foot locking. Walking stance Jacobian probes update the humanoid pose after vertical correction. Run `node test_locomotion252.cjs` for numerical tests across 20 motion profiles. Ground contact, skin deformation and slopes still need browser visual testing.
