@@ -1,5 +1,10 @@
 # WISH WORLD — Release history
 
+## V14.9 — Living Motion & Fur (candidate)
+- Smoothed rider gait pose transitions, independent pelvis pitch/roll, lumbar and chest counter-motion, relaxed wrist and rein targets, subtle seated suspension. Horse gait crossfade preserves cycle phase and adjusts playback rate.
+- Shared 128px procedural fur and scale color/bump maps, low-specular physical materials, vertex shading gradients, fur clump and dragon cheek silhouette refinements. No per-frame texture generation.
+- JavaScript syntax checked; in-browser visual, material, clipping and device FPS tests remain open.
+
 ## V14.8 — Mount & Fantasy (candidate, combines V14.6–V14.8)
 - Removed the primitive horse fallback. Require the Western Horse GLB (vinish.dev, CC BY 4.0) with validated same-origin server cache and explicit error if unavailable. Idle, Walk, Trot, Gallop; no separate Canter clip upstream.
 - Spine-relative estimated saddle, stirrup and rein sockets; two-link raw VRM leg and arm IK; gait-specific procedural rider pose states and mount/dismount transitions. These are not authored mocap clips. Model socket calibration, cloth collision and real-browser visuals remain unverified.
