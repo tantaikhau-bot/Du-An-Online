@@ -109,7 +109,7 @@ def world_snapshot(c,uid,now):
  hp,rev=(row['hp'],row['rev']) if row else (WORLD_HP,0)
  player=c.execute('SELECT damage,last FROM ww_world_boss_player284 WHERE event=? AND uid=?',(event,uid)).fetchone()
  wait=max(0,WORLD_COOLDOWN-(now-player['last'])) if player else 0
- return {'event':event,'server_now':now,'start':start,'ends':ends,'next_start':start+WORLD_PERIOD,'active':now<ends and hp>0,'hp':hp,'max_hp':WORLD_HP,'phase':boss_phase(hp,WORLD_HP),'rev':rev,'my_damage':player['damage'] if player else 0,'cooldown':round(wait,2)}
+ return {'event':event,'server_now':now,'start':start,'ends':ends,'next_start':start+WORLD_PERIOD,'active':now<ends and hp>0,'hp':hp,'max_hp':WORLD_HP,'phase':boss_phase(hp,WORLD_HP),'rev':rev,'my_damage':player['damage'] if player else 0,'cooldown':wait}
 
 def world_handle(h,c,uid,d,now,action):
  def err(code,msg):return h.reply(code,{'error':msg})
