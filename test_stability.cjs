@@ -14,7 +14,7 @@ assert.ok(battery<=1);
 let limited=resolution(4096,4096,3,2,1,false,true,1024,true);
 assert.ok(limited<=.25);
 assert.equal(resolution(390,780,1,1,1,false,false,4096,true),1);
-assert.match(html,/BUILD62='14\.1-mobile-physics'/);
+const clientBuild=html.match(/BUILD62='([^']+)'/)?.[1],serverBuild=fs.readFileSync('server.py','utf8').match(/'build':'([^']+)'/)?.[1];assert.ok(clientBuild&&serverBuild);assert.equal(clientBuild,serverBuild);
 console.log('Mobile resolution regression checks passed');
 
 // V11.5.1: no experimental Original entry point in the game.
