@@ -77,7 +77,7 @@ def handle(h,c,u,d):
   origin=c.execute('SELECT x,y FROM presence WHERE uid=? AND area=0 AND seen>?',(uid,now-5)).fetchone()
   if not origin:return reply(409,{'error':'Cần online trong thế giới chung'})
   kind=d.get('kind');seq=d.get('seq');heading=d.get('heading')
-  cds={'strike':.48,'spin':3.5,'fire':5,'storm':8.5,'dodge':2.2,'ultimate':16}
+  cds={'strike':.48,'spin':3.5,'fire':5,'ice':6.5,'storm':8.5,'dodge':2.2,'ultimate':16}
   if not isinstance(kind,str) or kind not in cds or not isinstance(seq,str) or not 1<=len(seq)<=64 or type(heading) not in (int,float) or not math.isfinite(heading) or abs(heading)>7:return reply(400,{'error':'Kỹ năng không hợp lệ'})
   c.execute('BEGIN IMMEDIATE')
   old=c.execute('SELECT seq,created FROM combat_fx298 WHERE uid=?',(uid,)).fetchone()
