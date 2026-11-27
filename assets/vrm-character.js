@@ -210,6 +210,21 @@
     overlay('spine',sign*(i===3?.22:.12)*sweep,-swing*v[7],.055*swing,w);overlay('chest',sign*.08*sweep,-swing*v[7]*.8,0,w);
    }
   }
+  // V29.9: anticipation, weight transfer and follow-through across the full body.
+  if(combat&&!socialBlocked256&&Number.isFinite(combat.progress)){
+   const p=Math.max(0,Math.min(1,combat.progress)),ease=u=>{u=Math.max(0,Math.min(1,u));return u*u*(3-2*u)},w=ease(p/.14)*ease((1-p)/.23);
+   const load=Math.sin(Math.PI*Math.min(1,p/.40)),release=Math.sin(Math.PI*Math.max(0,Math.min(1,(p-.30)/.53)));
+   const sword=combat.kind==='strike'||combat.kind==='spin',dodge=combat.kind==='dodge',ult=combat.kind==='ultimate',dir=(combat.combo|0)%2?-1:1;
+   const bend=(dodge?.28:ult?.18:.12)*load+(dodge?.13:.08)*release,twist=sword?dir*(-.18*load+.32*release):0;
+   if(hips){hips.position.y-=bend*.13*w;hips.position.x+=twist*.09*w;}
+   overlay('hips',sign*.12*load,twist,dir*.045*release,w);
+   overlay('leftUpperLeg',-sign*(bend+.07*release),0,.055*load,w);
+   overlay('rightUpperLeg',-sign*(bend+.11*load),0,-.055*load,w);
+   overlay('leftLowerLeg',sign*bend*1.8,0,0,w);overlay('rightLowerLeg',sign*bend*1.8,0,0,w);
+   overlay('leftFoot',-sign*bend*.75,0,0,w);overlay('rightFoot',-sign*bend*.75,0,0,w);
+   overlay('neck',-sign*.05*load,-twist*.25,0,w);overlay('upperChest',sign*.09*release,-twist*.5,0,w);
+   const wrist=vrm.humanoid.getNormalizedBoneNode('rightHand');if(wrist){wrist.rotation.x+=w*(sword?-.20*load+.28*release:ult?-.18*load:.12*release);wrist.rotation.z+=w*(sword?dir*.21*release:0);}
+  }
   const look=WWMotion.socialLook255(a.look255??={},mode==='ride'||WWMotion.phaseOf(j)?0:j.lookYaw,dt);
   if(!socialBlocked256&&Math.abs(look)>.001){const n=vrm.humanoid.getNormalizedBoneNode('neck'),hd=vrm.humanoid.getNormalizedBoneNode('head');if(n)n.rotation.y+=look*.35;if(hd)hd.rotation.y+=look*(n?.65:1)}
   a.secondary132??={};const secondary=WWMotion.secondary132(a.secondary132,dt,a.weight,a.motion.turn,j.wind);
