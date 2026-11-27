@@ -1,0 +1,3 @@
+# V19.2 Living Forest
+
+Three procedural tree species, continuous tapering trunk mesh with ring variation, split branches, asymmetric crowns, painted leaf atlas with veins at 512px desktop/384px mobile, finer curved grass blades and spatial gusts. Existing forest batching and grass instance budgets preserved, mobile crown card count reduced. No imported tree model: Poly Haven Tree Small 02 (https://polyhaven.com/a/tree_small_02) is CC0 but source has 5M triangles; a decimated, validated asset is needed before import. No claim of photorealism or real device FPS. Existing realm coordinates and physics unchanged.
