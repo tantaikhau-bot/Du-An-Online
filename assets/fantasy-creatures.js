@@ -266,5 +266,21 @@
  function careTravel135(raw,kind,seconds,now=Date.now()){
   const v=careState135(raw,kind,now);v.energy=Math.max(35,v.energy-clamp(Number.isFinite(seconds)?seconds:0,0,60)*.09);return v;
  }
- const api={KINDS,ELEMENTS150,spiritMotion254,updateVFX150,create,bind,animate,react,followProfiles,follower,followTarget,safeSpawn,followStep,careState135,careAction135,careTravel135};if(typeof module!=='undefined')module.exports=api;else global.WWCreatures=api;
+ // V26.4: bounded wildlife decisions, independent of rendering and rewards.
+ function wildlife264(kind,hour,weather,seed,threat,canDrink,previous){
+ const h=((Number.isFinite(hour)?hour:12)%24+24)%24;
+ const n=Number.isFinite(seed)?((seed%1)+1)%1:0;
+ const nocturnal=kind==='fox',night=h<6||h>=19.5;
+ const radius=kind==='rabbit'?3.2:kind==='deer'?3:2.2;
+ const d=Number.isFinite(threat)?Math.max(0,threat):Infinity;
+ if(d<radius||(previous==='flee'&&d<radius+1.4))return {mode:'flee',speed:kind==='rabbit'?2.8:kind==='deer'?3.2:2.7,seconds:1.15};
+ if(weather===5||weather===4)return {mode:'rest',speed:0,seconds:4+n*3};
+ if((night&&!nocturnal)||(!night&&nocturnal&&h>=10&&h<16))return {mode:'rest',speed:0,seconds:4+n*4};
+ if(canDrink&&((h>=7&&h<10)||(h>=16&&h<19))&&n<.45)return {mode:'drink',speed:.9,seconds:5+n*4};
+ if(weather===1&&n<.6)return {mode:'rest',speed:0,seconds:3+n*4};
+ if(n<.32)return {mode:'forage',speed:0,seconds:2.5+n*5};
+ if(n<.44)return {mode:'rest',speed:0,seconds:3+n*5};
+ return {mode:'roam',speed:kind==='deer'?1.15:.9,seconds:3+n*3};
+}
+ const api={KINDS,ELEMENTS150,wildlife264,spiritMotion254,updateVFX150,create,bind,animate,react,followProfiles,follower,followTarget,safeSpawn,followStep,careState135,careAction135,careTravel135};if(typeof module!=='undefined')module.exports=api;else global.WWCreatures=api;
 })(typeof globalThis!=='undefined'?globalThis:this);
