@@ -188,7 +188,14 @@
   const combat=j.combat291;
   if(combat&&!socialBlocked256){
    const p=Math.max(0,Math.min(1,combat.progress)),w=Math.min(1,p*10,(1-p)*7),sweep=Math.sin(Math.PI*Math.min(1,p/.82)),wind=Math.sin(Math.PI*Math.min(1,p/.34)),cast=combat.kind==='fire'||combat.kind==='storm';
-   if(cast){
+   if(combat.kind==='ultimate'){
+    const rise=Math.sin(Math.PI*Math.min(1,p/.58)),release=Math.max(0,Math.sin(Math.PI*Math.max(0,(p-.48)/.52)));
+    overlay('rightUpperArm',-sign*(.65+rise*.90+release*.48),-.30*release,right*(.65-.32*rise),w);
+    overlay('rightLowerArm',-sign*(.45+rise*.55),0,0,w);
+    overlay('leftUpperArm',-sign*(.45+rise*.72),.25*release,left*(.85-.25*rise),w);
+    overlay('leftLowerArm',-sign*(.55+rise*.40),0,0,w);
+    overlay('spine',sign*(-.12*rise+.24*release),.28*release,0,w);overlay('chest',sign*.10*release,.18*release,0,w);overlay('head',-sign*.14*rise,0,0,w);
+   }else if(cast){
     overlay('rightUpperArm',-sign*(.85+sweep*.48),-right*.12,right*.72,w);overlay('rightLowerArm',-sign*(.45+wind*.65),0,0,w);
     overlay('leftUpperArm',-sign*.72,0,left*.85,w);overlay('leftLowerArm',-sign*.55,0,0,w);
     overlay('spine',sign*(-.08+sweep*.17),.16*sweep,0,w);
