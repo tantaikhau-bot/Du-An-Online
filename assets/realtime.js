@@ -59,7 +59,7 @@
     height:pick('height',['compact','normal','tall'],'normal'),build:pick('build',['slim','normal','athletic'],'normal'),face:pick('face',['soft','classic','angular'],'classic'),eye:pick('eye',['brown','green','blue','amber'],'brown'),
     heading:finite(r.heading)?clamp(r.heading,-Math.PI*2,Math.PI*2):0,jump:finite(r.jump)?clamp(r.jump,0,2):0,moving,gait109:moving?(finite(r.gait109)?clamp(r.gait109,0,1):.65):0,
     avatar109:typeof r.avatar109==='string'&&/^[mf](?:[1-9]|10)$/.test(r.avatar109)?r.avatar109:body==='female'?'f1':'m1',
-    vehicle:pick('vehicle',['bike','motor','car','horse'],''),pet:pick('pet',['fox','rabbit','deer','cat','dragon'],''),action:pick('action',['idle','wave','bow','cheer','smile','happy','angry','surprised','sit','dance','hand','photo','hug','duet','portrait'],'idle'),friend:r.friend===1?1:0,received121:receivedMs,worldMs121:serverMs,rtt134:finite(rtt)?clamp(rtt,0,12000):0});
+    vehicle:pick('vehicle',['bike','motor','car','horse'],''),pet:pick('pet',['fox','rabbit','deer','cat','dragon'],''),action:pick('action',['idle','wave','bow','cheer','smile','happy','angry','surprised','sit','dance','hand','photo','hug','duet','portrait'],'idle'),friend:r.friend===1?1:0,pair275:r.pair275===true,received121:receivedMs,worldMs121:serverMs,rtt134:finite(rtt)?clamp(rtt,0,12000):0});
   }
   return [...byId.values()];
  }
