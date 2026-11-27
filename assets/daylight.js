@@ -75,5 +75,15 @@
   }
   return result;
  }
- const api={duration,hour,mode,label,format,sample,celestial262,cloudAdvance262,approachHour,weatherProfiles,weatherAt,weatherState,blendWeather,weatherCount,waterLook133,sceneryBudget133,bankSites133};if(typeof module!=='undefined')module.exports=api;else root.WWDay=api;
+ function routine263(id,h){
+ const offsets={linh54:-.5,hai54:-1,moc54:0,sao54:.5};
+ const hour=((Number.isFinite(h)?h:12)+(Object.hasOwn(offsets,id)?-offsets[id]:0)+24)%24;
+ const work={linh54:'Chăm sóc vườn',hai54:'Đánh cá bên sông',moc54:'Chế tác đồ gỗ',sao54:'Nghiên cứu di tích'};
+ if(hour<6||hour>=20)return {anchor:'night',activity:'rest',label:'Nghỉ ngơi tại nhà',speed:1.0};
+ if(hour<8)return {anchor:'day',activity:'prepare',label:'Chuẩn bị công việc',speed:1.25};
+ if(hour>=17)return {anchor:'evening',activity:'leisure',label:'Dạo chơi cuối ngày',speed:1.0};
+ if(hour>=12&&hour<13)return {anchor:'day',activity:'break',label:'Nghỉ trưa',speed:1.0};
+ return {anchor:'day',activity:'work',label:Object.hasOwn(work,id)?work[id]:'Làm việc',speed:1.15};
+}
+ const api={duration,hour,mode,label,format,sample,routine263,celestial262,cloudAdvance262,approachHour,weatherProfiles,weatherAt,weatherState,blendWeather,weatherCount,waterLook133,sceneryBudget133,bankSites133};if(typeof module!=='undefined')module.exports=api;else root.WWDay=api;
 })(typeof globalThis!=='undefined'?globalThis:this);
