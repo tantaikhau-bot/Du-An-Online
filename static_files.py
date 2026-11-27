@@ -2,9 +2,10 @@
 from pathlib import Path
 import shutil,urllib.request,hashlib,struct,threading,time,os,json,re,html
 from urllib.parse import urlsplit
-FILES={'jade-dragon156.js':'text/javascript; charset=utf-8','meshopt-decoder1531.js':'text/javascript; charset=utf-8','companion-portraits152.css':'text/css; charset=utf-8','dragon-pilot16.json':'application/json; charset=utf-8','daylight.js':'text/javascript; charset=utf-8','fantasy-creatures.js':'text/javascript; charset=utf-8','original-avatar.js':'text/javascript; charset=utf-8','character-identity.js':'text/javascript; charset=utf-8','Sendagaya_Shibu.vrm':'model/gltf-binary','Vivi.vrm':'model/gltf-binary','arm-motion.js':'text/javascript; charset=utf-8','foot-ik.js':'text/javascript; charset=utf-8','smooth-motion.js':'text/javascript; charset=utf-8','HairSample_Male.vrm':'model/gltf-binary','HairSample_Female.vrm':'model/gltf-binary','vrm-character.js':'text/javascript; charset=utf-8','three-vrm.module.js':'text/javascript; charset=utf-8','Sakurada_Fumiriya.vrm':'model/gltf-binary','Sendagaya_Shino.vrm':'model/gltf-binary','deer.glb':'model/gltf-binary','cat.glb':'model/gltf-binary','rabbit.glb':'model/gltf-binary','dragon.glb':'model/gltf-binary','anime-character.js':'text/javascript; charset=utf-8','game-policy.js':'text/javascript; charset=utf-8','realtime.js':'text/javascript; charset=utf-8','fox.glb':'model/gltf-binary','hero.glb':'model/gltf-binary','forrest_ground_01.jpg':'image/jpeg','medieval_blocks_05.jpg':'image/jpeg','medieval_wood.jpg':'image/jpeg','manifest.json':'application/json'}
+FILES={'jade-ice-dragon160.glb':'model/gltf-binary','jade-dragon156.js':'text/javascript; charset=utf-8','meshopt-decoder1531.js':'text/javascript; charset=utf-8','companion-portraits152.css':'text/css; charset=utf-8','dragon-pilot16.json':'application/json; charset=utf-8','daylight.js':'text/javascript; charset=utf-8','fantasy-creatures.js':'text/javascript; charset=utf-8','original-avatar.js':'text/javascript; charset=utf-8','character-identity.js':'text/javascript; charset=utf-8','Sendagaya_Shibu.vrm':'model/gltf-binary','Vivi.vrm':'model/gltf-binary','arm-motion.js':'text/javascript; charset=utf-8','foot-ik.js':'text/javascript; charset=utf-8','smooth-motion.js':'text/javascript; charset=utf-8','HairSample_Male.vrm':'model/gltf-binary','HairSample_Female.vrm':'model/gltf-binary','vrm-character.js':'text/javascript; charset=utf-8','three-vrm.module.js':'text/javascript; charset=utf-8','Sakurada_Fumiriya.vrm':'model/gltf-binary','Sendagaya_Shino.vrm':'model/gltf-binary','deer.glb':'model/gltf-binary','cat.glb':'model/gltf-binary','rabbit.glb':'model/gltf-binary','dragon.glb':'model/gltf-binary','anime-character.js':'text/javascript; charset=utf-8','game-policy.js':'text/javascript; charset=utf-8','realtime.js':'text/javascript; charset=utf-8','fox.glb':'model/gltf-binary','hero.glb':'model/gltf-binary','forrest_ground_01.jpg':'image/jpeg','medieval_blocks_05.jpg':'image/jpeg','medieval_wood.jpg':'image/jpeg','manifest.json':'application/json'}
 VRM='https://raw.githubusercontent.com/madjin/vrm-samples/master/vroid/beta/'
 UPSTREAM={
+ 'jade-ice-dragon160.glb':('https://vinish-models.pages.dev/dragons/ice-dragon.glb',None),
  'cat.glb':('https://vinish-models.pages.dev/cats/british-shorthair.glb',None),
  'rabbit.glb':('https://vinish-models.pages.dev/rabbits-mice-and-squirrels/wild-rabbit.glb',None),
  'dragon.glb':('https://raw.githubusercontent.com/euuuuuuan/cairnfall-public/8ee4cfd789282c59632a9339e61564b7d6c1acfe/assets/vendor/quaternius_monsters/Dragon.glb',None),
@@ -50,6 +51,16 @@ def read_pet118(name,url):
    return data
   except Exception as e:print('Pet source unavailable: '+u+' '+str(e)[:90],flush=True)
  raise ValueError('No verified rigged pet source for '+name)
+def validate_jade160(data):
+ if len(data)<20 or len(data)>8*1024*1024 or data[:4]!=b'glTF':raise ValueError('invalid Jade GLB size/header')
+ version,total,n,kind=struct.unpack_from('<IIII',data,4)
+ if version!=2 or total!=len(data) or kind!=0x4e4f534a or n>len(data)-20:raise ValueError('invalid Jade GLB metadata')
+ doc=json.loads(data[20:20+n])
+ clips={a.get('name','').lower() for a in doc.get('animations',[])}
+ if not doc.get('skins') or not {'idle','fly'}<=clips:raise ValueError('Jade rig or clips missing')
+ if any('uri' in a and not a['uri'].startswith('data:') for a in doc.get('buffers',[])+doc.get('images',[])):raise ValueError('external Jade dependency')
+ if not doc.get('images') or not any('normalTexture' in m for m in doc.get('materials',[])):raise ValueError('Jade texture/normal missing')
+ return doc
 def cached_asset(name):
  folder=Path(os.environ.get('WISH_ASSET_CACHE','/tmp/wish-assets-v107'));folder.mkdir(mode=0o700,parents=True,exist_ok=True)
  dest=folder/name
@@ -62,7 +73,8 @@ def cached_asset(name):
    if name in PET118:data=read_pet118(name,url)
    else:
     with urllib.request.urlopen(urllib.request.Request(url,headers={'User-Agent':'WishWorld/10.5'}),timeout=15) as r:
-     data=r.read(40*1024*1024+1)
+     data=r.read((8 if name=='jade-ice-dragon160.glb' else 40)*1024*1024+1)
+   if name=='jade-ice-dragon160.glb':validate_jade160(data)
    if not data or len(data)>40*1024*1024:raise ValueError('asset length')
    if name.endswith(('.vrm','.glb')) and (len(data)<20 or data[:4]!=b'glTF' or struct.unpack_from('<I',data,8)[0]!=len(data)):raise ValueError('bad glTF')
    if name.startswith('HairSample_') or name in ('Sendagaya_Shibu.vrm','Vivi.vrm'):
