@@ -98,5 +98,8 @@
  if(h>=22&&h<23)return {id:'closing',label:'Kết thúc lễ hội',next:23,active:false,gather:false,lanterns:1,glow:.35};
  return {id:'quiet',label:'Chờ lễ hội',next:15,active:false,gather:false,lanterns:0,glow:0};
 }
- const api={duration,hour,mode,label,format,sample,routine263,festival266,environment265,groundTrack265,bankRipple265,celestial262,cloudAdvance262,approachHour,weatherProfiles,weatherAt,weatherState,blendWeather,weatherCount,waterLook133,sceneryBudget133,bankSites133};if(typeof module!=='undefined')module.exports=api;else root.WWDay=api;
+ // V26.7: reset trail continuity when surface, mount or world context changes.
+ function trailReset267(previous,surface,hoof,zone,distance){return !previous||!surface||previous.surface!==surface||previous.hoof!==hoof||previous.zone!==zone||!Number.isFinite(distance)||distance>2.8}
+ function festivalKey267(hour,shared){return festival266(hour).id+':'+(shared?'shared':'local')}
+ const api={duration,hour,mode,label,format,sample,routine263,festival266,trailReset267,festivalKey267,environment265,groundTrack265,bankRipple265,celestial262,cloudAdvance262,approachHour,weatherProfiles,weatherAt,weatherState,blendWeather,weatherCount,waterLook133,sceneryBudget133,bankSites133};if(typeof module!=='undefined')module.exports=api;else root.WWDay=api;
 })(typeof globalThis!=='undefined'?globalThis:this);
