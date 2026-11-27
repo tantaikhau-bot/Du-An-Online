@@ -1,6 +1,7 @@
 """Isolated regression tests; no live database or accounts."""
 import http.client
 import json
+import re
 import tempfile
 import threading
 import unittest
@@ -32,7 +33,19 @@ class Stability(unittest.TestCase):
       status,headers,empty=req('HEAD',path)
       self.assertEqual((a,status,empty),(200,200,b''))
       self.assertEqual(headers['Content-Length'],str(len(body)))
-     self.assertEqual(json.loads(req('GET','/api/version')[2])['build'],'19.2-living-forest')
+     html=req('GET','/play')[2].decode('utf-8')
+     match=re.search(r"BUILD62='([^']+)'",html)
+     self.assertIsNotNone(match)
+     release=json.loads(req('GET','/api/version')[2])
+     self.assertEqual(release['build'],match.group(1))
+     self.assertEqual(release['version'],match.group(1).split('-')[0])
+     a,headers,asset=req('GET','/assets/arsenal311.glb')
+     self.assertEqual(a,200)
+     self.assertEqual(headers['Content-Type'],'model/gltf-binary')
+     self.assertEqual(asset[:4],b'glTF')
+     self.assertEqual(int.from_bytes(asset[8:12],'little'),len(asset))
+     status,head_headers,empty=req('HEAD','/assets/arsenal311.glb')
+     self.assertEqual((status,head_headers['Content-Length'],empty),(200,str(len(asset)),b''))
      self.assertEqual(req('GET','/favicon.ico')[1]['Content-Type'],'image/svg+xml')
      self.assertEqual(req('HEAD','/api/save')[0],405)
      self.assertEqual(req('GET','/api/save')[0],401)
