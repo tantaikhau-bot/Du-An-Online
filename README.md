@@ -94,3 +94,7 @@ Species-specific gait thresholds and smoothed playback rates drive equipped GLB 
 
 ### V25.5 Expression & Interaction
 Action weights are bounded and action clocks start with each interaction. VRM expressions use distinct smile targets and asymmetric blinks with profile-dependent timing; optional relaxed expression is used only where supported. A mutually matched nearby peer can drive a bounded, eased local head/neck look for matching social actions. Existing interaction permissions, paired contact and mount IK remain unchanged. Run `node test_expression255.cjs`; actual facial blendshapes and paired contact require visual tests.
+
+
+### V25.6 Animation Testing
+Re-run all Engine/World and Natural Motion regression suites (test_engine235.cjs, test_world245.cjs, test_motion250.cjs, test_hands251.cjs, test_locomotion252.cjs, test_horse253.cjs, test_spirit254.cjs, test_expression255.cjs, test_animation256.cjs). The new mixed-action numerical suite covers 25,200 frames across 20 profiles and three time steps. Prevent stale social overlays from overriding mounted/airborne poses, correct duet clock selection, and guard invalid animation inputs. Offline numerical tests do not establish visual contact, GPU FPS or multiplayer correctness.

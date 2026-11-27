@@ -103,9 +103,9 @@
  }
  // Independent asymmetric blinks and expression weights; no new blendshape assets required.
  function expression132(st,mode,dt,t,seed=0){
-  dt=Number.isFinite(dt)?clamp(dt,0,.35):0;t=Number.isFinite(t)?t:0;
+  dt=Number.isFinite(dt)?clamp(dt,0,.35):0;t=Number.isFinite(t)?t:0;seed=Number.isFinite(seed)?seed:0;
   const smiles={happy:.72,smile:.60,wave:.38,cheer:.78,portrait:.38,photo:.50,hug:.52,hand:.36,duet:.46,dance:.40};
-  const target={happy:smiles[mode]||0,angry:mode==='angry'?.78:0,surprised:mode==='surprised'?.72:0,relaxed:['idle','sit','ride','bow'].includes(mode)?.18:0};
+  const target={happy:Object.hasOwn(smiles,mode)?smiles[mode]:0,angry:mode==='angry'?.78:0,surprised:mode==='surprised'?.72:0,relaxed:['idle','sit','ride','bow'].includes(mode)?.18:0};
   st.face??={};const k=1-Math.exp(-dt/.16);
   for(const key of Object.keys(target))st.face[key]=mix(st.face[key]||0,target[key],k);
   const phase=((t+seed*.73+.29*Math.sin(t*.71+seed))%4.9+4.9)%4.9,peak=4.65;
