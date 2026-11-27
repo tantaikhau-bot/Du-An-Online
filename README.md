@@ -42,3 +42,7 @@ Press U or use Community → Tổ đội & bang hội. One party (4 members) and
 ### V5.8 Natural Light
 
 Graphics-focused release; V5.7 social features remain intact. Six procedural materials generate 512x512 color, height, tangent-space normal and roughness maps. A prefiltered procedural HDR environment supplies indirect ambient illumination, not full global illumination. High quality requests Three.js r164 Reflector with a custom water shader and 768x512 render target near the river; it falls back to V5.5 water if loading or shader compilation fails. Reflection is planar, not ray tracing. High shadow map up to 4096 depending on hardware. Terrain and rectangular obstacle camera clearance. JavaScript parsing and all 24 generated map buffers were checked with a mock Canvas; actual WebGL rendering, shader compilation and FPS were not tested because DNS access is unavailable in the local environment. Free hosting unchanged.
+
+
+### V23.5 Engine Testing
+Run `node test_engine235.cjs` from the repository root for offline engine regression checks, and `python test_http_assets.py` for HTTP cache checks. Tests cover syntax, mobile quality policy, fixed-step simulation, avatar cache, nearby chat, decorative throttling, forest LOD and GLB header/size rejection. They do not measure GPU FPS or validate actual browser rendering. Render free storage remains ephemeral; do not use for production player data without durable storage.
