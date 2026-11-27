@@ -102,3 +102,7 @@ Re-run all Engine/World and Natural Motion regression suites (test_engine235.cjs
 
 ### V26.0 Living World
 Existing procedural crown animation uses a bounded nearest-first active set, separate from slower visibility checks, with coherent weather-driven gusts and a 30/60 Hz target update cadence on mobile/desktop. Butterfly wing motion is also decoupled from coarse visibility updates. River surface shader time advances continuously at a wind-dependent rate, without adding render passes. Existing GLB tree models, water geometry, collisions and world events remain unchanged. Run `node test_living260.cjs` for numerical checks. Real GPU, shader and visual testing remain required.
+
+
+### V26.1 Dynamic Weather
+Rain and snow use wrapped world-coordinate particle positions, varying fall speeds and bounded wind response. Rain height follows the player's ground elevation; snow continues to sample terrain per flake. Mist uses drifting world-coordinate positions. Weather particle updates are capped at approximately 30 Hz mobile/60 Hz desktop, with immediate refresh on movement or quality change; existing shared weather schedule and transition blend remain intact. Run `node test_weather261.cjs`. Real GPU/visual tests, including weather clipping on slopes, remain required.
