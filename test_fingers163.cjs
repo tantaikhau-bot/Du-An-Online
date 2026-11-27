@@ -1,0 +1,6 @@
+const assert=require('node:assert/strict'),T=require('three'),V=require('./assets/vrm-character.js');
+const idle=V.fingerTargets163('idle',0,0,0,'left'),ride=V.fingerTargets163('ride',0,0,0,'left'),wave=V.fingerTargets163('wave',0,0,0,'right');
+assert.equal(Object.keys(idle).length,15);assert.ok(ride.MiddleIntermediate[0]>idle.MiddleIntermediate[0]*2);assert.ok(wave.IndexProximal[0]<idle.IndexProximal[0]);
+const nodes={};for(const side of ['left','right'])for(const name of Object.keys(idle)){const o=new T.Object3D();o.position.set(side==='left'?.03:-.03,0,name.includes('Index')?.01:name.includes('Little')?-.01:0);nodes[side+name]=o}
+const a={T,vrm:{humanoid:{getNormalizedBoneNode:k=>nodes[k]}}};const initial=V.animateFingers163(a,1/60,'ride',0,0,0,0);assert.equal(initial.joints,30);for(let i=0;i<60;i++)V.animateFingers163(a,1/60,'ride',0,0,i/60,0);const held=V.animateFingers163(a,1/60,'ride',0,0,1,0);assert.ok(held.meanCurl>initial.meanCurl*2);assert.ok(nodes.leftMiddleProximal.quaternion.angleTo(new T.Quaternion())>.3);for(let i=0;i<90;i++)V.animateFingers163(a,1/60,'idle',0,0,i/60,0);assert.ok(V.animateFingers163(a,1/60,'idle',0,0,2,0).meanCurl<held.meanCurl*.6);
+console.log('V16.3 finger grip, transitions and both hands passed');

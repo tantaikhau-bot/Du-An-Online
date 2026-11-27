@@ -1,0 +1,3 @@
+# V16.3 Natural Motion
+
+Adds 15 normalized finger joints per hand where available, with relaxed, walking, running, riding and emote targets; smooth transition; local rig-axis estimate. Rein endpoint shifts from wrist to palm/knuckles. Existing horse IK remains. More detailed smooth-normal rock meshes with procedural moss/grain/strata shader, clustered instanced shrubs, macro terrain variation and daylight contrast. Maintains map size and companion assets. No new purchased assets. Actual hand orientation and rein clipping must be tested on real VRMs; visual realism and mobile FPS not yet measured.

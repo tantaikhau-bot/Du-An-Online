@@ -30,7 +30,7 @@
   a.root.scale.setScalar(a.baseScale*heightFactor(p));
   for(const {material,base,role} of a.colors){material.color.copy(base);if(role==='hair')material.color.multiply(new T.Color(p.hair));else if(role==='cloth')material.color.multiply(new T.Color(p.cloth))}
   if(a.vrm&&!a.original&&typeof WWIdentity!=='undefined'){try{a.vrm.humanoid.resetNormalizedPose?.();a.vrm.humanoid.update();WWIdentity.apply(T,a,p)}catch(e){WWIdentity.clear(a);console.warn('Optional wearable fallback',e)}}
-  a.applied=p.id;a.motionProfile=p.id;a.lastDiagnostic140=undefined;a.rawDiagnostics140=null;a.action132={};a.secondary132={};a.idleGroundWeight=0;a.idleAnchor1170=null;a.contacts={};a.contactFrame=null;if(typeof WWMotion!=='undefined')a.motion=WWMotion.newState();
+  a.applied=p.id;a.motionProfile=p.id;a.lastDiagnostic140=undefined;a.rawDiagnostics140=null;a.action132={};a.secondary132={};if(a.fingers163)for(const side of ['left','right'])for(const f of a.fingers163[side]){f.node.quaternion.copy(f.rest);f.curl=0;f.spread=0}a.idleGroundWeight=0;a.idleAnchor1170=null;a.contacts={};a.contactFrame=null;if(typeof WWMotion!=='undefined')a.motion=WWMotion.newState();
  }
  const remote='https://raw.githubusercontent.com/madjin/vrm-samples/master/vroid/beta/';
  let lib;
@@ -72,6 +72,39 @@
   const a={root,vrm,kind,phase:0,weight:0,elapsed:0,baseScale:root.scale.x,colors,armDown,legSign,modelForward,motionProfile:kind.startsWith('female')?'f1':'m1',motion:WWMotion.newState(),hipsRest:vrm.humanoid.getNormalizedBoneNode('hips')?.position.clone(),springReady:false,T,dispose:()=>VRMUtils.deepDispose(vrm.scene),soleHeight};
   try{WWFootIK.calibrateSoles(T,a)}catch(e){console.warn('Sole calibration fallback',e);a.soleSamples=null}return a;
  }
+ // V16.3: normalized VRM finger joints, independent per hand with eased transitions.
+ const digits163=['Index','Middle','Ring','Little'];
+ function fingerTargets163(mode,gait,jump,time,side,turn=0){
+  const clamp=(x,l=0,h=1)=>Math.max(l,Math.min(h,x)),g=clamp(Number(gait)||0),j=clamp(Number(jump)||0),t=Number(time)||0;
+  let grip=.24+.17*g+.12*j,spread=.025;
+  if(mode==='ride'){grip=.83+.035*Math.sin(t*3+(side==='left'?.4:1.1))+.04*clamp(Math.abs(turn));spread=.008}
+  else if(mode==='wave'||mode==='cheer'){grip=mode==='wave'&&side==='left'?.28:.09;spread=.065}
+  else if(mode==='hand'||mode==='hug')grip=.40;
+  else if(mode==='dance'||mode==='duet')grip=.17+.09*Math.sin(t*3);
+  else if(mode==='sit')grip=.22;
+  const result={};for(let i=0;i<4;i++){const digit=digits163[i],k=clamp(grip+(i-1.5)*.045);result[digit+'Proximal']=[k*.98,spread*(i-1.5)];result[digit+'Intermediate']=[k*1.25,0];result[digit+'Distal']=[k*.70,0]}
+  result.ThumbMetacarpal=[grip*.34,grip*.20];result.ThumbProximal=[grip*.54,0];result.ThumbDistal=[grip*.42,0];return result
+ }
+ function setupFingers163(a){
+  const {T,vrm}=a,h=vrm.humanoid,out={left:[],right:[]};
+  for(const side of ['left','right']){
+   const get=name=>h.getNormalizedBoneNode(side+name),index=get('IndexProximal'),little=get('LittleProximal'),middle=get('MiddleProximal'),next=get('MiddleIntermediate');
+   let palm=new T.Vector3(0,-1,0);
+   if(index&&little&&middle&&next){const direction=next.position.clone().normalize(),across=index.position.clone().sub(little.position).normalize(),n=new T.Vector3().crossVectors(direction,across).normalize();if(n.lengthSq()>.5){if(n.dot(palm)<0)n.negate();if(Math.abs(n.dot(palm))>.25)palm.copy(n)}}
+   const names=Object.keys(fingerTargets163('idle',0,0,0,side));
+   for(const name of names){const node=get(name);if(!node)continue;const follow=name.endsWith('Proximal')?name.replace('Proximal','Intermediate'):name.endsWith('Intermediate')?name.replace('Intermediate','Distal'):name==='ThumbMetacarpal'?'ThumbProximal':name==='ThumbProximal'?'ThumbDistal':null;
+    let d=follow&&get(follow)?get(follow).position.clone():node.position.clone();if(name==='ThumbProximal'&&get('ThumbDistal'))d=get('ThumbDistal').position.clone();if(d.lengthSq()<1e-7)d.set(side==='left'?1:-1,0,0);d.normalize();
+    let inward=palm.clone();if(name.startsWith('Thumb')&&middle){const across=middle.position.clone().sub(get('ThumbMetacarpal')?.position||new T.Vector3());if(across.lengthSq()>.00001)inward.lerp(across.normalize(),.38)}
+    const axis=new T.Vector3().crossVectors(d,inward);if(axis.lengthSq()<1e-6)axis.set(0,0,side==='left'?-1:1);axis.normalize();out[side].push({name,node,axis,spreadAxis:palm.clone(),rest:node.quaternion.clone(),curl:0,spread:0})
+   }
+  }return out
+ }
+ function animateFingers163(a,dt,mode,gait,jump,time,turn){
+  a.fingers163??=setupFingers163(a);const {T}=a,alpha=1-Math.exp(-Math.max(0,Math.min(.1,dt))* (mode==='ride'?12:8));let count=0,grip=0;const rot=a.fingerQuat163??=new T.Quaternion();
+  for(const side of ['left','right']){const target=fingerTargets163(mode,gait,jump,time,side,turn);for(const f of a.fingers163[side]){const [curl,spread]=target[f.name];f.curl+=(curl-f.curl)*alpha;f.spread+=(spread-f.spread)*alpha;f.node.quaternion.copy(f.rest).multiply(rot.setFromAxisAngle(f.spreadAxis,f.spread)).multiply(rot.setFromAxisAngle(f.axis,f.curl));count++;grip+=f.curl}}
+  return {joints:count,meanCurl:count?grip/count:0,mode}
+ }
+
  function animate(a,dt,gait,mode='idle',jump=0,detail=0,ground=null){
   const {vrm}=a;if(a.idleOffset1170){a.root.position.x-=a.idleOffset1170.x;a.root.position.z-=a.idleOffset1170.z;a.idleOffset1170=null}dt=Math.min(.35,Math.max(0,dt));a.elapsed+=dt;a.motion??=WWMotion.newState();let j=typeof jump==='object'?jump:{height:jump,velocity:0},v=WWMotion.step(a.motion,dt,gait,j,mode,a.motionProfile),t=a.elapsed;
   a.weight=a.motion.walk+a.motion.run;const settle=mode==='idle'&&!WWMotion.phaseOf(j)?Math.max(0,1-(a.weight+a.motion.jump)*5):0;
@@ -137,11 +170,11 @@
   if(typeof WWIdentity!=='undefined')WWIdentity.animate(a,t,a.weight,secondary);
   const em=vrm.expressionManager,face=WWMotion.expression132(a.action132,mode,dt,t);
   if(em){for(const k of ['happy','angry','surprised','blink'])if(em.getExpression(k))em.setValue(k,face[k])}
-  const airborne=!!(WWMotion.phaseOf(j)||a.motion.jump>.12),offGround=(j.height||0)>.006||(j.velocity||0)>.01;
+  const fingers=animateFingers163(a,dt,mode,a.weight,a.motion.jump,t,j.turn);const airborne=!!(WWMotion.phaseOf(j)||a.motion.jump>.12),offGround=(j.height||0)>.006||(j.velocity||0)>.01;
   if(detail===0&&ground&&!(mode==='idle'&&gait<.15)){vrm.humanoid.update();a.footIK=WWFootIK.apply(a.T,a,ground,dt,gait,airborne,mode)}else{WWFootIK.reset(a);a.footIK=null}
   if(detail===0){for(let remain=dt;remain>0;){let d=Math.min(.033,remain);vrm.update(d);remain-=d}}else{vrm.humanoid.update();vrm.expressionManager?.update();}
   if(detail<=1){const contact=WWFootIK.groundIdle(a.T,a,ground,dt,gait,offGround,mode);if(contact)a.footIK=contact;}
-  a.motionState=a.motion.state;a.poseCheck={motionVersion:'13.2',actionWeights:{...weights},secondary:{...secondary},targetHeight:1.68*heightFactor(preset(a.motionProfile)),original:!!a.original,measuredSpeed:a.motion.speed,turn:a.motion.turn,identity:a.identityType||null,fallbackBase:a.fallbackBase||null,cycle:a.motion.cycle,walkWeight:a.motion.walk,runWeight:a.motion.run,profile:a.motionProfile,legSign:sign,hip:[v.hipL,v.hipR],knee:['left','right'].map(side=>(vrm.humanoid.getNormalizedBoneNode(side+'LowerLeg')?.rotation.x||0)*sign),ankle:[v.ankleL,v.ankleR],jumpWeight:a.motion.jump};
+  a.motionState=a.motion.state;a.poseCheck={motionVersion:'16.3',fingers163:fingers,actionWeights:{...weights},secondary:{...secondary},targetHeight:1.68*heightFactor(preset(a.motionProfile)),original:!!a.original,measuredSpeed:a.motion.speed,turn:a.motion.turn,identity:a.identityType||null,fallbackBase:a.fallbackBase||null,cycle:a.motion.cycle,walkWeight:a.motion.walk,runWeight:a.motion.run,profile:a.motionProfile,legSign:sign,hip:[v.hipL,v.hipR],knee:['left','right'].map(side=>(vrm.humanoid.getNormalizedBoneNode(side+'LowerLeg')?.rotation.x||0)*sign),ankle:[v.ankleL,v.ankleR],jumpWeight:a.motion.jump};
   const measure140=!a.diagnosticInterval140||!Number.isFinite(a.lastDiagnostic140)||t-a.lastDiagnostic140>=a.diagnosticInterval140||a.lastMode140!==a.motion.state;const previousRaw140=a.rawDiagnostics140;if(previousRaw140){a.poseCheck.rawArm=previousRaw140.arm;a.poseCheck.rawLeg=previousRaw140.leg}
   if(detail===0&&measure140&&['idle','walk','run'].includes(mode)){a.lastDiagnostic140=t;a.lastMode140=a.motion.state;
    a.root.updateWorldMatrix(true,true);
@@ -155,5 +188,5 @@
   if(measure140&&mode==='idle'&&a.weight<.05&&!WWMotion.phaseOf(j)){vrm.scene.updateMatrixWorld(true);const h=vrm.humanoid.getRawBoneNode('head'),l=vrm.humanoid.getRawBoneNode('leftHand'),r=vrm.humanoid.getRawBoneNode('rightHand'),ls=vrm.humanoid.getRawBoneNode('leftUpperArm'),rs=vrm.humanoid.getRawBoneNode('rightUpperArm');if(h&&l&&r&&ls&&rs){const hy=h.matrixWorld.elements[13];a.handsBelowHead=l.matrixWorld.elements[13]<hy&&r.matrixWorld.elements[13]<hy;a.handsDown=l.matrixWorld.elements[13]<ls.matrixWorld.elements[13]&&r.matrixWorld.elements[13]<rs.matrixWorld.elements[13]}}
  }
  function release(a){if(typeof WWIdentity!=='undefined')WWIdentity.clear(a);a.root.removeFromParent();a.dispose?.();a.contacts={}}
- const api={load,animate,sources,roster,preset,applyPreset,release,heightFactor,createBufferCache140,bufferStats140:()=>buffers.stats()};if(typeof module!=='undefined')module.exports=api;else window.WWVRM=api;
+ const api={fingerTargets163,setupFingers163,animateFingers163,load,animate,sources,roster,preset,applyPreset,release,heightFactor,createBufferCache140,bufferStats140:()=>buffers.stats()};if(typeof module!=='undefined')module.exports=api;else window.WWVRM=api;
 })();
