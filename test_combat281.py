@@ -1,4 +1,4 @@
-"""V28.5 regression checks for the authoritative turn-based combat API."""
+"""V28.6 regression checks for the authoritative turn-based combat API."""
 import sqlite3
 import unittest
 from unittest.mock import patch
@@ -14,6 +14,8 @@ class Combat281Tests(unittest.TestCase):
     def setUp(self):
         self.c = sqlite3.connect(':memory:')
         self.c.row_factory = sqlite3.Row
+        self.c.execute('CREATE TABLE users(id TEXT PRIMARY KEY,name TEXT)')
+        self.c.executemany('INSERT INTO users VALUES(?,?)', [('a','A'),('b','B'),('c','C')])
         dungeon.init(self.c)
         dungeon.init(self.c)
         self.c.commit()
@@ -41,7 +43,7 @@ class Combat281Tests(unittest.TestCase):
         self.assertEqual(v['weapon'],'greatsword')
         self.assertEqual(v['combo'],0)
         self.assertEqual(v['stamina'],100)
-        self.assertEqual(v['combat_version'],'28.5')
+        self.assertEqual(v['combat_version'],'28.6')
         self.assertEqual(next(q for q in v['skills'] if q['id']=='strike')['damage'],23)
     @patch('dungeon.secrets.randbelow',return_value=99)
     def test_combo_and_guard_reset(self, _):
@@ -209,6 +211,56 @@ class Combat281Tests(unittest.TestCase):
         self.assertEqual(v['enemy_max'],515)
         self.assertTrue(v['boss'])
         self.assertEqual(len(v['milestones']),9)
+
+    def test_party_permissions_and_shared_state(self):
+        code,v=self.world_call('a','party-create',{'stage':1,'role':'damage'},100)
+        self.assertEqual(code,200)
+        invite=v['party']['code']
+        code,_=self.world_call('a','party-start',{},101)
+        self.assertEqual(code,409)
+        code,v=self.world_call('b','party-join',{'code':invite,'role':'support'},102)
+        self.assertEqual(code,200)
+        code,_=self.world_call('b','party-start',{},103)
+        self.assertEqual(code,403)
+        code,v=self.world_call('a','party-start',{},104)
+        self.assertEqual((code,v['party']['hp'],v['party']['enemy']),(200,200,128))
+        rev=v['party']['rev']
+        code,v=self.world_call('a','party-act',{'skill':'strike','rev':rev},105)
+        self.assertEqual((code,v['party']['enemy']),(200,104))
+        code,_=self.world_call('b','party-act',{'skill':'heal','rev':rev},106)
+        self.assertEqual(code,409)
+        rev=v['party']['rev']
+        code,_=self.world_call('a','party-act',{'skill':'heal','rev':rev},109)
+        self.assertEqual(code,400)
+        code,v=self.world_call('b','party-act',{'skill':'heal','rev':rev},109)
+        self.assertEqual(code,200)
+        self.assertEqual(v['party']['hp'],193)
+        code,_=self.world_call('b','party-act',{'skill':'heal','rev':v['party']['rev']},110)
+        self.assertEqual(code,429)
+        code,v=self.world_call('a','party-status',{},111)
+        self.assertEqual(v['party']['hp'],193)
+        self.assertEqual(v['party']['enemy'],104)
+
+    def test_party_win_badge_only_for_participants(self):
+        code,v=self.world_call('a','party-create',{'stage':1,'role':'damage'},100)
+        invite=v['party']['code']
+        self.world_call('b','party-join',{'code':invite,'role':'tank'},101)
+        self.world_call('c','party-join',{'code':invite,'role':'support'},102)
+        code,v=self.world_call('a','party-start',{},103)
+        self.c.execute('UPDATE ww_party286 SET enemy=1 WHERE code=?',(invite,))
+        self.c.commit()
+        code,v=self.world_call('a','party-act',{'skill':'strike','rev':v['party']['rev']},104)
+        self.assertEqual((code,v['party']['status'],v['badges']),(200,'won',[1]))
+        code,v=self.world_call('b','party-status',{},105)
+        self.assertEqual(v['badges'],[])
+        code,v=self.world_call('c','party-status',{},105)
+        self.assertEqual(v['badges'],[])
+
+    def test_world_leaderboard(self):
+        self.world_call('a','world-strike',{'event':1},7201)
+        self.world_call('b','world-strike',{'event':1},7201)
+        code,v=self.world_call('b','world-strike',{'event':1},7205)
+        self.assertEqual(v['leaders'],[{'name':'B','damage':60},{'name':'A','damage':30}])
 
 if __name__=='__main__':
     unittest.main()
