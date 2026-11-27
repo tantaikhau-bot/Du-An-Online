@@ -9,13 +9,41 @@ MAGIC={
  'light':('Thánh quang',22,0,3,'Hồi 28 HP và giảm 50% đòn phản công'),
  'shadow':('Bóng tối',20,20,3,'Hút 12 HP tối đa theo sát thương thực tế'),
 }
+# AI is deterministic per turn: preview and resolution use the same snapshot.
+AI_PROFILES=(
+ ('Mầm bóng tối','fire','shadow'),
+ ('Sói sương','fire','ice'),
+ ('Hộ vệ đá','lightning','fire'),
+ ('Tinh linh bão','ice','lightning'),
+ ('Long vương pha lê','light','shadow'),
+)
+def enemy_plan(v):
+ stage=v['stage'];turn=v['turn'];_,_,hp,attack,heavy=STAGES[stage-1]
+ low=v['enemy']*100<=hp*30
+ mode='heavy' if turn%3==2 else 'normal'
+ if stage==2 and turn%4==1:mode='dodge'
+ if stage==3 and turn%4==1:mode='guard'
+ if stage==4 and turn%4==1:mode='counter'
+ if stage==5 and turn%4==1:mode='guard'
+ if low and mode=='normal' and stage>=2:mode='rage'
+ names={'normal':'Đòn thường','heavy':'Đòn cường kích','dodge':'Lướt né','guard':'Thế thủ','counter':'Phản công','rage':'Cuồng nộ'}
+ raw={'normal':attack,'heavy':heavy,'dodge':max(1,attack//2),'guard':max(1,attack//2),'counter':attack,'rage':attack*3//2}[mode]
+ return mode,names[mode],mitigate(raw)
+def adjusted_damage(v,skill,damage,mode):
+ _,weak,resist=AI_PROFILES[v['stage']-1]
+ if skill==weak:damage=damage*125//100
+ if skill==resist:damage=damage*75//100
+ if mode=='guard' and skill in ('strike','burst'):damage=damage*60//100
+ if mode=='dodge' and skill in ('strike','burst'):damage=damage*50//100
+ return damage
 def cooldowns(v):
  return json.loads(v['magic_cd'])
 def skill_view(v,k,cost):
  q={'id':k,'cost':cost,'damage':attack_profile(v,k)[0],'stamina_cost':attack_profile(v,k)[1],'cooldown':max(0,cooldowns(v).get(k,0)-v['turn'])}
  if k in MAGIC:
   q.update(name=MAGIC[k][0],effect=MAGIC[k][4],cooldown_turns=MAGIC[k][3])
-  if k=='lightning' and v['turn']%3==2:q['damage']+=8
+  if k=='lightning' and enemy_plan(v)[0]=='heavy':q['damage']+=8
+ q['damage']=adjusted_damage(v,k,q['damage'],enemy_plan(v)[0])
  return q
 MAX_HP=100
 MAX_ENERGY=60
@@ -62,8 +90,9 @@ def state(c,uid):
 def view(v):
  name,icon,maxhp,attack,heavy=STAGES[v['stage']-1]
  boss=v['stage']==len(STAGES)
- charged=v['turn']%3==2
- return {k:v[k] for k in ('stage','best','rev','hp','energy','enemy','turn','status','notice','stamina','weapon','combo','burn')}|{'combat_version':'28.2','weapon_name':WEAPONS[v['weapon']][0],'weapons':[{'id':k,'name':w[0],'strike':w[1],'burst':w[2],'stamina':w[3]} for k,w in WEAPONS.items()],'combo_max':3,'max_hp':MAX_HP,'max_energy':MAX_ENERGY,'max_stamina':MAX_STAMINA,'armor':ARMOR,'crit_chance':5,'count':len(STAGES),'enemy_name':name,'enemy_icon':icon,'enemy_max':maxhp,'boss':boss,'incoming':'Đòn cường kích' if charged else 'Đòn thường','incoming_damage':heavy if charged else attack,'skills':[skill_view(v,k,cost) for k,(cost,damage) in SKILLS.items()]}
+ mode,incoming_name,incoming=enemy_plan(v)
+ _,weak,resist=AI_PROFILES[v['stage']-1]
+ return {k:v[k] for k in ('stage','best','rev','hp','energy','enemy','turn','status','notice','stamina','weapon','combo','burn')}|{'combat_version':'28.3','enemy_mode':mode,'enemy_weakness':weak,'enemy_resistance':resist,'enemy_counter_bonus':6 if mode=='counter' else 0,'weapon_name':WEAPONS[v['weapon']][0],'weapons':[{'id':k,'name':w[0],'strike':w[1],'burst':w[2],'stamina':w[3]} for k,w in WEAPONS.items()],'combo_max':3,'max_hp':MAX_HP,'max_energy':MAX_ENERGY,'max_stamina':MAX_STAMINA,'armor':ARMOR,'crit_chance':5,'count':len(STAGES),'enemy_name':name,'enemy_icon':icon,'enemy_max':maxhp,'boss':boss,'incoming':incoming_name,'incoming_damage':incoming,'skills':[skill_view(v,k,cost) for k,(cost,damage) in SKILLS.items()]}
 def store(c,v):
  keys=('uid','stage','best','rev','hp','energy','enemy','turn','status','updated','notice','stamina','weapon','combo','magic_cd','burn')
  c.execute('INSERT INTO ww_dungeon138('+','.join(keys)+') VALUES('+','.join('?' for _ in keys)+') ON CONFLICT(uid) DO UPDATE SET '+','.join(k+'=excluded.'+k for k in keys[1:]),tuple(v[k] for k in keys))
@@ -91,6 +120,7 @@ def handle(h,c,u,d,now=None):
   if now-v['updated']<.25:return err(429,'Thao tác quá nhanh')
   if skill=='retreat':v.update(combo=0,magic_cd='{}',burn=0,status='lost',notice='Đã rút lui an toàn')
   else:
+   mode,enemy_move,incoming=enemy_plan(v)
    cost=SKILLS[skill][0];damage,stamina_cost=attack_profile(v,skill)
    cds=cooldowns(v)
    if cds.get(skill,0)>v['turn']:return err(409,'Kỹ năng đang hồi chiêu')
@@ -103,7 +133,8 @@ def handle(h,c,u,d,now=None):
    if critical:damage=damage*3//2
    if skill in MAGIC:cds[skill]=v['turn']+MAGIC[skill][3]+1
    v['magic_cd']=json.dumps(cds,separators=(',',':'))
-   if skill=='lightning' and v['turn']%3==2:damage+=8
+   if skill=='lightning' and mode=='heavy':damage+=8
+   damage=adjusted_damage(v,skill,damage,mode)
    if skill=='heal':v['hp']=min(MAX_HP,v['hp']+35)
    if skill=='light':v['hp']=min(MAX_HP,v['hp']+28)
    if skill=='shadow':v['hp']=min(MAX_HP,v['hp']+min(12,damage,v['enemy']))
@@ -115,9 +146,7 @@ def handle(h,c,u,d,now=None):
    if v['enemy']==0:
     v['status']='won';v['best']=max(v['best'],v['stage']);v['notice']='Chiến thắng! Đã ghi nhận huy hiệu ải.'
    else:
-    _,_,_,attack,heavy=STAGES[v['stage']-1]
-    incoming=heavy if v['turn']%3==2 else attack
-    incoming=mitigate(incoming)
+    if mode=='counter' and skill in ('strike','burst'):incoming+=6
     if skill=='guard':incoming=max(1,incoming//4)
     if skill in ('ice','light'):incoming=max(1,incoming//2)
     if skill=='dodge':incoming=0
@@ -125,7 +154,7 @@ def handle(h,c,u,d,now=None):
     v['energy']=min(MAX_ENERGY,v['energy']+(18 if skill=='guard' else 8))
     v['stamina']=min(MAX_STAMINA,v['stamina']+(24 if skill=='guard' else 8 if skill=='heal' else 4))
     v['status']='fight' if v['hp'] else 'lost'
-    v['notice']=('Chí mạng! ' if critical else '')+(MAGIC[skill][0]+' · ' if skill in MAGIC else '')+('Thiêu đốt · ' if burn_damage else '')+'Đã gây '+str(damage)+' sát thương · nhận '+str(incoming)+' sát thương' if v['hp'] else 'Đã thua, có thể thử lại'
+    v['notice']=('Chí mạng! ' if critical else '')+(MAGIC[skill][0]+' · ' if skill in MAGIC else '')+('Thiêu đốt · ' if burn_damage else '')+'Đã gây '+str(damage)+' sát thương · '+enemy_move+' · nhận '+str(incoming)+' sát thương' if v['hp'] else 'Đã thua, có thể thử lại'
    v['turn']+=1
    if v['turn']>=80 and v['status']=='fight':v.update(status='lost',notice='Đã hết số lượt thử thách')
  v['rev']+=1;v['updated']=now;store(c,v);c.commit()
