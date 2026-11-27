@@ -2735,7 +2735,8 @@ let walkPhase62=0;const blend62=new WeakMap();
    const flashes=Array.from({length:2},()=>{const o=new T.Sprite(new T.SpriteMaterial({map:glow,transparent:true,depthWrite:false,blending:T.AdditiveBlending}));g.add(o);return o});
    const rays=new T.BufferGeometry(),rayData=new Float32Array(8*2*3);rays.setAttribute('position',new T.BufferAttribute(rayData,3));const lightning=new T.LineSegments(rays,new T.LineBasicMaterial({color:0xd3caff,transparent:true,depthWrite:false,blending:T.AdditiveBlending}));lightning.frustumCulled=false;g.add(lightning);
    const crest=make(new T.RingGeometry(.76,.80,6),2);
-   c.fx296={g,arcs,flashes,lightning,rayData,crest,rings:make(new T.RingGeometry(.92,1,40),3),sparks:make(new T.OctahedronGeometry(.09,0),12),orbs:make(new T.SphereGeometry(.26,12,8),4),ice:make(new T.OctahedronGeometry(.25,0),3),arrow:make(arrow,1)[0],swords:make(new T.ConeGeometry(.075,1.85,4),5)};
+   const flame=new T.Mesh(new T.PlaneGeometry(1,1),new T.ShaderMaterial({transparent:true,depthWrite:false,side:T.DoubleSide,blending:T.AdditiveBlending,uniforms:{clock:{value:0},alpha:{value:0},tint:{value:new T.Color(0xff7935)}},vertexShader:'varying vec2 vUV;void main(){vUV=uv;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0);}',fragmentShader:'varying vec2 vUV;uniform float clock;uniform float alpha;uniform vec3 tint;void main(){vec2 p=vUV*2.0-1.0;float f=sin(p.y*13.0-clock*8.0+sin(p.x*9.0+clock*3.0))*0.07;float r=length(vec2(p.x*(1.3+0.25*p.y)+f,p.y*0.86));float a=(1.0-smoothstep(0.12,0.92,r))*(1.0-smoothstep(0.5,1.0,abs(p.y)));float hot=1.0-smoothstep(0.0,0.55,r);gl_FragColor=vec4(mix(tint,vec3(1.0,0.96,0.72),hot),alpha*a);}' }));g.add(flame);
+   c.fx296={g,arcs,flashes,lightning,rayData,crest,flame,rings:make(new T.RingGeometry(.92,1,40),3),sparks:make(new T.OctahedronGeometry(.09,0),12),orbs:make(new T.SphereGeometry(.26,12,8),4),ice:make(new T.OctahedronGeometry(.25,0),3),arrow:make(arrow,1)[0],swords:make(new T.ConeGeometry(.075,1.85,4),5)};
   }
   const f=c.fx296;f.g.visible=true;for(const o of f.g.children)o.visible=false;
   const tier=Math.max(effectTier100,mobile71?1:0,fxBudget297.tier,drawTier305),limit=tier===2?3:tier===1?6:12,hit=now>=m.impact,age=Math.max(0,Math.min(1,(now-m.impact)/Math.max(1,m.end-m.impact))),ground=visibleGround1153(x,z);
@@ -2748,6 +2749,7 @@ let walkPhase62=0;const blend62=new WeakMap();
   if((m.kind==='fire'||m.kind==='ice'||ranged)&&!hit&&p>.08){
    const t=Math.max(0,Math.min(1,(now-m.start)/(m.impact-m.start))),gy=visibleGround1153(m.goal.x,m.goal.z);
    const projectile=(o,u)=>{o.position.set(x+(m.goal.x-x)*u,ground+1.1+(gy-ground)*u+Math.sin(u*Math.PI)*.22,z+(m.goal.z-z)*u);};
+   if(m.kind==='fire'){const o=f.flame;o.visible=true;projectile(o,t);o.quaternion.copy(camera.quaternion);o.scale.set(1.0,1.25,1);o.material.uniforms.clock.value=now*.001;o.material.uniforms.alpha.value=.88;}
    if(m.weapon==='bow'&&ranged){const o=f.arrow;set(o,kit304[4],.95);projectile(o,t);o.rotation.y=Math.atan2(m.goal.x-x,m.goal.z-z);}
    else if(m.kind==='ice'){for(let i=0;i<(tier===2?1:3);i++){const o=f.ice[i];set(o,i?0x72c6ff:0xf0fcff,.9-i*.2);projectile(o,Math.max(0,t-i*.08));o.rotation.set(p*3,m.yaw,p*2);o.scale.set(.65,1.5-i*.25,.65);}}
    else{for(let i=0;i<(tier===2?2:4);i++){const o=f.orbs[i];set(o,i?m.kind==='fire'?0xff5b22:kit304[4]:0xfff4cf,.9-i*.17);projectile(o,Math.max(0,t-i*.10));o.scale.setScalar((m.kind==='fire'?1.15:.7)*(1-i*.2));}}
@@ -2756,6 +2758,7 @@ let walkPhase62=0;const blend62=new WeakMap();
    const gx=m.kind==='ultimate'||m.kind==='spin'?x:m.goal.x,gz=m.kind==='ultimate'||m.kind==='spin'?z:m.goal.z,gy=visibleGround1153(gx,gz),radius=m.kind==='ultimate'?4.5:m.kind==='spin'?2.7:m.kind==='strike'?1.1:2.3,col=m.kind==='strike'?kit304[4]:q.color;
    for(let i=0;i<(tier===2?1:2);i++){const o=f.rings[i],u=Math.max(0,age-i*.12);set(o,i?col:0xfff6e0,hit?(1-u)*.76:.32);o.rotation.x=-Math.PI/2;o.position.set(gx,gy+.11+i*.04,gz);o.scale.setScalar(hit?.15+u*radius:.3+p*radius*.55);}
    if(hit)for(let i=0;i<limit;i++){const o=f.sparks[i],a=i*2.39996,rad=age*(radius*.65+i%3*.24);set(o,i%3?col:0xffffff,(1-age)*.9);o.position.set(gx+Math.cos(a)*rad,gy+.35+Math.sin(age*Math.PI)*(.7+i%3*.30),gz+Math.sin(a)*rad);o.rotation.set(age*5,a,age*2);o.scale.set(.65*(1-age)+.02,1.9*(1-age)+.02,.65*(1-age)+.02);}
+   if(hit&&m.kind==='fire'){const o=f.flame;o.visible=true;o.position.set(gx,gy+.75,gz);o.quaternion.copy(camera.quaternion);o.scale.set(.9+age*2.8,1.0+age*1.8,1);o.material.uniforms.clock.value=now*.001;o.material.uniforms.alpha.value=(1-age)*.88;}
    if(hit){const flash=f.flashes[0];set(flash,col,Math.pow(1-age,4)*.90);flash.position.set(gx,gy+.65,gz);flash.scale.setScalar((.7+age*2.1)*(m.kind==='ultimate'?2.2:1));}
    if(m.kind==='storm'&&hit){const a=f.rayData,bolt=f.lightning;for(let i=0;i<8;i++){const t=i/8,u=(i+1)/8,off=k=>Math.sin(k*34+Math.floor(now/48))*.23*Math.sin(k*Math.PI);a.set([gx+off(t),gy+4.8*(1-t),gz-off(t)*.5,gx+off(u),gy+4.8*(1-u),gz-off(u)*.5],i*6)}bolt.geometry.attributes.position.needsUpdate=true;set(bolt,0xe7ddff,(1-age)*.9);}
    if(m.kind==='ultimate'){
