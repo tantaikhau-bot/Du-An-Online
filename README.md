@@ -50,3 +50,7 @@ Run `node test_engine235.cjs` from the repository root for offline engine regres
 
 ### V24.0 World Streaming (forest pilot)
 Shared GLB tree assets remain cached, while nearby forest instance batches are constructed incrementally (1 mobile / 2 desktop per tick), with directional prefetch and bounded resident cells. Distant instance buffers are disposed without disposing shared geometry/materials; original procedural trees remain as fallback. Buildings, collision and terrain still use the existing loading system. GPU/browser playtesting remains required.
+
+
+### V24.1 Terrain Streaming
+All 64 low-resolution terrain tiles remain available as a visual fallback. Detailed tile geometry is generated near the player/camera incrementally, bounded by quality-dependent resident caps, and disposed outside the target set. Height interpolation follows the currently displayed LOD for actor grounding. Analytic collision, roads and bridge rules remain unchanged. Test browser seam transitions and mobile GPU performance before production.
