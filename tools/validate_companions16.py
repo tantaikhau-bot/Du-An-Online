@@ -38,10 +38,12 @@ def inspect(path):
 def main():
     p=argparse.ArgumentParser()
     p.add_argument("--directory",type=Path,default=BASE)
+    p.add_argument("--species",choices=KINDS,default=None,help="Validate one pilot species; omit for all five")
     p.add_argument("--approve",action="store_true",help="Only after visual review, animation, license and mobile testing")
     args=p.parse_args()
     models={}; errors=[]
     for kind,height in KINDS.items():
+        if args.species and kind!=args.species:continue
         try:
             meta=inspect(args.directory/(kind+".glb"))
             meta.update(height=height,forward="-Z",approved=args.approve)
@@ -53,6 +55,12 @@ def main():
         print("\n".join(errors))
         return 1
     if args.approve:
-        (args.directory/"manifest.json").write_text(json.dumps({"schema":1,"approved":True,"models":models},indent=2)+"\n")
+        manifest=args.directory/"manifest.json"
+        prior={}
+        if args.species and manifest.exists():
+            previous=json.loads(manifest.read_text())
+            if previous.get("schema")==1 and previous.get("approved") is True:prior=previous.get("models",{})
+        prior.update(models)
+        manifest.write_text(json.dumps({"schema":1,"approved":True,"models":prior},indent=2)+"\n")
     return 0
 if __name__=="__main__":raise SystemExit(main())
