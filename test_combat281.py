@@ -1,4 +1,4 @@
-"""V28.4 regression checks for the authoritative turn-based combat API."""
+"""V28.5 regression checks for the authoritative turn-based combat API."""
 import sqlite3
 import unittest
 from unittest.mock import patch
@@ -41,7 +41,7 @@ class Combat281Tests(unittest.TestCase):
         self.assertEqual(v['weapon'],'greatsword')
         self.assertEqual(v['combo'],0)
         self.assertEqual(v['stamina'],100)
-        self.assertEqual(v['combat_version'],'28.4')
+        self.assertEqual(v['combat_version'],'28.5')
         self.assertEqual(next(q for q in v['skills'] if q['id']=='strike')['damage'],23)
     @patch('dungeon.secrets.randbelow',return_value=99)
     def test_combo_and_guard_reset(self, _):
@@ -165,6 +165,50 @@ class Combat281Tests(unittest.TestCase):
         self.assertEqual(code,409)
         code,_=self.world_call('a','world-strike',{'event':event},14401)
         self.assertEqual(code,409)
+
+    def test_all_floors_and_bosses(self):
+        self.assertEqual(len(dungeon.STAGES),100)
+        self.assertEqual(len(dungeon.REGIONS),10)
+        self.assertEqual([i for i in range(1,101) if dungeon.is_boss(i)],[5,*range(10,101,10)])
+        for i in range(1,101):
+            v=dungeon.state(self.c,'other')
+            v.update(stage=i,enemy=dungeon.STAGES[i-1][2])
+            snapshot=dungeon.view(v)
+            self.assertEqual(snapshot['count'],100)
+            self.assertEqual(snapshot['region_index'],(i-1)//10)
+            self.assertEqual(snapshot['boss'],dungeon.is_boss(i))
+            self.assertEqual(len(snapshot['skills']),10)
+    def test_floor_unlock_and_milestone(self):
+        code,_=self.call('start',{'rev':0,'stage':6})
+        self.assertEqual(code,403)
+        v=dungeon.state(self.c,'test')
+        v.update(stage=5,best=5,status='won',enemy=0)
+        dungeon.store(self.c,v)
+        self.c.commit()
+        code,v=self.call('start',{'rev':0,'stage':6})
+        self.assertEqual(code,200)
+        self.assertEqual((v['hp'],v['energy'],v['power_percent']),(103,61,103))
+        v=dungeon.state(self.c,'test')
+        v.update(stage=10,best=9,enemy=1,status='fight')
+        dungeon.store(self.c,v)
+        self.c.commit()
+        v=self.act(v,'strike')
+        self.assertEqual(v['best'],10)
+        self.assertEqual(v['milestones'],[10])
+        code,v=self.call('start',{'rev':v['rev'],'stage':11})
+        self.assertEqual(code,200)
+        self.assertEqual(v['region_index'],1)
+    def test_final_floor_caps(self):
+        v=dungeon.state(self.c,'test')
+        v.update(stage=99,best=99,status='won',enemy=0)
+        dungeon.store(self.c,v)
+        self.c.commit()
+        code,v=self.call('start',{'rev':0,'stage':100})
+        self.assertEqual(code,200)
+        self.assertEqual((v['hp'],v['energy'],v['power_percent']),(385,155,385))
+        self.assertEqual(v['enemy_max'],515)
+        self.assertTrue(v['boss'])
+        self.assertEqual(len(v['milestones']),9)
 
 if __name__=='__main__':
     unittest.main()
