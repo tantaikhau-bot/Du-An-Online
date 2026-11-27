@@ -2,6 +2,7 @@
 from pathlib import Path
 import shutil,urllib.request,hashlib,struct,threading,time,os,json,re,html
 from urllib.parse import urlsplit
+from http_assets import MAX_TEXT_BYTES, accepts_gzip, etag_matches, text_representation
 FILES={'leafy_grass.jpg':'image/jpeg','spirit-cat161.glb':'model/gltf-binary','spirit-rabbit161.glb':'model/gltf-binary','spirit-fox161.glb':'model/gltf-binary','spirit-deer161.glb':'model/gltf-binary','jade-ice-dragon160.glb':'model/gltf-binary','jade-dragon156.js':'text/javascript; charset=utf-8','meshopt-decoder1531.js':'text/javascript; charset=utf-8','companion-portraits152.css':'text/css; charset=utf-8','dragon-pilot16.json':'application/json; charset=utf-8','daylight.js':'text/javascript; charset=utf-8','fantasy-creatures.js':'text/javascript; charset=utf-8','original-avatar.js':'text/javascript; charset=utf-8','character-identity.js':'text/javascript; charset=utf-8','Sendagaya_Shibu.vrm':'model/gltf-binary','Vivi.vrm':'model/gltf-binary','arm-motion.js':'text/javascript; charset=utf-8','foot-ik.js':'text/javascript; charset=utf-8','smooth-motion.js':'text/javascript; charset=utf-8','HairSample_Male.vrm':'model/gltf-binary','HairSample_Female.vrm':'model/gltf-binary','vrm-character.js':'text/javascript; charset=utf-8','three-vrm.module.js':'text/javascript; charset=utf-8','Sakurada_Fumiriya.vrm':'model/gltf-binary','Sendagaya_Shino.vrm':'model/gltf-binary','deer.glb':'model/gltf-binary','cat.glb':'model/gltf-binary','rabbit.glb':'model/gltf-binary','dragon.glb':'model/gltf-binary','anime-character.js':'text/javascript; charset=utf-8','game-policy.js':'text/javascript; charset=utf-8','realtime.js':'text/javascript; charset=utf-8','fox.glb':'model/gltf-binary','hero.glb':'model/gltf-binary','forrest_ground_01.jpg':'image/jpeg','medieval_blocks_05.jpg':'image/jpeg','medieval_wood.jpg':'image/jpeg','manifest.json':'application/json'}
 VRM='https://raw.githubusercontent.com/madjin/vrm-samples/master/vroid/beta/'
 UPSTREAM={
@@ -144,6 +145,20 @@ def serve_static(h,root,page):
   p=cached_asset(name)
   if p is None:return h.reply(503,{'error':'Tài nguyên 3D chưa sẵn sàng'})
  if not p.is_file():return h.reply(404,{'error':'Không tìm thấy'})
+ stat=p.stat()
+ if FILES[name].startswith(('text/javascript','text/css','application/json')) and stat.st_size<=MAX_TEXT_BYTES:
+  rep=text_representation(str(p),stat.st_mtime_ns,stat.st_size)
+  if rep is not None:
+   raw,packed,tag=rep
+   if etag_matches(h.headers.get('If-None-Match'),tag):
+    h.send_response(304);h.send_header('ETag',tag);h.send_header('Vary','Accept-Encoding');h.send_header('Cache-Control','public, max-age=3600');h.end_headers();return
+   encoded=packed is not None and accepts_gzip(h.headers.get('Accept-Encoding'))
+   body=packed if encoded else raw
+   h.send_response(200);h.send_header('Content-Type',FILES[name]);h.send_header('Content-Length',str(len(body)));h.send_header('ETag',tag);h.send_header('Vary','Accept-Encoding');h.send_header('Cache-Control','public, max-age=3600')
+   if encoded:h.send_header('Content-Encoding','gzip')
+   h.end_headers()
+   if h.command!='HEAD':h.wfile.write(body)
+   return
  with p.open('rb') as f:
   h.send_response(200);h.send_header('Content-Type',FILES[name]);h.send_header('Content-Length',str(p.stat().st_size));h.send_header('Cache-Control','public, max-age=3600');h.end_headers()
   if h.command!='HEAD':shutil.copyfileobj(f,h.wfile)
