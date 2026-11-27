@@ -90,3 +90,7 @@ Normalize the four existing horse animation clip weights, smooth cadence and add
 
 ### V25.4 Spirit Motion
 Species-specific gait thresholds and smoothed playback rates drive equipped GLB spirits and procedural fallback animation. Locomotion clips transfer normalized phase on gait changes (existing clip alignment is not reauthored). Companion stop hysteresis reduces near-owner shuffling while preserving segment collision checks and immediate wait commands. Dragon flight uses filtered speed and late loads are guarded. Run `node test_spirit254.cjs`. Visual contact and actual skeletal animations still require browser testing.
+
+
+### V25.5 Expression & Interaction
+Action weights are bounded and action clocks start with each interaction. VRM expressions use distinct smile targets and asymmetric blinks with profile-dependent timing; optional relaxed expression is used only where supported. A mutually matched nearby peer can drive a bounded, eased local head/neck look for matching social actions. Existing interaction permissions, paired contact and mount IK remain unchanged. Run `node test_expression255.cjs`; actual facial blendshapes and paired contact require visual tests.
