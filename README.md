@@ -70,3 +70,7 @@ High-detail terrain border vertices follow the coarse edge interpolation, with a
 
 ### V24.5 World Testing
 Run `node test_world245.cjs` alongside `node test_engine235.cjs`. The world suite checks shared terrain edges for both densities, 900 simulated moving frames per device class with changing quality tiers, construction and resident budgets, architecture legacy selection and safe high forest LOD eviction. High forest instance buffers are released when no longer eligible or distant, without disposing shared geometry/materials. These offline tests are not GPU, multiplayer, or real-device benchmarks.
+
+
+### V25.0 Natural Motion
+Measured local speed gates locomotion phase and blends when available, reducing residual steps while blocked or stopped. Bounded braking and turning responses affect torso/head, idle posture retains subtle motion, and gait labels use hysteresis. Preview/peer animation without measured speed retains the previous gait input; horse mount IK and jump priority remain unchanged. Run `node test_motion250.cjs` for offline numerical regression checks across all 20 profiles. Real skeleton rendering, clothing intersections and mobile FPS still need playtesting.
