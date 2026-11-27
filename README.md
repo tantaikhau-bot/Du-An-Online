@@ -110,3 +110,7 @@ Rain and snow use wrapped world-coordinate particle positions, varying fall spee
 
 ### V26.2 Dynamic Sky
 Signed sun and moon paths move across the horizon with visibility fades; twilight follows celestial altitude. Cloud drift integrates weather wind continuously, and moon light is attenuated behind clouds. The existing shadow-light direction and water material are preserved for stability; no extra render passes are introduced. Run `node test_sky262.cjs` for numerical tests. Shader compilation and visual/device tests remain required.
+
+
+### V26.3 NPC Living
+Four existing residents have staggered five-state daily routines (rest, preparation, work, lunch break, evening leisure), driven by the shared world clock or manual day mode. Existing day/evening/night anchors and collision-aware asynchronous route queue are reused. Off-camera travel continues without rendering or posing hidden residents; route requests use bounded retries and stale-job invalidation. Resident dialogue and the society journal show the current routine or travel status. Mây and An remain at their original quest locations. Run `node test_npc263.cjs` for schedule checks. Actual route reachability, VRM motion and device performance still require in-game validation.
