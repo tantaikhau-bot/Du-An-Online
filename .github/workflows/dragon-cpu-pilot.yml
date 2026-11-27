@@ -1,0 +1,54 @@
+name: V16 dragon CPU reconstruction pilot
+on:
+  workflow_dispatch:
+  push:
+    branches: [v16-companion-assets]
+    paths:
+      - '.github/workflows/dragon-cpu-pilot.yml'
+      - 'assets/companions16/dragon-reference.png'
+permissions:
+  contents: read
+concurrency:
+  group: dragon-cpu-pilot
+  cancel-in-progress: true
+jobs:
+  reconstruct:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    env:
+      LIBGL_ALWAYS_SOFTWARE: '1'
+      OMP_NUM_THREADS: '4'
+      MKL_NUM_THREADS: '4'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install CPU build dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y cmake ninja-build xvfb xauth libgl1 libegl1 libgl1-mesa-dri
+          python -m pip install --upgrade pip
+          python -m pip install 'numpy<2' 'torch==2.5.1' --extra-index-url https://download.pytorch.org/whl/cpu
+          python -m pip install 'Pillow==10.1.0' 'omegaconf==2.3.0' 'einops==0.7.0' 'transformers==4.35.0' 'trimesh==4.0.5' 'rembg[cpu]==2.0.62' 'huggingface-hub<1' 'imageio[ffmpeg]' 'xatlas==0.0.9' 'moderngl==5.10.0' 'pybind11' 'setuptools' 'wheel'
+          python -m pip install --no-build-isolation git+https://github.com/tatsy/torchmcubes.git
+      - name: Prepare dragon reference
+        run: python tools/prepare_dragon16.py
+      - name: Reconstruct textured draft (no rig)
+        run: |
+          git clone --depth 1 https://github.com/VAST-AI-Research/TripoSR.git /tmp/TripoSR
+          git -C /tmp/TripoSR rev-parse HEAD
+          cd /tmp/TripoSR
+          xvfb-run -a python run.py "$GITHUB_WORKSPACE/dragon-input.png" --device cpu --mc-resolution 96 --chunk-size 8192 --bake-texture --texture-resolution 512 --model-save-format obj --output-dir "$GITHUB_WORKSPACE/dragon-draft"
+      - name: Check draft files
+        run: |
+          test -s dragon-draft/0/mesh.obj
+          test -s dragon-draft/0/texture.png
+          ls -lh dragon-draft/0
+      - name: Save short-lived draft for review
+        uses: actions/upload-artifact@v4
+        with:
+          name: dragon-unrigged-draft
+          path: dragon-draft/0/
+          retention-days: 1
+          if-no-files-found: error
