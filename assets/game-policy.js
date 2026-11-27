@@ -25,7 +25,7 @@ function perfPreset118(q,saved,memory,cores,mobile){
  const requested=q.get('gfx');
  if(Object.hasOwn(WW_PERF118,requested))return requested;
  if(Object.hasOwn(WW_PERF118,saved))return saved;
- return mobile||(Number.isFinite(memory)&&memory<=4)?'low':'balanced';
+ return mobile?'balanced':(Number.isFinite(memory)&&memory<=4)?'low':'balanced';
 }
 function perfWarning118(fps,p95,cap,heap){
  const target=cap||60;
@@ -106,20 +106,27 @@ function mobileCap139(preset,pref){
  if(preset==='battery'||preset==='low')return 30;
  return [30,45,60].includes(pref)?pref:30;
 }
-function mobileResolution139(w,h,dpr,quality,tier,scale,hd,maxBuffer){
- w=Math.max(1,w);h=Math.max(1,h);
- const budget=tier===2?420000:tier===1?850000:hd?1800000:1250000;
- const base=tier===2?.88:tier===1?1.12:hd?1.65:1.35;
- return Math.min(Math.max(.48,base*Math.max(.50,Math.min(1.25,scale))),Math.max(1,dpr),Math.sqrt(budget/(w*h)),maxBuffer/Math.max(w,h));
+// V17.1: independent resolution and effects budgets; DPR expressed relative to CSS pixels.
+const MOBILE_CLARITY171=Object.freeze({
+ battery:Object.freeze({floor:.85,base:1,max:1,budget:650000,scaleFloor:.85,aniso:4}),
+ low:Object.freeze({floor:.90,base:1,max:1,budget:700000,scaleFloor:.90,aniso:4}),
+ balanced:Object.freeze({floor:1,base:1.2,max:1.35,budget:1100000,scaleFloor:.85,aniso:4}),
+ high:Object.freeze({floor:1,base:1.35,max:1.5,budget:1400000,scaleFloor:.85,aniso:8}),
+ sharp:Object.freeze({floor:1.15,base:1.5,max:1.65,budget:1800000,scaleFloor:.85,aniso:8})
+});
+function mobileResolution139(w,h,dpr,quality,tier,scale,hd,maxBuffer,preset=hd?'sharp':'balanced'){
+ w=Math.max(1,w);h=Math.max(1,h);const p=MOBILE_CLARITY171[preset]||MOBILE_CLARITY171.balanced;
+ const desired=Math.max(p.floor,p.base*Math.max(p.scaleFloor,Math.min(1.2,scale)));
+ return Math.min(desired,Math.max(1,dpr),p.max,Math.sqrt(p.budget/(w*h)),maxBuffer/Math.max(w,h));
 }
-function mobileStep139(v,fps,p95,cap,ceiling,tierFloor,scaleCeiling,manual=false){
+function mobileStep139(v,fps,p95,cap,ceiling,tierFloor,scaleCeiling,manual=false,preset='balanced'){
  const severe=fps<cap*.64||p95>100,slow=severe||fps<cap*.86||p95>1000/cap*1.9;
  const good=fps>=cap*.96&&p95<=1000/cap*1.16;
  let q={...v,slow:slow?(v.slow||0)+1:0,good:good?(v.good||0)+1:0,changed:false};
  if(severe||q.slow>=2){
   if(q.tier<2){q.tier=2;if(!manual)q.quality=Math.max(0,q.quality-1)}
   else if(q.quality>0&&!manual)q.quality--;
-  else q.scale=Math.max(.50,q.scale*(severe?.78:.90));
+  else q.scale=Math.max((MOBILE_CLARITY171[preset]||MOBILE_CLARITY171.balanced).scaleFloor,q.scale*(severe?.90:.96));
   q.changed=q.tier!==v.tier||q.quality!==v.quality||Math.abs(q.scale-v.scale)>.001;q.slow=0;q.good=0;
  }else if(q.good>=12&&!manual){
   if(q.scale<scaleCeiling-.025)q.scale=Math.min(scaleCeiling,q.scale+.06);
@@ -149,4 +156,4 @@ function jumpStep141(j,ms,canLaunch){
  if((velocity||height)&&remaining>0){const next=height+velocity*remaining-5.25*remaining*remaining;velocity-=10.5*remaining;if(next<=0){height=0;velocity=0;land=.34;landed=true}else height=next}
  return {prep,height,velocity,land,landed}
 }
-if(typeof module!=='undefined')module.exports={WW_ATLAS170,atlasDestination170,atlasMap170,smooth162,frontierHeight162,trailDistance162,terrainTiles162,tileAt162,tileVisible162,physicsDelta141,physicsSteps141,angle141,orbit141,jumpStep141,trimModels140,expiredModel140,mobileCap139,mobileResolution139,mobileStep139,actorBudget139,WW_WORLD137,WW_EXPANSION137,insideWorld137,expansionRegion137,clarityStep100,resolution77,WW_PERF118,perfPreset118,perfWarning118,WW_LANDMARK124,landmarkSite124,cellVisible124,landmarkVisits124,WW_LOOK131,look131,blendLook131,cameraSafe131,stepSound131};
+if(typeof module!=='undefined')module.exports={MOBILE_CLARITY171,WW_ATLAS170,atlasDestination170,atlasMap170,smooth162,frontierHeight162,trailDistance162,terrainTiles162,tileAt162,tileVisible162,physicsDelta141,physicsSteps141,angle141,orbit141,jumpStep141,trimModels140,expiredModel140,mobileCap139,mobileResolution139,mobileStep139,actorBudget139,WW_WORLD137,WW_EXPANSION137,insideWorld137,expansionRegion137,clarityStep100,resolution77,WW_PERF118,perfPreset118,perfWarning118,WW_LANDMARK124,landmarkSite124,cellVisible124,landmarkVisits124,WW_LOOK131,look131,blendLook131,cameraSafe131,stepSound131};
