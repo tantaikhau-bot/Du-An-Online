@@ -1,5 +1,10 @@
 # WISH WORLD — Release history
 
+## V15.3.1 — Dragon Loader Fix
+- The pilot GLB requires EXT_meshopt_compression. Register the Three.js r164-compatible Meshopt decoder before parsing; serve the MIT-licensed decoder locally to avoid a separate CDN dependency. Retry failed loads after 45 seconds and show the actual error. Existing companion fallback stays available.
+- GLB header, required extensions and JS syntax checked. Actual browser decoding and visual appearance remain unverified.
+
+
 ## V15.3 — Dragon Pilot (preview)
 - Optional local Dragon Evolved GLB by Quaternius (CC0, source https://poly.pizza/m/LlwD0QNUPj; packaged from crisleyhguimaraes/space-ship). 7,134 triangles, 46 joints, two flying clips; recolored teal, purple and gold. Not a sculpt from the concept or a textured final V16 asset.
 - Enable through /play?dragonPreview=1, equip Dragon, or use its preview toggle in the collection. Other pets and save data unchanged. Existing model retained on failure.
