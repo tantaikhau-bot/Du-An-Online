@@ -1406,14 +1406,14 @@ const horse53=new T.Group();scene.add(horse53);horse53.visible=false;
   for(const o of riverLifeMeshes217)o.visible=true;
   const fishLimit=mobile71?(effectTier100===2?4:8):(effectTier100===2?10:effectTier100===1?14:20), lampLimit=mobile71?(effectTier100===2?6:10):(effectTier100===2?10:18);
   let fishN=0,ringN=0,lampN=0,glowN=0;
-  for(let i=0;i<fishLimit;i++){const school=Math.floor(i/4),phase=time*(.48+school*.035)+i*1.71,center=Math.floor(x/12)*12+(school%3-1)*7,fx=center+Math.sin(phase)*3.2+(i%4-1.5)*.64,fz=RIVER_Z+Math.sin(phase*.83+i*.7)*.88;
+  const schoolBase217=Math.round(x/9);for(let k=0;k<(mobile71?5:7)*4&&fishN<fishLimit;k++){const offset=Math.floor(k/4),school=schoolBase217+(offset===0?0:(offset%2?1:-1)*Math.ceil(offset/2)),i=(school+16)*4+k%4,phase=time*(.48+(Math.abs(school)%4)*.035)+i*1.71,center=school*9+4.5,fx=center+Math.sin(phase)*2.6+(k%4-1.5)*.64,fz=RIVER_Z+Math.sin(phase*.83+i*.7)*.88;
    if(Math.abs(fx)>120||Math.abs(fx+12)<1.7||BRIDGE_X.some(b=>Math.abs(fx-b)<1.8))continue;
    const bottom=visibleGround1153(fx,fz),depth=.17+.09*(1+Math.sin(phase*.7+i));if(bottom>riverY217-.24)continue;
    const fy=Math.max(bottom+.105,riverY217-depth),angle=Math.atan2(-Math.cos(phase*.83+i*.7)*.88*.83,Math.cos(phase)*3.2),size=.8+(i%3)*.15,wag=Math.sin(time*8+i)*.17;
    instance217(fishBody217,fishN,fx,fy,fz,0,angle,0,size,size,size);
    instance217(fishTail217,fishN,fx-Math.cos(angle)*.28*size,fy,fz+Math.sin(angle)*.28*size,0,angle+Math.PI+wag,0,size,size,size);
    riverColor217.setHex([0xe4b86b,0xc3d4c3,0x809b86,0xf09a61][i%4]).multiplyScalar(1-depth*.55);fishBody217.setColorAt(fishN,riverColor217);fishTail217.setColorAt(fishN,riverColor217);fishN++;
-   if(effectTier100<2&&i%4===0&&depth<.22){const r=.2+(time*.38+i*.13)% .38;instance217(ring217,ringN++,fx,riverY217+.014,fz,-Math.PI/2,0,0,r,r,1)}
+   if(effectTier100<2&&i%4===0&&depth<.22&&ringN<4){const r=.2+(time*.38+i*.13)% .38;instance217(ring217,ringN++,fx,riverY217+.014,fz,-Math.PI/2,0,0,r,r,1)}
   }
   const count=Math.min(lampLimit,6+s.lanterns.length);
   for(let i=0;i<count;i++){const lx=-15+(i*2.1+time*.28)%30,lz=RIVER_Z+Math.sin(i*2.4+time*.15)*.83;if(Math.abs(lx-x)>(mobile71?18:35)||BRIDGE_X.some(b=>Math.abs(lx-b)<1.84))continue;
