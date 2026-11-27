@@ -1,5 +1,10 @@
 # WISH WORLD — Release history
 
+## V14.2 — Immersive Audio (candidate)
+- Opt-in procedural music, weather and river ambience, terrain-specific footsteps, companion feeding and dungeon action cues; independent persistent music, ambience and effects levels.
+- Limit transient voices to 6 on coarse-pointer devices and 12 otherwise; suspend audio when hidden or muted. No external audio downloads.
+- Stereo panning for ambient cues only; full positional 3D, recorded samples, voice chat, actual device FPS and listening QA remain open.
+
 ## V14.1 — Mobile Physics (candidate)
 - Bound simulation catch-up to 100 ms and collision-checked movement to at most four substeps of 25 ms, preventing unbounded work after stalls. Smooth character heading with time-based angle damping.
 - Integrate jump height analytically and consume preparation time separately; preserve existing jump speed and gravity, landing cue, and collision routine.
