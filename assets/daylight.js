@@ -85,5 +85,9 @@
  if(hour>=12&&hour<13)return {anchor:'day',activity:'break',label:'Nghỉ trưa',speed:1.0};
  return {anchor:'day',activity:'work',label:Object.hasOwn(work,id)?work[id]:'Làm việc',speed:1.15};
 }
- const api={duration,hour,mode,label,format,sample,routine263,celestial262,cloudAdvance262,approachHour,weatherProfiles,weatherAt,weatherState,blendWeather,weatherCount,waterLook133,sceneryBudget133,bankSites133};if(typeof module!=='undefined')module.exports=api;else root.WWDay=api;
+ // V26.5: shared interaction budgets and terrain classification.
+ function environment265(mobile,tier,basic){return {grass:!basic&&tier<2,ripples:basic||tier===2?0:mobile?2:4,interval:mobile?66:33}}
+ function groundTrack265(snow,sand,rain,blocked){return blocked?'':snow?'snow':sand?'sand':rain>=.38?'mud':''}
+ function bankRipple265(x,z,riverZ,bridges){if(![x,z,riverZ].every(Number.isFinite)||Math.abs(x)>119||Math.abs(z-riverZ)<2.05||Math.abs(z-riverZ)>3.4||bridges.some(b=>Math.abs(x-b)<2.4))return null;return {x,z:riverZ+Math.sign(z-riverZ)*1.15}}
+ const api={duration,hour,mode,label,format,sample,routine263,environment265,groundTrack265,bankRipple265,celestial262,cloudAdvance262,approachHour,weatherProfiles,weatherAt,weatherState,blendWeather,weatherCount,waterLook133,sceneryBudget133,bankSites133};if(typeof module!=='undefined')module.exports=api;else root.WWDay=api;
 })(typeof globalThis!=='undefined'?globalThis:this);
