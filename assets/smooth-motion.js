@@ -119,5 +119,12 @@
  function secondary132(st,dt,gait,turn,wind){
   const k=1-Math.exp(-clamp(dt,0,.35)/.19);st.pitch=mix(st.pitch||0,clamp(gait,0,1)*.6,k);st.roll=mix(st.roll||0,clamp(turn||0,-3,3)*-.16,k);st.wind=mix(st.wind||1,clamp(Number.isFinite(wind)?wind:1,.45,2.8),k);return st;
  }
- const api={newState,step,phaseOf,landingEnvelope252,npcLOD,profile,profiles,animalState,actionBlend132,expression132,socialLook255,secondary132};if(typeof module!=='undefined')module.exports=api;else root.WWMotion=api;
+ function secondary316(st,dt,input={}){
+  const finite=(x,f=0)=>Number.isFinite(x)?x:f,clamp=(x,l,h)=>Math.max(l,Math.min(h,x)),seconds=clamp(finite(dt),0,.08),gait=clamp(finite(input.gait),0,1),speed=clamp(finite(input.speed,gait*4),0,10),turn=clamp(finite(input.turn),-5,5),wind=clamp(finite(input.wind,1),0,3),vertical=clamp(finite(input.vertical),-6,6),combat=input.combat,p=clamp(finite(combat?.progress),0,1),swing=combat?Math.sin(Math.PI*p)*(combat.kind==='ultimate'?.8:combat.weapon==='great'?.65:.35):0,dir=(combat?.combo||0)%2?-1:1;
+  const accel=seconds>.001&&Number.isFinite(st.speed)?clamp((speed-st.speed)/seconds,-12,12):0;st.speed=speed;
+  const scale=input.reduce?.20:1,goal=[clamp((gait*.36+accel*.018-vertical*.035+swing*.32)*scale,-.20,.65),clamp((-turn*.075+dir*swing*.19)*scale,-.42,.42),clamp((wind*.04+gait*.08+Math.abs(vertical)*.018+swing*.12)*scale,0,.34)];
+  for(let n=0;n<3;n++){const k=['pitch','roll','flutter'][n],vk=k+'Velocity';let pos=finite(st[k]),vel=finite(st[vk]),remain=seconds;while(remain>1e-7){const step=Math.min(remain,1/120);vel+=(95*(goal[n]-pos)-17*vel)*step;pos+=vel*step;remain-=step;}const bound=n===0?.72:n===1?.48:.38;st[k]=clamp(pos,n===2?0:-bound,bound);st[vk]=Math.abs(pos-st[k])>.0001?0:clamp(vel,-6,6);}
+  st.wind=wind;return st;
+ }
+ const api={secondary316,newState,step,phaseOf,landingEnvelope252,npcLOD,profile,profiles,animalState,actionBlend132,expression132,socialLook255,secondary132};if(typeof module!=='undefined')module.exports=api;else root.WWMotion=api;
 })(typeof globalThis!=='undefined'?globalThis:this);

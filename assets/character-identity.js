@@ -32,7 +32,11 @@
   if(type==='cape'||type==='scarf'||type==='hood'){
    let g=groupAt(chest,0,.13,-.13),w=type==='cape'?.20:.12,h=type==='cape'?.49:type==='hood'?.24:.31;
    let pts=[[-w,0],[-w*.83,-h*.55],[-w*.63,-h],[0,-h*.86],[w*.63,-h],[w*.83,-h*.55],[w,0]];
-   shape(g,pts,fabric);line(g,pts.map(([x,y])=>[x,y,.009]),.004,trim);a.identityMotion.push({g,rest:g.quaternion.clone(),amplitude:type==='cape'?.12:.07});
+   // A small subdivided textile surface, fixed at the shoulders, deformable at the hem.
+   const geo=new T.PlaneGeometry(1,1,8,12),pos=geo.attributes.position;for(let row=0;row<=12;row++)for(let col=0;col<=8;col++){const v=row/12,u=col/8*2-1;pos.setXYZ(row*9+col,u*w*(1-.37*v),-h*v*(1-.14*(1-Math.abs(u))*v),-.018*v);}
+   pos.needsUpdate=true;geo.computeVertexNormals();const textile=mesh(g,geo,fabric);textile.frustumCulled=false;
+   const border=mesh(g,new T.BufferGeometry(),trim);const bp=new Float32Array(13*2*3);border.geometry.setAttribute('position',new T.BufferAttribute(bp,3));const ix=[];for(let row=0;row<12;row++){const n=row*2;ix.push(n,n+1,n+2,n+1,n+3,n+2)}border.geometry.setIndex(ix);border.frustumCulled=false;
+   a.identityMotion.push({g,rest:g.quaternion.clone(),amplitude:type==='cape'?.12:.07,cloth:pos,geo,base:new Float32Array(pos.array),border:border.geometry,last:-Infinity});
    if(type==='scarf'){let g2=groupAt(chest,0,.13,.12);line(g2,[[-.12,.015,0],[-.06,-.01,.04],[.06,-.01,.04],[.12,.015,0]],.025,fabric)}
   }else if(type==='blade'){
    let g=groupAt(chest,0,.16,-.17);g.rotation.z+=(p.id==='m6'?-.34:.34);
@@ -55,6 +59,6 @@
   // Each group can reference shared materials; dispose unused ones on next preset.
   a.identityType=type;
  }
- function animate(a,t,gait,secondary={}){const pitch=secondary.pitch||0,roll=secondary.roll||0,wind=secondary.wind||1;for(const {g,rest,amplitude} of a.identityMotion||[]){g.quaternion.copy(rest);g.rotateX(amplitude*(Math.sin(t*4.1)*(.28+gait*.72)+pitch*.4+Math.sin(t*2.2)*.12*wind));g.rotateZ(amplitude*(Math.sin(t*2.7+.4)*.25+roll*.55))}}
+ function animate(a,t,gait,secondary={}){const pitch=secondary.pitch||0,roll=secondary.roll||0,wind=secondary.wind??1,flutter=secondary.flutter||0;for(const item of a.identityMotion||[]){const {g,rest,amplitude,cloth,geo,base,border}=item;g.quaternion.copy(rest);g.rotateX(Math.max(0,amplitude*(pitch*.65+.12)));g.rotateZ(amplitude*roll*.55);if(!cloth||t-item.last<(a.diagnosticInterval140?.065:.033))continue;item.last=t;for(let i=0;i<cloth.count;i++){const row=Math.floor(i/9),v=row/12,u=(i%9)/4-1,x=base[i*3],y=base[i*3+1],z=base[i*3+2];const bend=Math.max(.006*v,.02*v+Math.max(0,pitch)*.20*v*v+flutter*.08*v*v*Math.sin(t*7+u*3-v*4));cloth.setXYZ(i,x+roll*.11*v*v,y+Math.abs(pitch)*.045*v*v,z-bend);}cloth.needsUpdate=true;geo.computeVertexNormals();const b=border.attributes.position;for(let row=0;row<=12;row++){const k=row*9;for(let j=0;j<2;j++)b.setXYZ(row*2+j,cloth.getX(k)+j*.009,cloth.getY(k),cloth.getZ(k)-.002);}b.needsUpdate=true;border.computeVertexNormals();}}
  const api={designs,apply,clear,animate};if(typeof module!=='undefined')module.exports=api;else root.WWIdentity=api;
 })(typeof globalThis!=='undefined'?globalThis:this);
