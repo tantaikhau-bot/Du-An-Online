@@ -139,14 +139,14 @@
    const p=Math.sin(phase),p2=Math.sin(phase*2-.35),turn=Math.max(-1,Math.min(1,Number(j.mountTurn??j.turn)||0)),brake=Math.max(0,Math.min(1,Number(j.mountBrake)||0));
    const pelvisPitch=p*m[1]*gait,pelvisRoll=Math.cos(phase)*m[2]*gait;
    sm.pitch+=(pelvisPitch-sm.pitch)*(1-Math.exp(-dt*13));sm.roll+=(pelvisRoll-sm.roll)*(1-Math.exp(-dt*11));
-   const breath=Math.sin(t*2.1)*.016*(1-gait*.6),lumbar=-sm.pitch*.62+Math.sin(phase-.55)*m[3]*gait,chest=-lumbar*.45+Math.sin(phase*2-.8)*m[4]*gait*.45;
-   overlay('hips',sign*(sm.pitch-.025)*blend,Math.sin(phase)*.045*gait,sm.roll*blend,1);
-   overlay('spine',sign*(m[0]*blend+lumbar+breath-brake*.19),-turn*.12,-sm.roll*.7+turn*.12,1);
-   overlay('chest',sign*(chest+breath*.8-brake*.055),turn*.08,-sm.roll*.25,1);
+   const idle=Math.max(0,Math.min(1,Number(j.mountIdle)||0)),scan=(Math.sin(t*.47)*.075+Math.sin(t*.19)*.055)*idle,settle=Math.sin(t*.85)*.018*idle;const breath=Math.sin(t*1.75)*(.016+.018*idle)*(1-gait*.6),lumbar=-sm.pitch*.62+Math.sin(phase-.55)*m[3]*gait,chest=-lumbar*.45+Math.sin(phase*2-.8)*m[4]*gait*.45;
+   overlay('hips',sign*(sm.pitch-.025)*blend,Math.sin(phase)*.045*gait,(sm.roll+settle*.4)*blend,1);
+   overlay('spine',sign*(m[0]*blend+lumbar+breath-brake*.19),-turn*.12+scan*.20,-sm.roll*.7+turn*.12+settle,1);
+   overlay('chest',sign*(chest+breath*.8-brake*.055),turn*.08+scan*.26,-sm.roll*.25+settle*.5,1);
    overlay('upperChest',-sign*chest*.35,0,sm.roll*.12,1);
-   overlay('neck',-sign*(lumbar+chest)*.32,turn*.045,sm.roll*.1,1);
-   overlay('head',-sign*(lumbar+chest)*.42,turn*.08,sm.roll*.25,1);
-   for(const side of ['left','right']){const lateral=side==='left'?1:-1,down=side==='left'?left:right,shift=Math.sin(phase+lateral*.4)*gait;
+   overlay('neck',-sign*(lumbar+chest)*.32,turn*.045+scan*.40,sm.roll*.1+settle*.35,1);
+   overlay('head',-sign*(lumbar+chest)*.42,turn*.08+scan,sm.roll*.25+settle*.6,1);
+   for(const side of ['left','right']){const lateral=side==='left'?1:-1,down=side==='left'?left:right,shift=Math.sin(phase+lateral*.4)*gait+Math.sin(t*1.13+lateral*.5)*.09*idle;
     overlay(side+'UpperLeg',-sign*(m[5]+.045*shift)*blend,0,lateral*.65*blend,1);
     overlay(side+'LowerLeg',sign*(m[6]+.065*p2*gait)*blend,0,0,1);
     overlay(side+'UpperArm',-sign*(.50+m[0]*.75+.065*shift)*blend,0,down*(1.30+.045*shift)*blend,1);
@@ -174,7 +174,7 @@
   if(detail===0&&ground&&!(mode==='idle'&&gait<.15)){vrm.humanoid.update();a.footIK=WWFootIK.apply(a.T,a,ground,dt,gait,airborne,mode)}else{WWFootIK.reset(a);a.footIK=null}
   if(detail===0){for(let remain=dt;remain>0;){let d=Math.min(.033,remain);vrm.update(d);remain-=d}}else{vrm.humanoid.update();vrm.expressionManager?.update();}
   if(detail<=1){const contact=WWFootIK.groundIdle(a.T,a,ground,dt,gait,offGround,mode);if(contact)a.footIK=contact;}
-  a.motionState=a.motion.state;a.poseCheck={motionVersion:'22.3',fingers163:fingers,actionWeights:{...weights},secondary:{...secondary},targetHeight:1.68*heightFactor(preset(a.motionProfile)),original:!!a.original,measuredSpeed:a.motion.speed,turn:a.motion.turn,identity:a.identityType||null,fallbackBase:a.fallbackBase||null,cycle:a.motion.cycle,walkWeight:a.motion.walk,runWeight:a.motion.run,profile:a.motionProfile,legSign:sign,hip:[v.hipL,v.hipR],knee:['left','right'].map(side=>(vrm.humanoid.getNormalizedBoneNode(side+'LowerLeg')?.rotation.x||0)*sign),ankle:[v.ankleL,v.ankleR],jumpWeight:a.motion.jump};
+  a.motionState=a.motion.state;a.poseCheck={motionVersion:'22.5',fingers163:fingers,actionWeights:{...weights},secondary:{...secondary},targetHeight:1.68*heightFactor(preset(a.motionProfile)),original:!!a.original,measuredSpeed:a.motion.speed,turn:a.motion.turn,identity:a.identityType||null,fallbackBase:a.fallbackBase||null,cycle:a.motion.cycle,walkWeight:a.motion.walk,runWeight:a.motion.run,profile:a.motionProfile,legSign:sign,hip:[v.hipL,v.hipR],knee:['left','right'].map(side=>(vrm.humanoid.getNormalizedBoneNode(side+'LowerLeg')?.rotation.x||0)*sign),ankle:[v.ankleL,v.ankleR],jumpWeight:a.motion.jump};
   const measure140=!a.diagnosticInterval140||!Number.isFinite(a.lastDiagnostic140)||t-a.lastDiagnostic140>=a.diagnosticInterval140||a.lastMode140!==a.motion.state;const previousRaw140=a.rawDiagnostics140;if(previousRaw140){a.poseCheck.rawArm=previousRaw140.arm;a.poseCheck.rawLeg=previousRaw140.leg}
   if(detail===0&&measure140&&['idle','walk','run'].includes(mode)){a.lastDiagnostic140=t;a.lastMode140=a.motion.state;
    a.root.updateWorldMatrix(true,true);
