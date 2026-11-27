@@ -1,0 +1,3 @@
+# V17.0 Wish Heart
+
+Reference: supplied World of Wishes fantasy map. Stage 1: new central stylized tree with instanced pink flower crowns, gold branch details, animated rings and motes, flush decorative plaza inlay, small western blossom grove pilot and atlas listing all 11 reference regions (including heavenly city). The existing 240 × 272 traversable terrain and saves remain. Planned regions are disabled as atlas travel targets; their approximate markers are conceptual, not new biomes. No new castles, floating islands, ocean, quests or large waterfalls in this stage. Procedural scene art, not imported hand-sculpted tree. Real-browser visuals/FPS still required.

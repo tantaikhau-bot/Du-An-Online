@@ -24,6 +24,7 @@ jobs:
       - run: python test_guild.py
       - run: node test_stability.cjs
       - run: node test_living_world162.cjs
+      - run: node test_wish_atlas170.cjs
       - run: node test_graphics100.cjs
 
       - run: python -m pip install -r requirements-realtime.txt
