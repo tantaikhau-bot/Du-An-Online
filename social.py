@@ -2,6 +2,7 @@ import time, math, sqlite3, together, guild, adventure
 
 def init(c):
  adventure.init(c)
+ c.execute('CREATE TABLE IF NOT EXISTS combat_cd303(uid TEXT NOT NULL,kind TEXT NOT NULL,created REAL NOT NULL,PRIMARY KEY(uid,kind))')
  c.execute('CREATE TABLE IF NOT EXISTS combat_fx298(uid TEXT PRIMARY KEY,seq TEXT NOT NULL,kind TEXT NOT NULL,x REAL NOT NULL,y REAL NOT NULL,heading REAL NOT NULL,created REAL NOT NULL)')
  c.execute('CREATE TABLE IF NOT EXISTS avatar109(uid TEXT PRIMARY KEY,preset TEXT NOT NULL,gait REAL NOT NULL)')
  together.init(c)
@@ -80,8 +81,13 @@ def handle(h,c,u,d):
   cds={'strike':.48,'spin':3.5,'fire':5,'ice':6.5,'storm':8.5,'dodge':2.2,'ultimate':16}
   if not isinstance(kind,str) or kind not in cds or not isinstance(seq,str) or not 1<=len(seq)<=64 or type(heading) not in (int,float) or not math.isfinite(heading) or abs(heading)>7:return reply(400,{'error':'Kỹ năng không hợp lệ'})
   c.execute('BEGIN IMMEDIATE')
+  if c.execute("SELECT 1 FROM vehicle88 WHERE uid=? AND kind!=''",(uid,)).fetchone():return reply(409,{'error':'Hãy xuống phương tiện'})
   old=c.execute('SELECT seq,created FROM combat_fx298 WHERE uid=?',(uid,)).fetchone()
   if old and (old['seq']==seq or now-old['created']<.42):return reply(429,{'error':'Kỹ năng đang hồi'})
+  last=c.execute('SELECT created FROM combat_cd303 WHERE uid=? AND kind=?',(uid,kind)).fetchone()
+  if last and now-last['created']<cds[kind]-.08:return reply(429,{'error':'Kỹ năng đang hồi'})
+  c.execute('INSERT OR REPLACE INTO combat_cd303 VALUES(?,?,?)',(uid,kind,now))
+  c.execute('DELETE FROM combat_cd303 WHERE created<?',(now-60,))
   c.execute('INSERT OR REPLACE INTO combat_fx298 VALUES(?,?,?,?,?,?,?)',(uid,seq,kind,origin['x'],origin['y'],heading,now))
   c.execute('DELETE FROM combat_fx298 WHERE created<?',(now-8,))
   c.commit();return reply(200,{'ok':True})
