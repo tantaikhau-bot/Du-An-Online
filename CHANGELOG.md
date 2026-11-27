@@ -1,5 +1,10 @@
 # WISH WORLD — Release history
 
+## V15.4 — Dragon Remastered (preview)
+- Refine existing CC0 Quaternius skinned dragon mesh: weighted head/horn and wing proportions, vertex-painted teal/blue/cream and violet gradients, generated UV and shared 128px scale bump map. Retain joint weights, source normals and two flying clips. This is not a new professional sculpt or AI-generated model.
+- Add on-demand real-model preview with animation selector, drag rotation and wheel zoom. Separate capped renderer disposed on exit. Center companion drawer, hide overlapping audio button, preserve portrait aspect ratio.
+- JavaScript syntax and Three r164 attribute API checked; visual rendering, clipping, texture quality and actual FPS remain unverified. No new paid assets.
+
 ## V15.3.2 — Dragon Visibility & HD Portraits
 - Replace original 80px concept crops with 224px crops from the approved concept artwork, cache-bust CSS; use readable Vietnamese headings and cap detail portrait to native size.
 - Enable rigged dragon by default when equipped (no special URL). In-menu loading/error status, recall/retry without page reload, initial animation before hiding the old model, raise hovering height and restore previous geometry if animation fails. Other companions unchanged.
