@@ -2619,7 +2619,7 @@ $('cloudBoard').onclick=()=>board().catch(cloudError);if(location.protocol!=='fi
 
 let recoveryOwner276='',recoverySince276=0,recoveryEpoch276=0,recoveryState276='idle';let net273={},pulseStarted273=0,pulseCadence273=750,pulseSignature273='';let worldSync121=null,remotePlayers=[],pulseBusy=false,pulseFailures49=0,pulseNext49=0,presenceShared68=false,lastPulse68=0,connection68='offline';
 const socialBar=document.createElement('div');socialBar.className='settingsrow';socialBar.innerHTML='<button id="socialOpen">✦ Bạn bè & cộng đồng</button><span id="presenceStatus" class="muted">Chưa kết nối</span>';online.append(socialBar);
-function resetPresence68(){recoveryEpoch276++;recoveryOwner276='';recoverySince276=0;recoveryState276='idle';pairSince275=0;pairStatus275='';seen275.clear();worldSync121=null;matched61='';incoming63=[];remotePlayers=[];lastPulse68=0;receiveNear69([]);outings70=[]}
+function resetPresence68(){recoveryEpoch276++;recoveryOwner276='';recoverySince276=0;recoveryState276='idle';pairSince275=0;pairStatus275='';seen275.clear();worldSync121=null;matched61='';target61='';emote61='idle';until61=0;capture61=false;incoming63=[];remotePlayers=[];lastPulse68=0;receiveNear69([]);outings70=[]}
 function suspendPresence276(reason){
  recoveryEpoch276++;recoveryState276=reason;matched61='';target61='';emote61='idle';until61=0;capture61=false;pairSince275=0;pairStatus275='';incoming63=[];seen275.clear();receiveNear69([]);outings70=[];
  remotePlayers=WWRealtime.recovery276(remotePlayers,recoverySince276,Date.now(),publicWorld68(),!!onlineUser&&onlineUser.id===recoveryOwner276);
