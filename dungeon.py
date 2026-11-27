@@ -17,6 +17,21 @@ AI_PROFILES=(
  ('Tinh linh bão','ice','lightning'),
  ('Long vương pha lê','light','shadow'),
 )
+REGIONS=('Rừng bóng tối','Thung lũng sương','Thành đá cổ','Đỉnh bão tố','Hang pha lê','Sa mạc cổ','Vực dung nham','Vương quốc băng','Đền thiên giới','Vực hư vô')
+REGION_BOSSES=('Cổ thụ ma','Sói chúa','Titan đá','Chúa tể bão','Long vương tinh thể','Vua cát','Hỏa long','Nữ hoàng băng','Hộ thần thiên giới','Long thần hư vô')
+def is_boss(stage):
+ return stage==5 or stage%10==0
+def region_index(stage):
+ return (stage-1)//10
+def ai_kind(stage):
+ return stage if stage<=5 else (region_index(stage)%5)+1
+def power_percent(stage):
+ return 100+max(0,stage-5)*3
+def player_caps(stage):
+ extra=max(0,stage-5)
+ return MAX_HP+extra*3,MAX_ENERGY+extra,MAX_STAMINA
+def scaled(v,n):
+ return n*power_percent(v['stage'])//100
 def boss_phase(hp,maxhp):
  if hp*100<=maxhp*15:return 4
  if hp*100<=maxhp*40:return 3
@@ -24,15 +39,15 @@ def boss_phase(hp,maxhp):
  return 1
 
 def enemy_plan(v):
- stage=v['stage'];turn=v['turn'];_,_,hp,attack,heavy=STAGES[stage-1]
+ stage=v['stage'];kind=ai_kind(stage);turn=v['turn'];_,_,hp,attack,heavy=STAGES[stage-1]
  low=v['enemy']*100<=hp*30
  mode='heavy' if turn%3==2 else 'normal'
- if stage==2 and turn%4==1:mode='dodge'
- if stage==3 and turn%4==1:mode='guard'
- if stage==4 and turn%4==1:mode='counter'
- if stage==5 and turn%4==1:mode='guard'
+ if kind==2 and turn%4==1:mode='dodge'
+ if kind==3 and turn%4==1:mode='guard'
+ if kind==4 and turn%4==1:mode='counter'
+ if kind==5 and turn%4==1:mode='guard'
  if low and mode=='normal' and stage>=2:mode='rage'
- if stage==len(STAGES):
+ if is_boss(stage):
   phase=boss_phase(v['enemy'],hp)
   if phase==2 and turn%3==1:mode='crystal'
   if phase==3 and turn%3==2:mode='nova'
@@ -41,7 +56,7 @@ def enemy_plan(v):
  raw={'normal':attack,'heavy':heavy,'dodge':max(1,attack//2),'guard':max(1,attack//2),'counter':attack,'rage':attack*3//2,'crystal':heavy,'nova':heavy+8}[mode]
  return mode,names[mode],mitigate(raw)
 def adjusted_damage(v,skill,damage,mode):
- _,weak,resist=AI_PROFILES[v['stage']-1]
+ _,weak,resist=AI_PROFILES[ai_kind(v['stage'])-1]
  if skill==weak:damage=damage*125//100
  if skill==resist:damage=damage*75//100
  if mode=='guard' and skill in ('strike','burst'):damage=damage*60//100
@@ -51,9 +66,13 @@ def cooldowns(v):
  return json.loads(v['magic_cd'])
 def skill_view(v,k,cost):
  q={'id':k,'cost':cost,'damage':attack_profile(v,k)[0],'stamina_cost':attack_profile(v,k)[1],'cooldown':max(0,cooldowns(v).get(k,0)-v['turn'])}
+ if k=='heal':q['heal']=scaled(v,35)
  if k in MAGIC:
   q.update(name=MAGIC[k][0],effect=MAGIC[k][4],cooldown_turns=MAGIC[k][3])
-  if k=='lightning' and enemy_plan(v)[0] in ('heavy','crystal','nova'):q['damage']+=8
+  if k=='fire':q['effect']='Thiêu đốt 2 lượt, mỗi lượt '+str(scaled(v,6))+' ST'
+  if k=='light':q['effect']='Hồi '+str(scaled(v,28))+' HP và giảm 50% đòn phản công'
+  if k=='shadow':q['effect']='Hút tối đa '+str(scaled(v,12))+' HP theo sát thương thực tế'
+  if k=='lightning' and enemy_plan(v)[0] in ('heavy','crystal','nova'):q['damage']+=scaled(v,8)
  q['damage']=adjusted_damage(v,k,q['damage'],enemy_plan(v)[0])
  return q
 MAX_HP=100
@@ -70,9 +89,9 @@ WEAPONS={
 COMBO_BONUS=(100,115,135)
 def attack_profile(v,skill):
  name,strike,burst,light,heavy=WEAPONS[v['weapon']]
- if skill=='strike':return strike*COMBO_BONUS[min(v['combo'],2)]//100,light
- if skill=='burst':return burst,heavy
- return SKILLS[skill][1],STAMINA_COST[skill]
+ if skill=='strike':return scaled(v,strike*COMBO_BONUS[min(v['combo'],2)]//100),light
+ if skill=='burst':return scaled(v,burst),heavy
+ return scaled(v,SKILLS[skill][1]),STAMINA_COST[skill]
 STAMINA_COST={'strike':12,'burst':20,'guard':0,'heal':0,'dodge':20}
 STAMINA_COST.update({k:0 for k in MAGIC})
 def mitigate(raw,armor=ARMOR):
@@ -84,6 +103,15 @@ STAGES=(
  ('Tinh linh bão','🌪️',128,14,28),
  ('Long vương pha lê','🐉',156,16,34),
 )
+# Keep floors 1–5 and their stored progress unchanged; subsequent floors use bounded integer scaling.
+def make_floor(stage):
+ region=region_index(stage);kind=ai_kind(stage);name,icon,_,_,_=STAGES[kind-1]
+ boss=is_boss(stage)
+ hp=100+(stage-5)*4+(35 if boss else 0)
+ attack=12+(stage-5)//3+(3 if boss else 0)
+ heavy=attack*2+4
+ return (REGION_BOSSES[region] if boss else name+' · '+REGIONS[region], '🐉' if boss else icon,hp,attack,heavy)
+STAGES=STAGES+tuple(make_floor(i) for i in range(6,101))
 SKILLS={'strike':(0,18),'burst':(20,38),'guard':(0,6),'heal':(25,0),'dodge':(0,0)}
 SKILLS.update({k:(q[1],q[2]) for k,q in MAGIC.items()})
 def init(c):
@@ -135,10 +163,10 @@ def state(c,uid):
  return dict(row) if row else {'uid':uid,'stage':1,'best':0,'rev':0,'hp':100,'energy':60,'enemy':64,'turn':0,'status':'ready','updated':0,'notice':'','stamina':MAX_STAMINA,'weapon':'sword','combo':0,'magic_cd':'{}','burn':0}
 def view(v):
  name,icon,maxhp,attack,heavy=STAGES[v['stage']-1]
- boss=v['stage']==len(STAGES)
+ boss=is_boss(v['stage'])
  mode,incoming_name,incoming=enemy_plan(v)
- _,weak,resist=AI_PROFILES[v['stage']-1]
- return {k:v[k] for k in ('stage','best','rev','hp','energy','enemy','turn','status','notice','stamina','weapon','combo','burn')}|{'combat_version':'28.4','boss_phase':boss_phase(v['enemy'],maxhp) if boss else 0,'boss_phase_name':('Thức tỉnh','Tinh thể','Long tức','Cuồng nộ')[boss_phase(v['enemy'],maxhp)-1] if boss else '', 'boss_phases':4 if boss else 0,'enemy_mode':mode,'enemy_weakness':weak,'enemy_resistance':resist,'enemy_counter_bonus':6 if mode=='counter' else 0,'weapon_name':WEAPONS[v['weapon']][0],'weapons':[{'id':k,'name':w[0],'strike':w[1],'burst':w[2],'stamina':w[3]} for k,w in WEAPONS.items()],'combo_max':3,'max_hp':MAX_HP,'max_energy':MAX_ENERGY,'max_stamina':MAX_STAMINA,'armor':ARMOR,'crit_chance':5,'count':len(STAGES),'enemy_name':name,'enemy_icon':icon,'enemy_max':maxhp,'boss':boss,'incoming':incoming_name,'incoming_damage':incoming,'skills':[skill_view(v,k,cost) for k,(cost,damage) in SKILLS.items()]}
+ _,weak,resist=AI_PROFILES[ai_kind(v['stage'])-1]
+ return {k:v[k] for k in ('stage','best','rev','hp','energy','enemy','turn','status','notice','stamina','weapon','combo','burn')}|{'combat_version':'28.5','region':REGIONS[region_index(v['stage'])],'region_index':region_index(v['stage']),'regions':list(REGIONS),'boss_floors':[i for i in range(1,len(STAGES)+1) if is_boss(i)],'power_percent':power_percent(v['stage']),'milestones':[i for i in range(10,v['best']+1,10)],'boss_phase':boss_phase(v['enemy'],maxhp) if boss else 0,'boss_phase_name':('Thức tỉnh','Tinh thể','Long tức','Cuồng nộ')[boss_phase(v['enemy'],maxhp)-1] if boss else '', 'boss_phases':4 if boss else 0,'enemy_mode':mode,'enemy_weakness':weak,'enemy_resistance':resist,'enemy_counter_bonus':6 if mode=='counter' else 0,'weapon_name':WEAPONS[v['weapon']][0],'weapons':[{'id':k,'name':w[0],'strike':w[1],'burst':w[2],'stamina':w[3]} for k,w in WEAPONS.items()],'combo_max':3,'max_hp':player_caps(v['stage'])[0],'max_energy':player_caps(v['stage'])[1],'max_stamina':MAX_STAMINA,'armor':ARMOR,'crit_chance':5,'count':len(STAGES),'enemy_name':name,'enemy_icon':icon,'enemy_max':maxhp,'boss':boss,'incoming':incoming_name,'incoming_damage':incoming,'skills':[skill_view(v,k,cost) for k,(cost,damage) in SKILLS.items()]}
 def store(c,v):
  keys=('uid','stage','best','rev','hp','energy','enemy','turn','status','updated','notice','stamina','weapon','combo','magic_cd','burn')
  c.execute('INSERT INTO ww_dungeon138('+','.join(keys)+') VALUES('+','.join('?' for _ in keys)+') ON CONFLICT(uid) DO UPDATE SET '+','.join(k+'=excluded.'+k for k in keys[1:]),tuple(v[k] for k in keys))
@@ -159,7 +187,7 @@ def handle(h,c,u,d,now=None):
   if type(stage) is not int or not 1<=stage<=min(len(STAGES),v['best']+1):return err(403,'Ải chưa mở khóa')
   if v['status']=='fight':return err(409,'Hãy hoàn thành hoặc kết thúc trận hiện tại')
   if now-v['updated']<.25:return err(429,'Thử lại sau')
-  v.update(stage=stage,weapon=weapon,combo=0,magic_cd='{}',burn=0,hp=MAX_HP,energy=MAX_ENERGY,stamina=MAX_STAMINA,enemy=STAGES[stage-1][2],turn=0,status='fight',notice='Trận chiến bắt đầu')
+  v.update(stage=stage,weapon=weapon,combo=0,magic_cd='{}',burn=0,hp=player_caps(stage)[0],energy=player_caps(stage)[1],stamina=MAX_STAMINA,enemy=STAGES[stage-1][2],turn=0,status='fight',notice='Trận chiến bắt đầu')
  else:
   if v['status']!='fight':return err(409,'Chưa có trận đang diễn ra')
   skill=d['skill']
@@ -180,26 +208,26 @@ def handle(h,c,u,d,now=None):
    if critical:damage=damage*3//2
    if skill in MAGIC:cds[skill]=v['turn']+MAGIC[skill][3]+1
    v['magic_cd']=json.dumps(cds,separators=(',',':'))
-   if skill=='lightning' and mode in ('heavy','crystal','nova'):damage+=8
+   if skill=='lightning' and mode in ('heavy','crystal','nova'):damage+=scaled(v,8)
    damage=adjusted_damage(v,skill,damage,mode)
-   if skill=='heal':v['hp']=min(MAX_HP,v['hp']+35)
-   if skill=='light':v['hp']=min(MAX_HP,v['hp']+28)
-   if skill=='shadow':v['hp']=min(MAX_HP,v['hp']+min(12,damage,v['enemy']))
+   if skill=='heal':v['hp']=min(player_caps(v['stage'])[0],v['hp']+scaled(v,35))
+   if skill=='light':v['hp']=min(player_caps(v['stage'])[0],v['hp']+scaled(v,28))
+   if skill=='shadow':v['hp']=min(player_caps(v['stage'])[0],v['hp']+min(scaled(v,12),damage,v['enemy']))
    if skill=='fire':v['burn']=2
-   burn_damage=6 if v['burn'] else 0
+   burn_damage=scaled(v,6) if v['burn'] else 0
    v['burn']=max(0,v['burn']-1)
    damage=min(v['enemy'],damage+burn_damage)
-   previous_phase=boss_phase(v['enemy'],STAGES[v['stage']-1][2]) if v['stage']==len(STAGES) else 0
+   previous_phase=boss_phase(v['enemy'],STAGES[v['stage']-1][2]) if is_boss(v['stage']) else 0
    v['enemy']=max(0,v['enemy']-damage)
    if v['enemy']==0:
-    v['status']='won';v['best']=max(v['best'],v['stage']);v['notice']='Chiến thắng! Đã ghi nhận huy hiệu ải.'
+    v['status']='won';v['best']=max(v['best'],v['stage']);v['notice']='Chiến thắng! Đã ghi nhận huy hiệu ải.'+(' · Hoàn thành khu vực '+REGIONS[region_index(v['stage'])] if v['stage']%10==0 else '')
    else:
     if mode=='counter' and skill in ('strike','burst'):incoming+=6
     if skill=='guard':incoming=max(1,incoming//4)
     if skill in ('ice','light'):incoming=max(1,incoming//2)
     if skill=='dodge':incoming=0
     v['hp']=max(0,v['hp']-incoming)
-    v['energy']=min(MAX_ENERGY,v['energy']+(18 if skill=='guard' else 8))
+    v['energy']=min(player_caps(v['stage'])[1],v['energy']+(18 if skill=='guard' else 8))
     v['stamina']=min(MAX_STAMINA,v['stamina']+(24 if skill=='guard' else 8 if skill=='heal' else 4))
     v['status']='fight' if v['hp'] else 'lost'
     v['notice']=('Chí mạng! ' if critical else '')+(MAGIC[skill][0]+' · ' if skill in MAGIC else '')+('Thiêu đốt · ' if burn_damage else '')+'Đã gây '+str(damage)+' sát thương · '+enemy_move+' · nhận '+str(incoming)+' sát thương' if v['hp'] else 'Đã thua, có thể thử lại'
