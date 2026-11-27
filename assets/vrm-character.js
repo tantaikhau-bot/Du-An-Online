@@ -192,12 +192,15 @@
     overlay('rightUpperArm',-sign*(.85+sweep*.48),-right*.12,right*.72,w);overlay('rightLowerArm',-sign*(.45+wind*.65),0,0,w);
     overlay('leftUpperArm',-sign*.72,0,left*.85,w);overlay('leftLowerArm',-sign*.55,0,0,w);
     overlay('spine',sign*(-.08+sweep*.17),.16*sweep,0,w);
+   }else if(combat.kind==='dodge'){
+    overlay('spine',-sign*.24*sweep,0,0,w);overlay('rightUpperArm',sign*.30,0,right*1.15,w);overlay('leftUpperArm',-sign*.35,0,left*1.1,w);
    }else{
-    const swing=(p<.34?-p/.34:Math.min(1,(p-.34)/.27)*2-1)*(combat.combo%2?-1:1);
-    overlay('rightUpperArm',-sign*(.65+.55*sweep),swing*.75,right*(.92-.48*sweep),w);
-    overlay('rightLowerArm',-sign*(.42+.58*wind),0,0,w);
-    overlay('leftUpperArm',-sign*.30,0,left*1.04,w);overlay('leftLowerArm',-sign*.40,0,0,w);
-    overlay('spine',sign*.12*sweep,-swing*.30,.055*swing,w);overlay('chest',sign*.08*sweep,-swing*.25,0,w);
+    const i=combat.kind==='spin'?4:Math.max(0,Math.min(4,combat.combo|0)),poses=[[.65,.55,.75,.92,.48,.42,.58,.30],[.72,.62,.82,.90,.43,.44,.62,.34],[.42,.84,.36,1.02,.38,.62,.43,.18],[.93,.38,.25,.80,.28,.50,.65,.24],[.90,.60,.95,.87,.50,.55,.72,.45]],v=poses[i];
+    const swing=(p<.34?-p/.34:Math.min(1,(p-.34)/.27)*2-1)*(i%2?-1:1);
+    overlay('rightUpperArm',-sign*(v[0]+v[1]*sweep),swing*v[2],right*(v[3]-v[4]*sweep),w);
+    overlay('rightLowerArm',-sign*(v[5]+v[6]*wind),0,0,w);
+    overlay('leftUpperArm',-sign*(i===4?.65:.30),0,left*(i===4?.78:1.04),w);overlay('leftLowerArm',-sign*.40,0,0,w);
+    overlay('spine',sign*(i===3?.22:.12)*sweep,-swing*v[7],.055*swing,w);overlay('chest',sign*.08*sweep,-swing*v[7]*.8,0,w);
    }
   }
   const look=WWMotion.socialLook255(a.look255??={},mode==='ride'||WWMotion.phaseOf(j)?0:j.lookYaw,dt);
