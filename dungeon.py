@@ -17,6 +17,12 @@ AI_PROFILES=(
  ('Tinh linh bão','ice','lightning'),
  ('Long vương pha lê','light','shadow'),
 )
+def boss_phase(hp,maxhp):
+ if hp*100<=maxhp*15:return 4
+ if hp*100<=maxhp*40:return 3
+ if hp*100<=maxhp*70:return 2
+ return 1
+
 def enemy_plan(v):
  stage=v['stage'];turn=v['turn'];_,_,hp,attack,heavy=STAGES[stage-1]
  low=v['enemy']*100<=hp*30
@@ -26,8 +32,13 @@ def enemy_plan(v):
  if stage==4 and turn%4==1:mode='counter'
  if stage==5 and turn%4==1:mode='guard'
  if low and mode=='normal' and stage>=2:mode='rage'
- names={'normal':'Đòn thường','heavy':'Đòn cường kích','dodge':'Lướt né','guard':'Thế thủ','counter':'Phản công','rage':'Cuồng nộ'}
- raw={'normal':attack,'heavy':heavy,'dodge':max(1,attack//2),'guard':max(1,attack//2),'counter':attack,'rage':attack*3//2}[mode]
+ if stage==len(STAGES):
+  phase=boss_phase(v['enemy'],hp)
+  if phase==2 and turn%3==1:mode='crystal'
+  if phase==3 and turn%3==2:mode='nova'
+  if phase==4:mode='nova' if turn%2==1 else 'rage'
+ names={'normal':'Đòn thường','heavy':'Đòn cường kích','dodge':'Lướt né','guard':'Thế thủ','counter':'Phản công','rage':'Cuồng nộ','crystal':'Mưa tinh thể','nova':'Long tức hủy diệt'}
+ raw={'normal':attack,'heavy':heavy,'dodge':max(1,attack//2),'guard':max(1,attack//2),'counter':attack,'rage':attack*3//2,'crystal':heavy,'nova':heavy+8}[mode]
  return mode,names[mode],mitigate(raw)
 def adjusted_damage(v,skill,damage,mode):
  _,weak,resist=AI_PROFILES[v['stage']-1]
@@ -42,7 +53,7 @@ def skill_view(v,k,cost):
  q={'id':k,'cost':cost,'damage':attack_profile(v,k)[0],'stamina_cost':attack_profile(v,k)[1],'cooldown':max(0,cooldowns(v).get(k,0)-v['turn'])}
  if k in MAGIC:
   q.update(name=MAGIC[k][0],effect=MAGIC[k][4],cooldown_turns=MAGIC[k][3])
-  if k=='lightning' and enemy_plan(v)[0]=='heavy':q['damage']+=8
+  if k=='lightning' and enemy_plan(v)[0] in ('heavy','crystal','nova'):q['damage']+=8
  q['damage']=adjusted_damage(v,k,q['damage'],enemy_plan(v)[0])
  return q
 MAX_HP=100
@@ -84,6 +95,41 @@ def init(c):
  if 'combo' not in columns:c.execute('ALTER TABLE ww_dungeon138 ADD COLUMN combo INTEGER NOT NULL DEFAULT 0')
  if 'magic_cd' not in columns:c.execute("ALTER TABLE ww_dungeon138 ADD COLUMN magic_cd TEXT NOT NULL DEFAULT '{}'")
  if 'burn' not in columns:c.execute('ALTER TABLE ww_dungeon138 ADD COLUMN burn INTEGER NOT NULL DEFAULT 0')
+ c.execute("CREATE TABLE IF NOT EXISTS ww_world_boss284(event INTEGER PRIMARY KEY,hp INTEGER NOT NULL,rev INTEGER NOT NULL DEFAULT 0)")
+ c.execute("CREATE TABLE IF NOT EXISTS ww_world_boss_player284(event INTEGER NOT NULL,uid TEXT NOT NULL,damage INTEGER NOT NULL DEFAULT 0,last REAL NOT NULL DEFAULT 0,PRIMARY KEY(event,uid))")
+
+WORLD_PERIOD=7200
+WORLD_WINDOW=1800
+WORLD_HP=12000
+WORLD_COOLDOWN=4
+
+def world_snapshot(c,uid,now):
+ event=int(now)//WORLD_PERIOD;start=event*WORLD_PERIOD;ends=start+WORLD_WINDOW
+ row=c.execute('SELECT hp,rev FROM ww_world_boss284 WHERE event=?',(event,)).fetchone()
+ hp,rev=(row['hp'],row['rev']) if row else (WORLD_HP,0)
+ player=c.execute('SELECT damage,last FROM ww_world_boss_player284 WHERE event=? AND uid=?',(event,uid)).fetchone()
+ wait=max(0,WORLD_COOLDOWN-(now-player['last'])) if player else 0
+ return {'event':event,'server_now':now,'start':start,'ends':ends,'next_start':start+WORLD_PERIOD,'active':now<ends and hp>0,'hp':hp,'max_hp':WORLD_HP,'phase':boss_phase(hp,WORLD_HP),'rev':rev,'my_damage':player['damage'] if player else 0,'cooldown':round(wait,2)}
+
+def world_handle(h,c,uid,d,now,action):
+ def err(code,msg):return h.reply(code,{'error':msg})
+ if action=='world-status':
+  if d:return err(400,'Không nhận tham số')
+  return h.reply(200,world_snapshot(c,uid,now))
+ if not isinstance(d,dict) or set(d)!={'event'} or type(d['event']) is not int:return err(400,'Yêu cầu không hợp lệ')
+ c.execute('BEGIN IMMEDIATE')
+ v=world_snapshot(c,uid,now)
+ if d['event']!=v['event'] or not v['active']:return err(409,'Boss đã kết thúc hoặc chưa mở')
+ if v['cooldown']>0:return err(429,'Chờ hồi chiêu')
+ event=v['event'];damage=min(v['hp'],30)
+ c.execute('INSERT OR IGNORE INTO ww_world_boss284(event,hp) VALUES(?,?)',(event,WORLD_HP))
+ c.execute('UPDATE ww_world_boss284 SET hp=hp-?,rev=rev+1 WHERE event=?',(damage,event))
+ c.execute('INSERT INTO ww_world_boss_player284(event,uid,damage,last) VALUES(?,?,?,?) ON CONFLICT(event,uid) DO UPDATE SET damage=damage+excluded.damage,last=excluded.last',(event,uid,damage,now))
+ c.execute('DELETE FROM ww_world_boss_player284 WHERE event<?',(event-12,))
+ c.execute('DELETE FROM ww_world_boss284 WHERE event<?',(event-12,))
+ c.commit()
+ return h.reply(200,world_snapshot(c,uid,now))
+
 def state(c,uid):
  row=c.execute('SELECT * FROM ww_dungeon138 WHERE uid=?',(uid,)).fetchone()
  return dict(row) if row else {'uid':uid,'stage':1,'best':0,'rev':0,'hp':100,'energy':60,'enemy':64,'turn':0,'status':'ready','updated':0,'notice':'','stamina':MAX_STAMINA,'weapon':'sword','combo':0,'magic_cd':'{}','burn':0}
@@ -92,13 +138,14 @@ def view(v):
  boss=v['stage']==len(STAGES)
  mode,incoming_name,incoming=enemy_plan(v)
  _,weak,resist=AI_PROFILES[v['stage']-1]
- return {k:v[k] for k in ('stage','best','rev','hp','energy','enemy','turn','status','notice','stamina','weapon','combo','burn')}|{'combat_version':'28.3','enemy_mode':mode,'enemy_weakness':weak,'enemy_resistance':resist,'enemy_counter_bonus':6 if mode=='counter' else 0,'weapon_name':WEAPONS[v['weapon']][0],'weapons':[{'id':k,'name':w[0],'strike':w[1],'burst':w[2],'stamina':w[3]} for k,w in WEAPONS.items()],'combo_max':3,'max_hp':MAX_HP,'max_energy':MAX_ENERGY,'max_stamina':MAX_STAMINA,'armor':ARMOR,'crit_chance':5,'count':len(STAGES),'enemy_name':name,'enemy_icon':icon,'enemy_max':maxhp,'boss':boss,'incoming':incoming_name,'incoming_damage':incoming,'skills':[skill_view(v,k,cost) for k,(cost,damage) in SKILLS.items()]}
+ return {k:v[k] for k in ('stage','best','rev','hp','energy','enemy','turn','status','notice','stamina','weapon','combo','burn')}|{'combat_version':'28.4','boss_phase':boss_phase(v['enemy'],maxhp) if boss else 0,'boss_phase_name':('Thức tỉnh','Tinh thể','Long tức','Cuồng nộ')[boss_phase(v['enemy'],maxhp)-1] if boss else '', 'boss_phases':4 if boss else 0,'enemy_mode':mode,'enemy_weakness':weak,'enemy_resistance':resist,'enemy_counter_bonus':6 if mode=='counter' else 0,'weapon_name':WEAPONS[v['weapon']][0],'weapons':[{'id':k,'name':w[0],'strike':w[1],'burst':w[2],'stamina':w[3]} for k,w in WEAPONS.items()],'combo_max':3,'max_hp':MAX_HP,'max_energy':MAX_ENERGY,'max_stamina':MAX_STAMINA,'armor':ARMOR,'crit_chance':5,'count':len(STAGES),'enemy_name':name,'enemy_icon':icon,'enemy_max':maxhp,'boss':boss,'incoming':incoming_name,'incoming_damage':incoming,'skills':[skill_view(v,k,cost) for k,(cost,damage) in SKILLS.items()]}
 def store(c,v):
  keys=('uid','stage','best','rev','hp','energy','enemy','turn','status','updated','notice','stamina','weapon','combo','magic_cd','burn')
  c.execute('INSERT INTO ww_dungeon138('+','.join(keys)+') VALUES('+','.join('?' for _ in keys)+') ON CONFLICT(uid) DO UPDATE SET '+','.join(k+'=excluded.'+k for k in keys[1:]),tuple(v[k] for k in keys))
 def handle(h,c,u,d,now=None):
  now=time.time() if now is None else now;uid=u['id'];action=h.path.rsplit('/',1)[-1]
  def err(code,msg):return h.reply(code,{'error':msg})
+ if action in ('world-status','world-strike'):return world_handle(h,c,uid,d,now,action)
  if action=='status':
   if d:return err(400,'Không nhận tham số')
   return h.reply(200,view(state(c,uid)))
@@ -133,7 +180,7 @@ def handle(h,c,u,d,now=None):
    if critical:damage=damage*3//2
    if skill in MAGIC:cds[skill]=v['turn']+MAGIC[skill][3]+1
    v['magic_cd']=json.dumps(cds,separators=(',',':'))
-   if skill=='lightning' and mode=='heavy':damage+=8
+   if skill=='lightning' and mode in ('heavy','crystal','nova'):damage+=8
    damage=adjusted_damage(v,skill,damage,mode)
    if skill=='heal':v['hp']=min(MAX_HP,v['hp']+35)
    if skill=='light':v['hp']=min(MAX_HP,v['hp']+28)
@@ -142,6 +189,7 @@ def handle(h,c,u,d,now=None):
    burn_damage=6 if v['burn'] else 0
    v['burn']=max(0,v['burn']-1)
    damage=min(v['enemy'],damage+burn_damage)
+   previous_phase=boss_phase(v['enemy'],STAGES[v['stage']-1][2]) if v['stage']==len(STAGES) else 0
    v['enemy']=max(0,v['enemy']-damage)
    if v['enemy']==0:
     v['status']='won';v['best']=max(v['best'],v['stage']);v['notice']='Chiến thắng! Đã ghi nhận huy hiệu ải.'
@@ -155,6 +203,9 @@ def handle(h,c,u,d,now=None):
     v['stamina']=min(MAX_STAMINA,v['stamina']+(24 if skill=='guard' else 8 if skill=='heal' else 4))
     v['status']='fight' if v['hp'] else 'lost'
     v['notice']=('Chí mạng! ' if critical else '')+(MAGIC[skill][0]+' · ' if skill in MAGIC else '')+('Thiêu đốt · ' if burn_damage else '')+'Đã gây '+str(damage)+' sát thương · '+enemy_move+' · nhận '+str(incoming)+' sát thương' if v['hp'] else 'Đã thua, có thể thử lại'
+   if previous_phase and v['status']=='fight':
+    phase=boss_phase(v['enemy'],STAGES[v['stage']-1][2])
+    if phase!=previous_phase:v['notice']+=' · Boss chuyển giai đoạn '+str(phase)
    v['turn']+=1
    if v['turn']>=80 and v['status']=='fight':v.update(status='lost',notice='Đã hết số lượt thử thách')
  v['rev']+=1;v['updated']=now;store(c,v);c.commit()
