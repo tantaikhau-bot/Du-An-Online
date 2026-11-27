@@ -1,0 +1,3 @@
+# V19.1 Natural World
+
+Improve existing map art without altering world coordinates, gameplay or mobile resolution floor. Restore approximate luminance-derived normal/roughness maps for existing CC0 photo textures; not physically measured PBR. Add seamless procedural geological rock maps, desktop-only extra terrain rock sample, soil and fine grain blending, alpha-cut fantasy leaf materials, architectural normal relief and daylight contrast. No new asset download, no ray tracing, no imported new terrain models. Browser test records initialization; visual quality and phone performance remain unverified. V19.0 CI reached fox rig load but timed out; this patch does not claim to fix that separate animal pipeline issue.

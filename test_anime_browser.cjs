@@ -37,7 +37,7 @@ const fs=require('node:fs'),os=require('node:os'),path=require('node:path'),asse
   await page.goto(origin+'/play?perf=1');
   await page.waitForFunction(()=>window.wwGraphics59?.stage==='running'||window.wwGraphics59?.engine==='classic',{},{timeout:90000});
   const info=await page.evaluate(()=>window.wwGraphics59);
-  assert.equal(info.engine,'three',JSON.stringify(info));
+  assert.equal(info.engine,'three',JSON.stringify(info));assert.ok(info.realism191?.terrainBlend&&info.realism191?.rockPBR&&info.realism191?.leafCutout&&info.realism191?.architectureRelief,JSON.stringify(info.realism191));
   assert.equal(info.world137.depth,272);assert.equal(info.world137.width,240);assert.equal(info.world137.tiles,64);assert.ok(info.world137.newSites>=10&&info.world137.newSites<=12);
   const frontier=await page.evaluate(()=>({north:walkable4(-22,-82),south:walkable4(22,82),outside:walkable4(0,WW_WORLD137.halfZ+1),bridge:segment4({x:0,z:-11},{x:0,z:-3}),water:segment4({x:10,z:-11},{x:10,z:-3})}));assert.ok(frontier.north&&frontier.south&&!frontier.outside&&frontier.bridge&&!frontier.water,JSON.stringify(frontier));
   console.log('V13.7 expanded walkability and bridge regression passed');
