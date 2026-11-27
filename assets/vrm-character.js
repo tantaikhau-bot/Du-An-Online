@@ -46,7 +46,14 @@
   return {get,stats:()=>({entries:entries.size,bytes:[...entries.values()].reduce((n,e)=>n+(e.size||0),0),pending:[...entries.values()].filter(e=>e.size===null).length})}
  }
  const mobile140=typeof window!=='undefined'&&(window.matchMedia('(pointer:coarse)').matches||Math.min(screen.width,screen.height)<700);
- const buffers=createBufferCache140(async kind=>{const r=await fetch('/assets/'+sources[kind]+'.vrm',typeof AbortSignal.timeout==='function'?{signal:AbortSignal.timeout(25000)}:{});if(!r.ok)throw Error('VRM HTTP '+r.status);return r.arrayBuffer()},(mobile140?24:80)*1024*1024,mobile140?3:6);
+ const buffers=createBufferCache140(async kind=>{
+  const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),25000),limit=40*1024*1024;
+  try{const r=await fetch('/assets/'+sources[kind]+'.vrm',{signal:controller.signal});if(!r.ok)throw Error('VRM HTTP '+r.status);
+   if(Number(r.headers.get('Content-Length'))>limit)throw Error('VRM size');
+   const data=await r.arrayBuffer();if(data.byteLength<20||data.byteLength>limit)throw Error('VRM size');
+   const view=new DataView(data);if(view.getUint32(0,true)!==0x46546c67||view.getUint32(4,true)!==2||view.getUint32(8,true)!==data.byteLength)throw Error('Invalid VRM GLB');return data;
+  }finally{clearTimeout(timer)}
+ },(mobile140?24:80)*1024*1024,mobile140?3:6);
  function modelBuffer(kind){return buffers.get(kind)}
 
  async function load(T,kind){try{return await loadBase(T,kind)}catch(e){if(kind==='female3'||kind==='female4'){console.warn('Optional avatar base fallback',kind,e);const a=await loadBase(T,kind==='female3'?'female2':'female');a.fallbackBase=kind;return a}throw e}}
@@ -56,9 +63,9 @@
   const loader=new GLTFLoader();loader.register(parser=>new VRMLoaderPlugin(parser));
   let gltf;
   gltf=await loader.parseAsync(await modelBuffer(kind),'/assets/');
-  const vrm=gltf.userData.vrm;if(!vrm?.humanoid)throw Error('Invalid VRM');
+  const vrm=gltf.userData.vrm;if(!vrm?.humanoid){if(gltf.scene)VRMUtils.deepDispose(gltf.scene);throw Error('Invalid VRM')}
   VRMUtils.rotateVRM0(vrm);VRMUtils.removeUnnecessaryVertices(vrm.scene);VRMUtils.removeUnnecessaryJoints(vrm.scene);
-  vrm.humanoid.update();vrm.scene.updateMatrixWorld(true);const box=new T.Box3().setFromObject(vrm.scene,true),size=box.getSize(new T.Vector3());if(!Number.isFinite(size.y)||size.y<.5||size.y>5)throw Error('Invalid avatar scale');
+  vrm.humanoid.update();vrm.scene.updateMatrixWorld(true);const box=new T.Box3().setFromObject(vrm.scene,true),size=box.getSize(new T.Vector3());if(!Number.isFinite(size.y)||size.y<.5||size.y>5){VRMUtils.deepDispose(vrm.scene);throw Error('Invalid avatar scale')}
   const root=new T.Group();root.add(vrm.scene);root.rotation.y=Math.PI;root.scale.setScalar(1.68/size.y);vrm.scene.position.y-=box.min.y;
   vrm.scene.traverse(o=>{if(o.isMesh){o.frustumCulled=false;o.castShadow=false;o.receiveShadow=false}});
   const armDown={};for(const side of ['left','right']){const lower=vrm.humanoid.getNormalizedBoneNode(side+'LowerArm');armDown[side]=lower&&Math.abs(lower.position.x)>.01?-Math.sign(lower.position.x):(side==='left'?1:-1)}
