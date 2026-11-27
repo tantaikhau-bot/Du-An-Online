@@ -104,7 +104,7 @@ def handle(h,c,u,d):
   gait=num('gait109',0,1,.65 if moving else 0) if moving else 0
   c.execute('INSERT OR REPLACE INTO avatar109 VALUES(?,?,?)',(uid,preset,gait))
   pet=pick('pet',('fox','rabbit','deer','cat','dragon'),'')
-  vehicle=pick('vehicle',('bike','motor','car'),'') if a==0 else ''
+  vehicle=pick('vehicle',('bike','motor','car','horse'),'') if a==0 else ''
   c.execute('INSERT OR REPLACE INTO vehicle88 VALUES(?,?)',(uid,vehicle))
   c.execute('INSERT OR REPLACE INTO pet70 VALUES(?,?)',(uid,pet))
   c.execute('INSERT OR REPLACE INTO presence VALUES(?,?,?,?,?)',(uid,x,y,a,now))
