@@ -1,5 +1,10 @@
 # WISH WORLD — Release history
 
+## V15.2 — Enchanted Companions (candidate)
+- Dedicated responsive companion collection with five concept-art portrait crops, elemental badges, selected detail, owned/active state, existing purchase/equip and care/preview actions; no change to prices or rewards. Portrait atlas is a compact 400x80 WebP embedded in CSS; detail is illustration, not a 3D preview.
+- Revised original procedural creature proportions, eyes, rabbit lop ears, cat plume, dragon neck/muzzle/wings, gold ornaments and forest garland to follow approved concepts. Kept prior particle and locomotion systems. No new externally rigged models or paid service.
+- Classic JavaScript syntax checked; actual browser layout, GPU appearance, animation and FPS remain unverified.
+
 ## V15.1 — Soundscape & Rein Control (candidate)
 - Contextual sample music: Sunset Walk (KiluaBoy), Iremos Forest Theme (beardalaxy), Whispers in the Fog (Ruhinre), Fairy Battles (MintoDog), waterflow (TyberiusGames), CC0 via OpenGameArt. SFXMint CC0 generated sample clips: grass/stone/wood footsteps, rain, birds, hoofbeats on grass/stone, sword clash, cat meow. Fixed allowlist, bounded server cache, lazy browser decoding and music/ambient crossfades; existing synth fallback retained.
 - Reach-limited arm IK with lowered/closer grip, bent elbows and animated rein lines from wrists toward estimated bit sockets. Exact model grip and cloth collision remain unverified.
