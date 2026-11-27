@@ -1,5 +1,10 @@
 # WISH WORLD — Release history
 
+## V14.5 — Wildlife & Mount IK (candidate)
+- Optional animated Western Horse by vinish.dev (CC BY 4.0); external GLB lazy loaded with procedural fallback. Rest saddle estimate follows spine; hips offset and raw-bone two-link leg targets outside mount width.
+- Refined five procedural companion palettes and adornments; dragon GLB material tint and roughness. Existing skinned animal geometry retained.
+- External model availability, actual saddle/stirrup alignment, cloth clipping and real-device visual/FPS QA remain unverified.
+
 ## V14.4 — Equestrian & HUD (candidate)
 - Rebuilt procedural horse with refined head, mane, articulated legs, saddle and stirrups; speed-smoothed gait and saddle-relative rider hip alignment; dedicated VRM horseback pose.
 - Compact two-column quick actions, improved hotbar and touch button contrast, visible mount/dismount and retained V14.3 audio recovery.
