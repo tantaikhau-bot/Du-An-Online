@@ -195,6 +195,13 @@
     overlay('leftUpperArm',-sign*(.45+.38*draw),.28*draw,left*.70,w);
     overlay('leftLowerArm',-sign*(.55+.35*draw),0,0,w);
     overlay('spine',sign*.05*draw,.22*draw,0,w);
+   }else if(combat.kind==='strike'&&combat.weapon==='great'){
+    const windup=Math.sin(Math.PI*Math.min(1,p/.38)),cut=Math.sin(Math.PI*Math.max(0,Math.min(1,(p-.30)/.62)));
+    overlay('rightUpperArm',-sign*(.72+.70*windup+.33*cut),-.28*windup,right*(.78-.25*cut),w);
+    overlay('rightLowerArm',-sign*(.48+.54*windup),0,0,w);
+    overlay('leftUpperArm',-sign*(.55+.38*windup),.18*cut,left*.73,w);
+    overlay('leftLowerArm',-sign*(.45+.37*windup),0,0,w);
+    overlay('spine',sign*(-.12*windup+.20*cut),.34*(windup-cut),0,w);
    }else if(combat.kind==='strike'&&combat.weapon==='staff'){
     overlay('rightUpperArm',-sign*(.45+.55*sweep),-.15,right*.70,w);
     overlay('rightLowerArm',-sign*(.40+.55*wind),0,0,w);
