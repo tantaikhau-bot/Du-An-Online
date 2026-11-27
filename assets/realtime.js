@@ -67,7 +67,36 @@
   if(![x,z,range,cap].every(finite)||range<=0||cap<=0)return [];
   return rows.map(r=>{const d=Math.hypot((r.x-490)/35-x,-(r.y-575)/14-z),kept=resident.has(r.id);return {r,d,score:d-(kept?2:0),kept}}).filter(v=>v.d<=range+(v.kept?3:0)).sort((a,b)=>a.score-b.score||a.r.id.localeCompare(b.r.id)).slice(0,Math.min(100,Math.floor(cap))).map(v=>v.r);
  }
- const api={addSnapshot,sample,serverSnapshot134,clockReading,clockSeconds,retryDelay,roster270,selectPeers270};
+ // V27.1: per-peer bounded adaptive interpolation, with explicit discontinuity handling.
+ function ingest271(state,history,r){
+  if(!r||![r.sample_ms,r.worldMs121,r.received121,r.x,r.y,r.heading,r.jump,r.gait109].every(finite))return false;
+  const prior=state.last,old=history.at(-1),x=(r.x-490)/35,z=-(r.y-575)/14;
+  if(finite(prior)&&r.sample_ms<=prior)return false;
+  const gap=finite(prior)?r.sample_ms-prior:0,discontinuity=!!old&&(gap>4000||Math.hypot(x-old.x,z-old.z)>12);
+  if(!serverSnapshot134(state,history,{sample_ms:r.sample_ms,x,z,heading:r.heading,jump:r.jump,moving:r.moving,gait:r.gait109},r.worldMs121,r.received121,r.rtt134))return false;
+  if(discontinuity||!finite(state.interval271)){state.interval271=750;state.jitter271=0}
+  if(gap>0&&!discontinuity){const interval=clamp(gap,100,2500),arrival=finite(state.arrival271)?r.received121-state.arrival271:interval;state.interval271+=(interval-state.interval271)*.25;state.jitter271+=(clamp(Math.abs(arrival-gap),0,800)-state.jitter271)*.2}
+  state.arrival271=r.received121;state.delay271=clamp(state.interval271*1.15+state.jitter271*.8,350,1700);
+  if(discontinuity)state.snap271=true;
+  return true;
+ }
+ function pose271(state,history,now){
+  if(!history.length||!finite(now))return null;
+  const delay=finite(state.delay271)?state.delay271:850,at=now-delay,first=history[0],last=history.at(-1);
+  let p=sample(history,now,delay);if(!p)return null;
+  let gait=first.gait||0;
+  if(at>=last.t)gait=last.gait||0;
+  else if(at>first.t)for(let i=1;i<history.length;i++){const b=history[i],a=history[i-1];if(at<=b.t){const k=clamp((at-a.t)/(b.t-a.t),0,1);gait=(a.gait||0)+((b.gait||0)-(a.gait||0))*k;break}}
+  const age=Math.max(0,now-last.t);
+  if(age>Math.max(2200,(state.interval271||750)*2.5)){p={...last,moving:false,jump:0};gait=0}
+  return {...p,gait:p.moving?clamp(gait,0,1):0,age,delay};
+ }
+ function correction271(distance,dt,hasSnapshot,force){
+  if(!finite(distance)||!finite(dt))return 0;
+  if(force||distance>12)return 1;
+  return 1-Math.exp(-clamp(dt,0,100)/(hasSnapshot?95:210));
+ }
+ const api={addSnapshot,sample,serverSnapshot134,clockReading,clockSeconds,retryDelay,roster270,selectPeers270,ingest271,pose271,correction271};
  if(typeof module!=='undefined')module.exports=api;else root.WWRealtime=api;
 })(typeof globalThis!=='undefined'?globalThis:this);
 /* Opt-in transport, same-origin socket with HTTP fallback. */
