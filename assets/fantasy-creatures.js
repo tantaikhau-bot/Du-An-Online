@@ -56,7 +56,7 @@
   // Continuous tapered torso profile; distinct chest, belly and rump.
   const bodyProfile={rabbit:[.65,.91,1,.94,.59],fox:[.62,1,.76,.95,.55],cat:[.56,.92,.73,.98,.52],deer:[.56,1,.72,.90,.48],dragon:[.68,.98,1,.87,.49]}[kind];
   const ys=[h*.92,h,h*.99,h*.98,h*.96],zs=[-len,-len*.63,0,len*.63,len];
-  tube(body,zs.map((z,i)=>[0,ys[i],z]),bodyProfile.map((v,i)=>[h*.39*v,w*v]),p.coat,type,24);
+  tube(body,zs.map((z,i)=>[0,ys[i],z]),bodyProfile.map((v,i)=>[w*v,h*.39*v]),p.coat,type,24);
   ell(body,0,h*.92,-len,w*.65,h*.23,len*.22,p.coat);
   ell(body,0,h*.96,len,w*.59,h*.25,len*.20,p.coat);
   if(kind==='rabbit'){ell(body,0,.24,.075,.22,.215,.255,p.coat);ell(body,0,.27,-.095,.18,.18,.174,p.coat);for(let sg of [-1,1])ell(body,sg*.145,.21,.17,.12,.145,.16,p.coat);ell(body,0,.23,-.161,.116,.127,.102,p.cream)}
