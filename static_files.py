@@ -2,9 +2,13 @@
 from pathlib import Path
 import shutil,urllib.request,hashlib,struct,threading,time,os,json,re,html
 from urllib.parse import urlsplit
-FILES={'jade-ice-dragon160.glb':'model/gltf-binary','jade-dragon156.js':'text/javascript; charset=utf-8','meshopt-decoder1531.js':'text/javascript; charset=utf-8','companion-portraits152.css':'text/css; charset=utf-8','dragon-pilot16.json':'application/json; charset=utf-8','daylight.js':'text/javascript; charset=utf-8','fantasy-creatures.js':'text/javascript; charset=utf-8','original-avatar.js':'text/javascript; charset=utf-8','character-identity.js':'text/javascript; charset=utf-8','Sendagaya_Shibu.vrm':'model/gltf-binary','Vivi.vrm':'model/gltf-binary','arm-motion.js':'text/javascript; charset=utf-8','foot-ik.js':'text/javascript; charset=utf-8','smooth-motion.js':'text/javascript; charset=utf-8','HairSample_Male.vrm':'model/gltf-binary','HairSample_Female.vrm':'model/gltf-binary','vrm-character.js':'text/javascript; charset=utf-8','three-vrm.module.js':'text/javascript; charset=utf-8','Sakurada_Fumiriya.vrm':'model/gltf-binary','Sendagaya_Shino.vrm':'model/gltf-binary','deer.glb':'model/gltf-binary','cat.glb':'model/gltf-binary','rabbit.glb':'model/gltf-binary','dragon.glb':'model/gltf-binary','anime-character.js':'text/javascript; charset=utf-8','game-policy.js':'text/javascript; charset=utf-8','realtime.js':'text/javascript; charset=utf-8','fox.glb':'model/gltf-binary','hero.glb':'model/gltf-binary','forrest_ground_01.jpg':'image/jpeg','medieval_blocks_05.jpg':'image/jpeg','medieval_wood.jpg':'image/jpeg','manifest.json':'application/json'}
+FILES={'spirit-cat161.glb':'model/gltf-binary','spirit-rabbit161.glb':'model/gltf-binary','spirit-fox161.glb':'model/gltf-binary','spirit-deer161.glb':'model/gltf-binary','jade-ice-dragon160.glb':'model/gltf-binary','jade-dragon156.js':'text/javascript; charset=utf-8','meshopt-decoder1531.js':'text/javascript; charset=utf-8','companion-portraits152.css':'text/css; charset=utf-8','dragon-pilot16.json':'application/json; charset=utf-8','daylight.js':'text/javascript; charset=utf-8','fantasy-creatures.js':'text/javascript; charset=utf-8','original-avatar.js':'text/javascript; charset=utf-8','character-identity.js':'text/javascript; charset=utf-8','Sendagaya_Shibu.vrm':'model/gltf-binary','Vivi.vrm':'model/gltf-binary','arm-motion.js':'text/javascript; charset=utf-8','foot-ik.js':'text/javascript; charset=utf-8','smooth-motion.js':'text/javascript; charset=utf-8','HairSample_Male.vrm':'model/gltf-binary','HairSample_Female.vrm':'model/gltf-binary','vrm-character.js':'text/javascript; charset=utf-8','three-vrm.module.js':'text/javascript; charset=utf-8','Sakurada_Fumiriya.vrm':'model/gltf-binary','Sendagaya_Shino.vrm':'model/gltf-binary','deer.glb':'model/gltf-binary','cat.glb':'model/gltf-binary','rabbit.glb':'model/gltf-binary','dragon.glb':'model/gltf-binary','anime-character.js':'text/javascript; charset=utf-8','game-policy.js':'text/javascript; charset=utf-8','realtime.js':'text/javascript; charset=utf-8','fox.glb':'model/gltf-binary','hero.glb':'model/gltf-binary','forrest_ground_01.jpg':'image/jpeg','medieval_blocks_05.jpg':'image/jpeg','medieval_wood.jpg':'image/jpeg','manifest.json':'application/json'}
 VRM='https://raw.githubusercontent.com/madjin/vrm-samples/master/vroid/beta/'
 UPSTREAM={
+ 'spirit-cat161.glb':('https://vinish-models.pages.dev/cats/british-shorthair.glb',None),
+ 'spirit-rabbit161.glb':('https://vinish-models.pages.dev/rabbits-mice-and-squirrels/wild-rabbit.glb',None),
+ 'spirit-fox161.glb':('https://vinish-models.pages.dev/wolves-and-foxes/red-fox.glb',None),
+ 'spirit-deer161.glb':('https://vinish-models.pages.dev/deer-elk-and-moose/red-deer-stag.glb',None),
  'jade-ice-dragon160.glb':('https://vinish-models.pages.dev/dragons/ice-dragon.glb',None),
  'cat.glb':('https://vinish-models.pages.dev/cats/british-shorthair.glb',None),
  'rabbit.glb':('https://vinish-models.pages.dev/rabbits-mice-and-squirrels/wild-rabbit.glb',None),
@@ -61,6 +65,41 @@ def validate_jade160(data):
  if any('uri' in a and not a['uri'].startswith('data:') for a in doc.get('buffers',[])+doc.get('images',[])):raise ValueError('external Jade dependency')
  if not doc.get('images') or not any('normalTexture' in m for m in doc.get('materials',[])):raise ValueError('Jade texture/normal missing')
  return doc
+SPIRIT161={
+ 'spirit-cat161.glb':('cat','british-shorthair.glb','https://vinish.dev/free-3d-models/cats'),
+ 'spirit-rabbit161.glb':('rabbit','wild-rabbit.glb','https://vinish.dev/free-3d-models/rabbits-mice-and-squirrels'),
+ 'spirit-fox161.glb':('fox','red-fox.glb','https://vinish.dev/free-3d-models/wolves-and-foxes'),
+ 'spirit-deer161.glb':('deer','red-deer-stag.glb','https://vinish.dev/free-3d-models/deer-elk-and-moose'),
+}
+def validate_spirit161(data,kind):
+ if len(data)<20 or len(data)>8*1024*1024 or data[:4]!=b'glTF':raise ValueError('invalid spirit GLB')
+ version,total,n,tag=struct.unpack_from('<IIII',data,4)
+ if version!=2 or total!=len(data) or tag!=0x4e4f534a or n>len(data)-20:raise ValueError('invalid spirit metadata')
+ doc=json.loads(data[20:20+n]);clips={a.get('name','').lower() for a in doc.get('animations',[])}
+ if not {'idle','walk','run'}<=clips:raise ValueError('missing locomotion clips')
+ if kind=='deer':
+  names={n.get('name','').lower() for n in doc.get('nodes',[])}
+  if not doc.get('skins') and not ({'head','leg_fl','leg_fr','leg_hl','leg_hr'}<=names):raise ValueError('missing deer joint rig')
+ elif not doc.get('skins'):raise ValueError('missing skin')
+ if any('uri' in a and not a['uri'].startswith('data:') for a in doc.get('buffers',[])+doc.get('images',[])):raise ValueError('external dependency')
+ return doc
+def read_spirit161(name,url):
+ kind,filename,page=SPIRIT161[name];candidates=[url,url.replace('vinish-models.pages.dev','models.vinish.dev')]
+ for u in candidates:
+  try:
+   with urllib.request.urlopen(urllib.request.Request(u,headers={'User-Agent':'WishWorld/16.1'}),timeout=12) as r:data=r.read(8*1024*1024+1)
+   validate_spirit161(data,kind);return data
+  except Exception as e:print('Spirit source unavailable: '+u+' '+str(e)[:100],flush=True)
+ # Recover exact linked model from the official catalog, if a path moved.
+ try:
+  with urllib.request.urlopen(urllib.request.Request(page,headers={'User-Agent':'Mozilla/5.0'}),timeout=8) as r:
+   markup=html.unescape(r.read(2500000).decode('utf-8','replace')).replace('\\/','/')
+  for u in dict.fromkeys(re.findall(r'https://[^"\s<>]+?\.glb',markup)):
+   if urlsplit(u).hostname not in ('vinish-models.pages.dev','models.vinish.dev') or not urlsplit(u).path.endswith('/'+filename) or u in candidates:continue
+   with urllib.request.urlopen(urllib.request.Request(u,headers={'User-Agent':'WishWorld/16.1'}),timeout=12) as r:data=r.read(8*1024*1024+1)
+   validate_spirit161(data,kind);return data
+ except Exception as e:print('Spirit catalog unavailable: '+str(e)[:100],flush=True)
+ raise ValueError('No verified model: '+name)
 def cached_asset(name):
  folder=Path(os.environ.get('WISH_ASSET_CACHE','/tmp/wish-assets-v107'));folder.mkdir(mode=0o700,parents=True,exist_ok=True)
  dest=folder/name
@@ -70,7 +109,8 @@ def cached_asset(name):
   temp=dest.with_suffix(dest.suffix+'.part')
   try:
    url,digest=UPSTREAM[name]
-   if name in PET118:data=read_pet118(name,url)
+   if name in SPIRIT161:data=read_spirit161(name,url)
+   elif name in PET118:data=read_pet118(name,url)
    else:
     with urllib.request.urlopen(urllib.request.Request(url,headers={'User-Agent':'WishWorld/10.5'}),timeout=15) as r:
      data=r.read((8 if name=='jade-ice-dragon160.glb' else 40)*1024*1024+1)

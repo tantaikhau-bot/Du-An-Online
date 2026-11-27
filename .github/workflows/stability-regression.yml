@@ -39,7 +39,8 @@ jobs:
       - run: node test_original_avatar.cjs
       - run: node test_fantasy_creatures.cjs
       - run: node test_jade_dragon156.cjs
-      - run: python -m unittest test_jade_glb160
+      - run: python -m unittest test_jade_glb160 test_spirit161
+      - run: python -c "from static_files import cached_asset,SPIRIT161; assert all(cached_asset(k) for k in SPIRIT161)"
       - run: python -c "from static_files import cached_asset; assert cached_asset('jade-ice-dragon160.glb')"
       - run: npx playwright install --with-deps chromium
       - run: python tools/fetch_vrm.py
