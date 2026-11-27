@@ -188,7 +188,27 @@
   const combat=j.combat291;
   if(combat&&!socialBlocked256){
    const p=Math.max(0,Math.min(1,combat.progress)),w=Math.min(1,p*10,(1-p)*7),sweep=Math.sin(Math.PI*Math.min(1,p/.82)),wind=Math.sin(Math.PI*Math.min(1,p/.34)),cast=combat.kind==='fire'||combat.kind==='ice'||combat.kind==='storm';
-   if(combat.kind==='ultimate'){
+   if(combat.kind==='strike'&&combat.weapon==='bow'){
+    const draw=Math.sin(Math.PI*Math.min(1,p/.72)),aim=Math.min(1,p*6);
+    overlay('rightUpperArm',-sign*(.62+.28*aim),-.18,right*.55,w);
+    overlay('rightLowerArm',-sign*(.38+.75*draw),0,-.22*draw,w);
+    overlay('leftUpperArm',-sign*(.45+.38*draw),.28*draw,left*.70,w);
+    overlay('leftLowerArm',-sign*(.55+.35*draw),0,0,w);
+    overlay('spine',sign*.05*draw,.22*draw,0,w);
+   }else if(combat.kind==='strike'&&combat.weapon==='staff'){
+    overlay('rightUpperArm',-sign*(.45+.55*sweep),-.15,right*.70,w);
+    overlay('rightLowerArm',-sign*(.40+.55*wind),0,0,w);
+    overlay('leftUpperArm',-sign*(.28+.42*sweep),0,left*.90,w);
+    overlay('leftLowerArm',-sign*.48,0,0,w);
+    overlay('spine',sign*.09*sweep,.10*sweep,0,w);
+   }else if(combat.kind==='strike'&&combat.weapon==='dual'){
+    const side=(combat.combo|0)%2?1:-1;
+    overlay('rightUpperArm',-sign*(.45+.65*sweep),side*.55*sweep,right*.74,w);
+    overlay('leftUpperArm',-sign*(.45+.65*wind),-side*.55*sweep,left*.74,w);
+    overlay('rightLowerArm',-sign*(.35+.48*wind),0,0,w);
+    overlay('leftLowerArm',-sign*(.35+.48*sweep),0,0,w);
+    overlay('spine',sign*.10*sweep,-side*.24*sweep,0,w);
+   }else if(combat.kind==='ultimate'){
     const rise=Math.sin(Math.PI*Math.min(1,p/.58)),release=Math.max(0,Math.sin(Math.PI*Math.max(0,(p-.48)/.52)));
     overlay('rightUpperArm',-sign*(.65+rise*.90+release*.48),-.30*release,right*(.65-.32*rise),w);
     overlay('rightLowerArm',-sign*(.45+rise*.55),0,0,w);
