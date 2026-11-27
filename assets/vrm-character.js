@@ -184,6 +184,22 @@
   overlay('rightUpperArm',-sign*.22,0,right*1.05,weights.hand);
   overlay('rightLowerArm',-sign*.35,0,0,weights.hand);
   overlay('head',-.04,0,.075,(weights.photo||0)+(weights.portrait||0));}
+  // V29.1: combat overlay on the actual skinned avatar, before humanoid/IK update.
+  const combat=j.combat291;
+  if(combat&&!socialBlocked256){
+   const p=Math.max(0,Math.min(1,combat.progress)),w=Math.min(1,p*10,(1-p)*7),sweep=Math.sin(Math.PI*Math.min(1,p/.82)),wind=Math.sin(Math.PI*Math.min(1,p/.34)),cast=combat.kind==='fire'||combat.kind==='storm';
+   if(cast){
+    overlay('rightUpperArm',-sign*(.85+sweep*.48),-right*.12,right*.72,w);overlay('rightLowerArm',-sign*(.45+wind*.65),0,0,w);
+    overlay('leftUpperArm',-sign*.72,0,left*.85,w);overlay('leftLowerArm',-sign*.55,0,0,w);
+    overlay('spine',sign*(-.08+sweep*.17),.16*sweep,0,w);
+   }else{
+    const swing=(p<.34?-p/.34:Math.min(1,(p-.34)/.27)*2-1)*(combat.combo%2?-1:1);
+    overlay('rightUpperArm',-sign*(.65+.55*sweep),swing*.75,right*(.92-.48*sweep),w);
+    overlay('rightLowerArm',-sign*(.42+.58*wind),0,0,w);
+    overlay('leftUpperArm',-sign*.30,0,left*1.04,w);overlay('leftLowerArm',-sign*.40,0,0,w);
+    overlay('spine',sign*.12*sweep,-swing*.30,.055*swing,w);overlay('chest',sign*.08*sweep,-swing*.25,0,w);
+   }
+  }
   const look=WWMotion.socialLook255(a.look255??={},mode==='ride'||WWMotion.phaseOf(j)?0:j.lookYaw,dt);
   if(!socialBlocked256&&Math.abs(look)>.001){const n=vrm.humanoid.getNormalizedBoneNode('neck'),hd=vrm.humanoid.getNormalizedBoneNode('head');if(n)n.rotation.y+=look*.35;if(hd)hd.rotation.y+=look*(n?.65:1)}
   a.secondary132??={};const secondary=WWMotion.secondary132(a.secondary132,dt,a.weight,a.motion.turn,j.wind);
