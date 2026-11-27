@@ -77,7 +77,7 @@
  }
  function routine263(id,h){
  const offsets={linh54:-.5,hai54:-1,moc54:0,sao54:.5};
- const hour=((Number.isFinite(h)?h:12)+(Object.hasOwn(offsets,id)?-offsets[id]:0)+24)%24;
+ const hour=wrap((Number.isFinite(h)?h:12)+(Object.hasOwn(offsets,id)?-offsets[id]:0));
  const work={linh54:'Chăm sóc vườn',hai54:'Đánh cá bên sông',moc54:'Chế tác đồ gỗ',sao54:'Nghiên cứu di tích'};
  if(hour<6||hour>=20)return {anchor:'night',activity:'rest',label:'Nghỉ ngơi tại nhà',speed:1.0};
  if(hour<8)return {anchor:'day',activity:'prepare',label:'Chuẩn bị công việc',speed:1.25};
