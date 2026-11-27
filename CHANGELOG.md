@@ -1,5 +1,10 @@
 # WISH WORLD — Release history
 
+## V15.1 — Soundscape & Rein Control (candidate)
+- Contextual sample music: Sunset Walk (KiluaBoy), Iremos Forest Theme (beardalaxy), Whispers in the Fog (Ruhinre), Fairy Battles (MintoDog), waterflow (TyberiusGames), CC0 via OpenGameArt. SFXMint CC0 generated sample clips: grass/stone/wood footsteps, rain, birds, hoofbeats on grass/stone, sword clash, cat meow. Fixed allowlist, bounded server cache, lazy browser decoding and music/ambient crossfades; existing synth fallback retained.
+- Reach-limited arm IK with lowered/closer grip, bent elbows and animated rein lines from wrists toward estimated bit sockets. Exact model grip and cloth collision remain unverified.
+- JavaScript syntax checked; upstream sample availability, actual playback, browser rendering and device performance remain unverified.
+
 ## V15.0 — Spirit Companions (candidate)
 - Continuous tapered torso profiles, species-specific fur ruffs, ear tufts, leaf antler accents, cheek fins and subtle jewel marks. Distinct secondary body motion for all five pets.
 - Local active companion elemental particles: moon diamonds, fire embers, star crosses, leaves and lightning. Summon, feed, pet and preview bursts; one point batch, max 32 desktop / 16 reduced tier, disabled on low FX. Visual effects only, no combat or economic changes.
