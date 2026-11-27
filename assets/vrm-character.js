@@ -190,7 +190,7 @@
   const names308=['hips','spine','chest','upperChest','neck','head','leftShoulder','rightShoulder','leftUpperArm','rightUpperArm','leftLowerArm','rightLowerArm','leftHand','rightHand','leftUpperLeg','rightUpperLeg','leftLowerLeg','rightLowerLeg','leftFoot','rightFoot'];
   const filter308=a.combatFilter308??={bones:names308.map(name=>{const node=vrm.humanoid.getNormalizedBoneNode(name);return {node,q:new a.T.Quaternion()}}),weight:0};
   const armed308=!!j.weapon307&&!socialBlocked256&&['idle','walk','run'].includes(mode);
-  if(armed308&&!combat){const bow=j.weapon307==='bow',dual=j.weapon307==='dual',hold=.30+.20*(1-Math.min(1,a.weight));overlay('rightLowerArm',-sign*.24,0,0,bow?0:hold);overlay('rightUpperArm',sign*.06,0,right*1.43,bow?0:hold);if(bow||dual){overlay('leftLowerArm',-sign*.28,0,0,hold);overlay('leftUpperArm',sign*.04,0,left*1.42,hold)}}
+  if(armed308&&!combat){const bow=j.weapon307==='bow',dual=j.weapon307==='dual',great=j.weapon307==='great',hold=.30+.20*(1-Math.min(1,a.weight));overlay('rightLowerArm',-sign*.24,0,0,bow?0:hold);overlay('rightUpperArm',sign*.06,0,right*1.43,bow?0:hold);if(bow||dual||great){overlay('leftLowerArm',-sign*(great?.48:.28),0,0,hold);overlay('leftUpperArm',sign*.04,0,left*1.42,hold)}}
   if(combat&&!socialBlocked256){
    const p=Math.max(0,Math.min(1,combat.progress)),smooth=u=>{u=Math.max(0,Math.min(1,u));return u*u*(3-2*u)},impact=Math.max(.18,Math.min(.82,combat.impact??.45)),w=smooth(p/.13)*smooth((1-p)/.24),sweep=p<impact?smooth((p-impact*.40)/(impact*.60)):1-smooth((p-impact)/(1-impact)),wind=Math.sin(Math.PI*Math.min(1,p/impact)),cast=combat.kind==='fire'||combat.kind==='ice'||combat.kind==='storm';
    if(combat.kind==='strike'&&combat.weapon==='bow'){
@@ -201,8 +201,8 @@
     overlay('leftLowerArm',-sign*(.55+.35*draw),0,0,w);
     overlay('spine',sign*.05*draw,.22*draw,0,w);
    }else if(combat.kind==='strike'&&combat.weapon==='great'){
-    const windup=p<impact?smooth(p/impact)*(1-smooth((p-impact*.75)/(impact*.25))):0,cut=p<impact?smooth((p-impact*.65)/(impact*.35)):1-smooth((p-impact)/(1-impact));
-    overlay('rightUpperArm',-sign*(.72+.70*windup+.33*cut),-.28*windup,right*(.78-.25*cut),w);
+    const form=(combat.combo|0)%5,windup=p<impact?smooth(p/impact)*(1-smooth((p-impact*.75)/(impact*.25))):0,cut=p<impact?smooth((p-impact*.65)/(impact*.35)):1-smooth((p-impact)/(1-impact));
+    overlay('rightUpperArm',-sign*(.72+.70*windup+.33*cut),(form===3?.35:-.28)*windup,right*(.78-(form===4?.38:.25)*cut),w);
     overlay('rightLowerArm',-sign*(.48+.54*windup),0,0,w);
     overlay('leftUpperArm',-sign*(.55+.38*windup),.18*cut,left*.73,w);
     overlay('leftLowerArm',-sign*(.45+.37*windup),0,0,w);
@@ -214,9 +214,9 @@
     overlay('leftLowerArm',-sign*.48,0,0,w);
     overlay('spine',sign*.09*sweep,.10*sweep,0,w);
    }else if(combat.kind==='strike'&&combat.weapon==='dual'){
-    const side=(combat.combo|0)%2?1:-1;
-    overlay('rightUpperArm',-sign*(.45+.65*sweep),side*.55*sweep,right*.74,w);
-    overlay('leftUpperArm',-sign*(.45+.65*wind),-side*.55*sweep,left*.74,w);
+    const form=(combat.combo|0)%5,side=form%2?1:-1;
+    overlay('rightUpperArm',-sign*(.45+(.45+form*.09)*sweep),side*(.42+form*.045)*sweep,right*(form===3?.92:.74),w);
+    overlay('leftUpperArm',-sign*(.45+(.70-form*.06)*wind),-side*.55*sweep,left*(form===2?.95:.74),w);
     overlay('rightLowerArm',-sign*(.35+.48*wind),0,0,w);
     overlay('leftLowerArm',-sign*(.35+.48*sweep),0,0,w);
     overlay('spine',sign*.10*sweep,-side*.24*sweep,0,w);
