@@ -2626,7 +2626,7 @@ let walkPhase62=0;const blend62=new WeakMap();
   const p=saveToWorld(player);if(Math.hypot(p.x-c.site.x,p.z-c.site.z)>10)return;
   let target=null,best=q.range;for(const m of c.mobs){if(m.hp<=0)continue;const dist=Math.hypot(m.x-p.x,m.z-p.z);if(dist<=best&&segment4(p,{x:m.x,z:m.z})){target=m;best=dist}}
   if(!target&&['fire','storm'].includes(kind)){c.note='Tiến gần mục tiêu để tung chiêu';return}
-  if(kind==='strike'){c.combo=now-c.lastCombo<1250?(c.combo+1)%3:0;c.lastCombo=now}else c.combo=0;
+  if(kind==='strike'){c.combo=c.lastCombo>0&&now-c.lastCombo<1250?(c.combo+1)%3:0;c.lastCombo=now}else c.combo=0;
   const yaw=target?Math.atan2(-(target.x-p.x),-(target.z-p.z)):heading;
   c.cd[kind]=now+q.cd;c.move={kind,start:now,end:now+q.duration,impact:now+q.hit,hit:false,combo:c.combo,yaw,target,origin:p,goal:target?{x:target.x,z:target.z}:{x:p.x-Math.sin(yaw)*2,z:p.z-Math.cos(yaw)*2}};c.note=q.name;
   if(kind==='dodge'){c.invuln=now+380;const dx=Math.sin(heading)*1.7,dz=Math.cos(heading)*1.7;const dest={x:p.x+dx,z:p.z+dz};if(segment4(p,dest)){stopMovement();setWalkTarget4(worldToSave(dest.x,dest.z))}}
