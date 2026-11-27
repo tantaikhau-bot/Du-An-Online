@@ -835,13 +835,13 @@ let walkPhase62=0;const blend62=new WeakMap();
  function premiumManifest16(){
   if(premium16.manifestTask)return premium16.manifestTask;
   premium16.manifestTask=fetch('/assets/companions16/manifest.json',{cache:'no-cache'}).then(r=>{if(!r.ok)throw Error('manifest '+r.status);return r.json()}).then(m=>{
-   if(m.schema!==1||m.approved!==true||!m.models||!['fox','cat','rabbit','dragon','deer'].every(k=>m.models[k]?.approved===true))return null;
-   for(const k of ['fox','cat','rabbit','dragon','deer']){const v=m.models[k];if(v.file!==k+'.glb'||!Number.isFinite(v.height)||v.height<.2||v.height>2||!['+Z','-Z'].includes(v.forward))return null}
+   if(m.schema!==1||m.approved!==true||!m.models||typeof m.models!=='object')return null;
+   const allowed=['fox','cat','rabbit','dragon','deer'],accepted={};for(const k of allowed){const v=m.models[k];if(v?.approved!==true)continue;if(v.file!==k+'.glb'||!Number.isFinite(v.height)||v.height<.2||v.height>2||!['+Z','-Z'].includes(v.forward)||!/^([a-f0-9]{64})$/i.test(v.sha256||''))continue;accepted[k]=v}if(!Object.keys(accepted).length)return null;m.models=accepted;
    premium16.manifest=m;return m
   }).catch(()=>null);return premium16.manifestTask
  }
  async function premiumAsset16(kind){
-  const m=await premiumManifest16();if(!m)return null;if(premium16.models.has(kind))return premium16.models.get(kind);
+  const m=await premiumManifest16();if(!m?.models?.[kind])return null;if(premium16.models.has(kind))return premium16.models.get(kind);
   if(Date.now()<(premium16.failed.get(kind)||0))return null;
   const task=(async()=>{const [{GLTFLoader},{clone}]=await Promise.all([import('three/addons/loaders/GLTFLoader.js'),import('three/addons/utils/SkeletonUtils.js')]);const gltf=await fetch46('/assets/companions16/'+m.models[kind].file+'?v='+encodeURIComponent(m.models[kind].sha256.slice(0,12)),new GLTFLoader());
    let skinned=false,textured=false;gltf.scene.traverse(o=>{if(o.isSkinnedMesh&&o.skeleton?.bones?.length>3)skinned=true;if(o.isMesh)for(const mat of [].concat(o.material||[]))if(mat?.map)textured=true});
@@ -859,7 +859,7 @@ let walkPhase62=0;const blend62=new WeakMap();
  }
  function premiumPose16(q,speed,dt){
   if(!q.fantasy116)return false;
-  if(!premium16.manifest){premiumManifest16();return false}
+  if(!premium16.manifest){premiumManifest16();return false}if(!premium16.manifest.models[q.kind])return false;
   const local=q===petModels42[q.kind],pos=q.root.getWorldPosition(new T.Vector3()),near=local||Math.hypot(pos.x-avatar.position.x,pos.z-avatar.position.z)<14;
   if(!near){if(q.premium16)q.premium16.wrapper.visible=false;return false}
   if(!q.premium16&&!q.loading16&&Date.now()>=(q.retry16||0)){q.loading16=true;premiumAsset16(q.kind).then(data=>{if(!data||!q.root.parent||q.removed122){q.retry16=Date.now()+60000;return}try{attachPremium16(q,data)}catch(e){q.retry16=Date.now()+60000;report59.premiumError16=String(e.message)}}).finally(()=>q.loading16=false)}
