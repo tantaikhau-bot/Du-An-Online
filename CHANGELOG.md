@@ -1,5 +1,11 @@
 # WISH WORLD — Release history
 
+## V15.3 — Dragon Pilot (preview)
+- Optional local Dragon Evolved GLB by Quaternius (CC0, source https://poly.pizza/m/LlwD0QNUPj; packaged from crisleyhguimaraes/space-ship). 7,134 triangles, 46 joints, two flying clips; recolored teal, purple and gold. Not a sculpt from the concept or a textured final V16 asset.
+- Enable through /play?dragonPreview=1, equip Dragon, or use its preview toggle in the collection. Other pets and save data unchanged. Existing model retained on failure.
+- Allowlisted the preview JSON and existing portrait CSS. Syntax and asset structure checked; browser rendering and FPS unverified.
+
+
 ## V15.2 — Enchanted Companions (candidate)
 - Dedicated responsive companion collection with five concept-art portrait crops, elemental badges, selected detail, owned/active state, existing purchase/equip and care/preview actions; no change to prices or rewards. Portrait atlas is a compact 400x80 WebP embedded in CSS; detail is illustration, not a 3D preview.
 - Revised original procedural creature proportions, eyes, rabbit lop ears, cat plume, dragon neck/muzzle/wings, gold ornaments and forest garland to follow approved concepts. Kept prior particle and locomotion systems. No new externally rigged models or paid service.
