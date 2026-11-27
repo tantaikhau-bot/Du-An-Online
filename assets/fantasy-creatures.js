@@ -1,4 +1,4 @@
-/* WISH WORLD V11.6 — Fantasy creature assets.
+/* WISH WORLD V15.0 — Fantasy creature assets.
  * Five independent authored shape recipes, reusable articulated mesh templates.
  * Original stylized geometry, no network model dependency. MIT-style project code.
  * Forward -Z, floor Y=0. Root is gameplay position, visual rig is separate. */
@@ -53,7 +53,12 @@
   const [h,w,len,hy,hz,hx,hh,hd]=dims,head=group(rig,'head',0,hy,hz),tail=group(rig,'tail',0,h,len*.83);
   const paws=[],knees=[],ears=[],eyes=[],wings=[],wingTips=[];
   // Each species has its own body proportions and silhouette.
-  ell(body,0,h,0,w,h*.40,len,p.coat);
+  // Continuous tapered torso profile; distinct chest, belly and rump.
+  const bodyProfile={rabbit:[.65,.91,1,.94,.59],fox:[.62,1,.76,.95,.55],cat:[.56,.92,.73,.98,.52],deer:[.56,1,.72,.90,.48],dragon:[.68,.98,1,.87,.49]}[kind];
+  const ys=[h*.92,h,h*.99,h*.98,h*.96],zs=[-len,-len*.63,0,len*.63,len];
+  tube(body,zs.map((z,i)=>[0,ys[i],z]),bodyProfile.map((v,i)=>[h*.39*v,w*v]),p.coat,type,24);
+  ell(body,0,h*.92,-len,w*.65,h*.23,len*.22,p.coat);
+  ell(body,0,h*.96,len,w*.59,h*.25,len*.20,p.coat);
   if(kind==='rabbit'){ell(body,0,.24,.075,.22,.215,.255,p.coat);ell(body,0,.27,-.095,.18,.18,.174,p.coat);for(let sg of [-1,1])ell(body,sg*.145,.21,.17,.12,.145,.16,p.coat);ell(body,0,.23,-.161,.116,.127,.102,p.cream)}
   if(kind==='fox'){ell(body,0,.44,-.19,.15,.18,.23,p.coat);ell(body,0,.44,.24,.145,.16,.17,p.coat);ell(body,0,.37,-.24,.117,.15,.15,p.cream);for(let sg of [-1,1])for(let j=0;j<4;j++)blade(body,[sg*.085,.47,-.25+j*.045],[sg*.16,.32,-.25+j*.06],.046,j%2?p.coat:p.cream)}
   if(kind==='cat'){ell(body,0,.38,-.14,.14,.15,.24,p.coat);ell(body,0,.36,.18,.145,.16,.21,p.coat);ell(body,0,.30,-.19,.100,.12,.105,p.cream);for(let sg of [-1,1])for(let i=0;i<4;i++)ell(body,sg*.148,.40,.12-i*.07,.014,.065,.025,p.shade,type,[.2,0,sg*.25],true)}
@@ -82,6 +87,14 @@
   }
   // Tapered clumps break the round silhouette of fur; grouped in existing geometry batches.
   if(kind==='fox'||kind==='rabbit'||kind==='cat'){for(let sg of [-1,1])for(let i=0;i<5;i++){const z=-len*.58+i*.055,y=h+.075-i*.014;blade(body,[sg*w*.68,y,z],[sg*w*.99,y-.055,z+.09],kind==='fox'?.038:.026,i%2?p.coat:p.shade)}}
+  // Distinct silhouette motifs: broad moon tufts, flame ruff, feline ear tufts, leaf antlers, dragon cheek fins.
+  for(const sg of [-1,1]){
+   if(kind==='rabbit'){for(let i=0;i<3;i++)blade(head,[sg*.13,-.03+i*.035,.03],[sg*(.23-i*.018),-.09+i*.04,.09],.033,p.cream)}
+   if(kind==='fox'){for(let i=0;i<5;i++)blade(body,[sg*.09,h+.10,-.26+i*.038],[sg*(.19+i*.007),h-.09,-.19+i*.05],.045,i<3?p.cream:p.coat)}
+   if(kind==='cat'){blade(head,[sg*.12,.12,.035],[sg*.17,.22,.06],.025,p.shade);for(let i=0;i<3;i++)blade(head,[sg*.115,-.06+i*.025,.035],[sg*.18,-.09+i*.022,.10],.025,p.coat)}
+   if(kind==='deer'){for(let i=0;i<3;i++){let y=.21+i*.045;blade(head,[sg*.10,y,.025],[sg*(.19+i*.021),y+.09,.07],.020,p.accent,'plain')}}
+   if(kind==='dragon'){for(let i=0;i<4;i++)blade(head,[sg*.135,.025+i*.032,.025],[sg*(.25-i*.012),.045+i*.038,.10],.04-i*.005,p.shade,'scale')}
+  }
   // Articulated fore and hind legs, not one rigid straight cylinder.
   for(let sg of [-1,1])for(let back of [-1,1]){
    const L=kind==='deer'?.70:kind==='rabbit'?.21:kind==='dragon'?.32:kind==='fox'?.36:.29;
@@ -108,6 +121,9 @@
   if(kind==='rabbit'){blade(adorn,[0,.06,-.09],[0,-.025,-.12],.025,0xb9a1df,'plain')}
   if(kind==='fox'){blade(head,[0,.11,-.12],[0,.047,-.16],.021,0xffe6b2,'plain')}
   if(kind==='deer'){for(let sg of [-1,1]){blade(adorn,[sg*.015,.03,-.09],[sg*.076,.085,-.10],.026,0x73ad81,'plain');ell(adorn,sg*.055,.065,-.112,.017,.014,.012,0xe7cb81,'plain',[],true)}}
+  // Small decorative gems, not whole-body emission.
+  const jewelColor={rabbit:0xd9c5ff,fox:0xffbb66,cat:0x9be5ff,deer:0xa6e2ac,dragon:0x74d9f2}[kind];
+  blade(head,[0,hh*.62,-hd*.82],[0,hh*.14,-hd*1.04],.025,jewelColor,'plain');
   for(let a of layers.values()){const g=new T.BufferGeometry();g.setAttribute('position',new T.Float32BufferAttribute(a.P,3));g.setAttribute('normal',new T.Float32BufferAttribute(a.N,3));g.setAttribute('color',new T.Float32BufferAttribute(a.C,3));g.setAttribute('uv',new T.Float32BufferAttribute(a.U,2));g.setIndex(a.I);g.computeBoundingSphere();const m=new T.Mesh(g,r.materials[a.material]);m.castShadow=false;m.receiveShadow=false;a.parent.add(m)}
   root.updateMatrixWorld(true);const bounds=new T.Box3().setFromObject(root,true);rig.position.y=-bounds.min.y;rig.userData.floor=rig.position.y;root.userData.kind=kind;root.visible=false;return root;
  }
@@ -129,9 +145,54 @@
   if(kind==='fox'){a.head.rotation.z+=.11*Math.sin(t*.6)*idle;a.tail.rotation.y+=.15*Math.sin(t*.9)}
   if(kind==='cat'){a.head.rotation.x+=lick*.36;a.head.rotation.z-=lick*.16;a.tail.rotation.y+=.24*Math.sin(t*1.5)*idle}
   if(kind==='deer'){a.head.rotation.x+=.15*Math.max(0,Math.sin(t*.36))*idle;a.ears[0].rotation.y=.16*Math.sin(t*1.8);a.ears[1].rotation.y=.14*Math.sin(t*1.8+1)}
-  if(kind==='dragon'){for(let i=0;i<a.wings.length;i++){let sg=i?1:-1;a.wings[i].rotation.z=sg*(.13*Math.sin(t*2.4)+w*.19*Math.sin(p)+joy*.55);a.wings[i].rotation.y=sg*(.11*idle+.12*Math.sin(t*1.8))}a.head.rotation.x+=.05*Math.sin(t*1.3)}
+  if(kind==='rabbit'){const spring=Math.sin(p);a.body.scale.y*=1+.095*spring*w;a.body.scale.z*=1-.055*spring*w}
+  if(kind==='fox'){a.body.rotation.y=.05*Math.sin(p)*w;a.tail.rotation.y+=.15*Math.sin(p-.8)*w}
+  if(kind==='cat'){a.body.rotation.z=.055*Math.sin(p)*w;a.head.rotation.y+=.08*Math.sin(t*1.45)*idle}
+  if(kind==='deer'){a.body.rotation.x=.035*Math.sin(p)*w}
+  if(kind==='dragon'){a.body.rotation.x=.045*Math.sin(p)*w;for(let i=0;i<a.wings.length;i++){let sg=i?1:-1;a.wings[i].rotation.z=sg*(.13*Math.sin(t*2.4)+w*.19*Math.sin(p)+joy*.55);a.wings[i].rotation.y=sg*(.11*idle+.12*Math.sin(t*1.8))}a.head.rotation.x+=.05*Math.sin(t*1.3)}
   // Body stays grounded at rest; bounded lift for hopping/reaction only.
   a.rig.position.y=(a.rig.userData.floor||0)+Math.max(0,lift)+joy*(kind==='rabbit'||kind==='dragon'?.07:.025);return 0;
+ }
+ // V15.0: one local companion, one GPU point batch, no dynamic lights.
+ const ELEMENTS150=Object.freeze({rabbit:{name:'Nguyệt quang',color:0xd6b5ff,shape:0},fox:{name:'Hỏa linh',color:0xffa34b,shape:1},cat:{name:'Tinh vân',color:0x8edaff,shape:2},deer:{name:'Mộc linh',color:0x9be28c,shape:3},dragon:{name:'Lôi ngọc',color:0x7be9ef,shape:4}});
+ function createVFX150(T,root,kind){
+  const cfg=ELEMENTS150[kind],capacity=32,g=new T.BufferGeometry(),p=new Float32Array(capacity*3),size=new Float32Array(capacity),alpha=new Float32Array(capacity);
+  for(const [k,v,n] of [['position',p,3],['aSize',size,1],['aAlpha',alpha,1]])g.setAttribute(k,new T.BufferAttribute(v,n).setUsage(T.DynamicDrawUsage));
+  g.setDrawRange(0,0);
+  const m=new T.ShaderMaterial({transparent:true,depthWrite:false,depthTest:true,blending:T.NormalBlending,uniforms:{uColor:{value:new T.Color(cfg.color)},uShape:{value:cfg.shape},uHeight:{value:720}},vertexShader:`
+   attribute float aSize;attribute float aAlpha;varying float vAlpha;
+   uniform float uHeight;
+   void main(){vec4 mv=modelViewMatrix*vec4(position,1.0);gl_Position=projectionMatrix*mv;gl_PointSize=clamp(aSize*uHeight/max(1.0,-mv.z),2.0,44.0);vAlpha=aAlpha;}
+  `,fragmentShader:`
+   uniform vec3 uColor;uniform float uShape;varying float vAlpha;
+   void main(){vec2 p=gl_PointCoord*2.0-1.0;float d=length(p),shape=0.0;
+    if(uShape<0.5){shape=1.0-smoothstep(.20,.85,abs(p.x)+abs(p.y));}
+    else if(uShape<1.5){shape=1.0-smoothstep(.16,.85,length(vec2(p.x*1.5,p.y+.23)));shape*=smoothstep(-1.,-.35,p.y);}
+    else if(uShape<2.5){shape=max((1.0-smoothstep(.055,.19,abs(p.x)))*(1.0-smoothstep(.1,.9,abs(p.y))),(1.0-smoothstep(.055,.19,abs(p.y)))*(1.0-smoothstep(.1,.9,abs(p.x))));}
+    else if(uShape<3.5){vec2 q=vec2((p.x+p.y)*.707,(p.y-p.x)*.707);shape=1.0-smoothstep(.32,.91,length(vec2(q.x*2.0,q.y))); }
+    else {float bolt=abs(p.x-.18*sin(p.y*7.));shape=(1.0-smoothstep(.08,.25,bolt))*(1.0-smoothstep(.4,.98,abs(p.y)));}
+    float glow=exp(-d*d*5.0)*.22;float a=(shape*.85+glow)*vAlpha;if(a<.02)discard;gl_FragColor=vec4(mix(uColor,vec3(1.),shape*.38),a);}
+  `});
+  const points=new T.Points(g,m);points.name='elemental-vfx150';points.frustumCulled=false;root.add(points);return {points,g,p,size,alpha,m,clock:0,burst:0,acc:0,kind,capacity}
+ }
+ function updateVFX150(T,a,dt,speed,tier,height,trigger=false){
+  if(!a?.root||!ELEMENTS150[a.kind])return 0;
+  if(tier>=2){if(a.vfx150){a.vfx150.points.visible=false;a.vfx150.burst=0}return 0}
+  const f=a.vfx150??=createVFX150(T,a.root,a.kind);f.points.visible=true;dt=clamp(dt/1000,0,.1);f.clock+=dt;f.acc+=dt;if(trigger)f.burst=1.35;f.burst=Math.max(0,f.burst-dt);
+  if(f.acc<1/30&&!trigger)return f.g.drawRange.count;f.acc=0;const burst=f.burst/1.35,n=Math.min(f.capacity,(tier===0?16:8)+(burst>0?(tier===0?16:8):0)),moving=clamp(speed/2),t=f.clock,kind=a.kind;
+  f.m.uniforms.uHeight.value=Math.max(240,Math.min(1440,height||720));
+  for(let i=0;i<n;i++){const isBurst=i>=(tier===0?16:8),seed=(i*.61803398875)%1,life=isBurst?1-burst:(t*(kind==='fox'?1.1:.55)+seed)%1,angle=i*2.399963+t*(kind==='cat'?1.4:.7),radius=isBurst?.18+life*.95:.24+seed*.23;
+   let x=Math.cos(angle)*radius,y=.10+life*.65,z=Math.sin(angle)*radius;
+   if(kind==='rabbit'){y=.2+life*.85;x*=.85;z+=moving*life*.22}
+   if(kind==='fox'){y=.10+life*.65;z=.25+life*(.45+moving*.5);x*=.62}
+   if(kind==='cat'){y=.23+.32*Math.sin(angle*.7)+life*.20;z+=moving*.16}
+   if(kind==='deer'){y=.32+life*.95;x*=1.05;z+=moving*.2}
+   if(kind==='dragon'){y=.40+life*.55;x*=1.5;z+=.15+moving*.28}
+   if(isBurst){x=Math.cos(angle)*radius;z=Math.sin(angle)*radius;y=.12+life*.85}
+   const fade=isBurst?Math.sin(Math.PI*life):Math.sin(Math.PI*life)*(.44+moving*.21);
+   f.p.set([x,y,z],i*3);f.size[i]=(kind==='deer'?.11:kind==='dragon'?.12:.085)*(1+.3*seed)*(isBurst?1.3:1);f.alpha[i]=fade;
+  }
+  f.g.setDrawRange(0,n);for(const k of ['position','aSize','aAlpha'])f.g.attributes[k].needsUpdate=true;return n
  }
  // V12.2: controller independent of geometry and rendering. Distances are world units.
  const followProfiles={rabbit:{walk:1.6,run:4.3,gap:1.05},fox:{walk:1.9,run:4.8,gap:1.25},cat:{walk:1.65,run:4.2,gap:1.05},deer:{walk:2.0,run:5.0,gap:1.5},dragon:{walk:1.8,run:4.6,gap:1.35}};
@@ -188,5 +249,5 @@
  function careTravel135(raw,kind,seconds,now=Date.now()){
   const v=careState135(raw,kind,now);v.energy=Math.max(35,v.energy-clamp(Number.isFinite(seconds)?seconds:0,0,60)*.09);return v;
  }
- const api={KINDS,create,bind,animate,react,followProfiles,follower,followTarget,safeSpawn,followStep,careState135,careAction135,careTravel135};if(typeof module!=='undefined')module.exports=api;else global.WWCreatures=api;
+ const api={KINDS,ELEMENTS150,updateVFX150,create,bind,animate,react,followProfiles,follower,followTarget,safeSpawn,followStep,careState135,careAction135,careTravel135};if(typeof module!=='undefined')module.exports=api;else global.WWCreatures=api;
 })(typeof globalThis!=='undefined'?globalThis:this);
