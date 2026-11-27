@@ -2,7 +2,7 @@ name: Combat regression
 on:
   push:
     branches: [main]
-    paths: ['dungeon.py', 'test_combat281.py', 'server.py', 'index.html', 'test_camera319.cjs', '.github/workflows/combat-regression.yml']
+    paths: ['dungeon.py', 'test_combat281.py', 'server.py', 'index.html', 'test_camera319.cjs', 'test_combat_motion320.cjs', 'assets/vrm-character.js', 'assets/foot-ik.js', '.github/workflows/combat-regression.yml']
   workflow_dispatch:
 permissions:
   contents: read
@@ -21,3 +21,4 @@ jobs:
         with:
           node-version: '22'
       - run: node test_camera319.cjs
+      - run: node test_combat_motion320.cjs

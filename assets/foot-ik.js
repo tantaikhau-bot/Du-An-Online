@@ -135,5 +135,6 @@
   }
   return {planted,maxError:Math.round(maxError*1000)/1000,maxCorrection,weight:w,mode:support.running?'running-vertical-support':stanceFeet?'bounded-sagittal-stance':'vertical-only',stanceFeet,stanceError};
  }
- const api={solve,apply,reset,support252,groundIdle,calibrateSoles,soleContacts,stance119};if(typeof module!=='undefined')module.exports=api;else root.WWFootIK=api;
+ function groundCombat320(T,a,ground,weight){a.idleAnchor1170=null;a.idleGroundWeight=0;const rows=soleContacts(T,a,ground);if(!rows.length)return null;const root=a.root,delta=clamp(Math.max(...rows.map(r=>r.error))+.001,-.24,.24)*clamp(weight*1.5,0,1);if(!Number.isFinite(delta))return null;if(root.parent){const p=root.getWorldPosition(new T.Vector3());p.y+=delta;root.position.copy(root.parent.worldToLocal(p));}else root.position.y+=delta;root.updateWorldMatrix(true,true);return {mode:'combat-support',offset:delta,planted:rows.filter(r=>Math.abs(delta-r.error)<.035).length,maxError:Math.max(...rows.map(r=>Math.abs(delta-r.error)))};}
+ const api={groundCombat320,solve,apply,reset,support252,groundIdle,calibrateSoles,soleContacts,stance119};if(typeof module!=='undefined')module.exports=api;else root.WWFootIK=api;
 })(typeof globalThis!=='undefined'?globalThis:this);
