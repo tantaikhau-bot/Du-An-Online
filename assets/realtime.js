@@ -119,7 +119,18 @@
   state.responses=(state.responses||0)+1;state.bytes=(state.bytes||0)+Math.max(0,finite(bytes)?bytes:0);
   return state;
  }
- const api={addSnapshot,sample,serverSnapshot134,clockReading,clockSeconds,retryDelay,roster270,selectPeers270,ingest271,pose271,correction271,motion272,cadence273,network273};
+ // V27.5: explicit interaction readiness, bounded physical reach, and invitation validation.
+ function pairReady275(mode,distance,vertical,localMoving,remoteMoving,localJump,remoteJump,vehicle){
+  const limits={hand:[.48,1.2],hug:[.48,1.05],duet:[.65,1.55],photo:[.55,2.8]},r=Object.hasOwn(limits,mode)?limits[mode]:null;
+  return !!r&&[distance,vertical,localJump,remoteJump].every(finite)&&distance>=r[0]&&distance<=r[1]&&Math.abs(vertical)<=.32&&!localMoving&&!remoteMoving&&localJump<=.05&&remoteJump<=.05&&!vehicle;
+ }
+ function invitations275(rows,roster,ignored,now){
+  if(!Array.isArray(rows)||!Array.isArray(roster))return [];
+  const peers=new Map(roster.map(p=>[p.id,p])),seen=new Set(),out=[];
+  for(const q of rows.slice(0,10)){if(!q||typeof q.id!=='string'||!['hand','hug','duet','photo'].includes(q.action)||!peers.get(q.id)?.friend||seen.has(q.id)||(ignored.get(q.id+':'+q.action)||0)>now)continue;seen.add(q.id);out.push({id:q.id,action:q.action,name:peers.get(q.id).name})}
+  return out;
+ }
+ const api={addSnapshot,sample,serverSnapshot134,clockReading,clockSeconds,retryDelay,roster270,selectPeers270,ingest271,pose271,correction271,motion272,cadence273,network273,pairReady275,invitations275};
  if(typeof module!=='undefined')module.exports=api;else root.WWRealtime=api;
 })(typeof globalThis!=='undefined'?globalThis:this);
 /* Opt-in transport, same-origin socket with HTTP fallback. */
