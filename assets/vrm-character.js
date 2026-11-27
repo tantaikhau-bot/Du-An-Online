@@ -96,7 +96,14 @@
   function overlay(name,x,y,z,w){if(!w)return;const b=vrm.humanoid.getNormalizedBoneNode(name);if(b){b.rotation.x+=(x-b.rotation.x)*w;b.rotation.y+=(y-b.rotation.y)*w;b.rotation.z+=(z-b.rotation.z)*w}}
   const sitting=(weights.sit||0)+(weights.ride||0),dancing=(weights.dance||0)+(weights.duet||0);
   if(sitting){for(const side of ['left','right']){overlay(side+'UpperLeg',-sign*1.1,0,0,sitting);overlay(side+'LowerLeg',sign*1.2,0,0,sitting);overlay(side+'UpperArm',-.35,0,(side==='left'?left:right)*1.25,sitting)}}
-  if(j.mountHorse&&mode==='ride'){const phase=Number(j.mountPhase)||0,gait=Math.max(0,Math.min(1,Number(j.mountGait)||0)),w=weights.ride||0;for(const side of ['left','right']){const lateral=side==='left'?1:-1,down=side==='left'?left:right;overlay(side+'UpperLeg',-sign*.66,0,lateral*.55,w);overlay(side+'LowerLeg',sign*.92,0,0,w);overlay(side+'UpperArm',-sign*(.48+Math.sin(phase)*.035*gait),0,down*1.35,w);overlay(side+'LowerArm',-sign*.72,0,0,w)}overlay('spine',sign*(.045+Math.sin(phase)*.045*gait),0,Math.sin(phase)*.025*gait,w);overlay('head',-sign*Math.sin(phase)*.025*gait,0,0,w)}
+  if(j.mountHorse&&mode==='ride'){
+   const phase=Number(j.mountPhase)||0,state=j.mountState||'ride_idle',blend=Math.max(0,Math.min(1,j.mountBlend??1)),gait=Math.max(0,Math.min(1,Number(j.mountGait)||0));
+   const poses={ride_idle:[.03,.02,.66,.86,.48,.72],ride_walk:[.05,.045,.69,.89,.50,.76],ride_trot:[.10,.095,.76,.96,.58,.79],ride_gallop:[.24,.13,.88,1.04,.72,.88],mount_start:[.20,.04,.75,.94,.58,.76],dismount:[.18,.04,.72,.91,.56,.74]};
+   const v=poses[state]||poses.ride_idle,bob=Math.sin(phase*2)*v[1]*gait,rock=Math.sin(phase)*v[1]*gait,w=1;
+   for(const side of ['left','right']){const lateral=side==='left'?1:-1,down=side==='left'?left:right;overlay(side+'UpperLeg',-sign*v[2]*blend,0,lateral*.65*blend,w);overlay(side+'LowerLeg',sign*v[3]*blend,0,0,w);overlay(side+'UpperArm',-sign*(v[4]+rock*.3)*blend,0,down*(1.35*blend),w);overlay(side+'LowerArm',-sign*v[5]*blend,0,0,w)}
+   overlay('spine',sign*(v[0]*blend+rock),0,bob*.35,w);overlay('chest',sign*rock*.45,0,-bob*.25,w);overlay('head',-sign*rock*.45,0,0,w);
+   if(state==='mount_start'||state==='dismount'){overlay('rightUpperLeg',-sign*(.5+Math.sin(Math.PI*blend)*.85),0,-Math.sin(Math.PI*blend)*.8,w);overlay('spine',sign*(.15+.28*Math.sin(Math.PI*blend)),0,.12*Math.sin(Math.PI*blend),w)}
+  }
   if(dancing){overlay('leftUpperArm',Math.sin(t*4)*.4,0,left*.85,dancing);overlay('rightUpperArm',-Math.sin(t*4)*.4,0,right*.85,dancing);overlay('spine',0,Math.sin(t*2)*.15,Math.sin(t*4)*.09,dancing)}
   overlay('rightUpperArm',-.25,0,-right*.25,weights.wave);overlay('rightLowerArm',-.8,0,Math.sin(t*5)*.35,weights.wave);
   overlay('spine',sign*.27,0,0,weights.bow);overlay('head',sign*.12,0,0,weights.bow);
