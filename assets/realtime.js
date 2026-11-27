@@ -106,7 +106,20 @@
   if(action!==state.action){state.action=action;state.actionTime=0}else state.actionTime+=seconds;
   return state;
  }
- const api={addSnapshot,sample,serverSnapshot134,clockReading,clockSeconds,retryDelay,roster270,selectPeers270,ingest271,pose271,correction271,motion272};
+ // V27.3: adaptive polling with bounded cadence and no extra requests.
+ function cadence273(active,near,urgent,rtt,random=.5){
+  const latency=clamp(finite(rtt)?rtt:0,0,4000),jitter=(clamp(finite(random)?random:.5,0,1)-.5)*100;
+  const base=urgent?650:active||near?750:2200;
+  const penalty=urgent?Math.min(350,latency*.2):active||near?Math.min(850,Math.max(0,latency-250)*.55):Math.min(400,latency*.2);
+  return Math.round(clamp(base+penalty+jitter,600,2600));
+ }
+ function network273(state,rtt,bytes){
+  const v=clamp(finite(rtt)?rtt:0,0,12000);
+  state.rtt=finite(state.rtt)?state.rtt*.8+v*.2:v;
+  state.responses=(state.responses||0)+1;state.bytes=(state.bytes||0)+Math.max(0,finite(bytes)?bytes:0);
+  return state;
+ }
+ const api={addSnapshot,sample,serverSnapshot134,clockReading,clockSeconds,retryDelay,roster270,selectPeers270,ingest271,pose271,correction271,motion272,cadence273,network273};
  if(typeof module!=='undefined')module.exports=api;else root.WWRealtime=api;
 })(typeof globalThis!=='undefined'?globalThis:this);
 /* Opt-in transport, same-origin socket with HTTP fallback. */
