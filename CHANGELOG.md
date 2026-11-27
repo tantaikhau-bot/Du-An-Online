@@ -1,5 +1,9 @@
 # WISH WORLD — Release history
 
+## V14.3 — Audio Recovery (candidate)
+- Expose sound toggle on main HUD and mobile settings; explicit user-gesture AudioContext resume, audible two-note speaker test and persistent opt-in.
+- Independent 250 ms audio scheduler, suspend when muted or hidden; resume on interaction after interruption. Increased music level. Real device listening QA remains open.
+
 ## V14.2 — Immersive Audio (candidate)
 - Opt-in procedural music, weather and river ambience, terrain-specific footsteps, companion feeding and dungeon action cues; independent persistent music, ambience and effects levels.
 - Limit transient voices to 6 on coarse-pointer devices and 12 otherwise; suspend audio when hidden or muted. No external audio downloads.
