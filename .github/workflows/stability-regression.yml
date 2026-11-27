@@ -40,6 +40,12 @@ jobs:
       - run: node test_fantasy_creatures.cjs
       - run: npx playwright install --with-deps chromium
       - run: python tools/fetch_vrm.py
+      - name: Test audio mixer in touch landscape
+        run: |
+          WISH_DB="$RUNNER_TEMP/audio-test.sqlite" PORT=9165 python server.py > "$RUNNER_TEMP/audio-server.log" 2>&1 &
+          trap 'kill $!' EXIT
+          curl --retry 15 --retry-connrefused --retry-delay 1 --fail http://localhost:9165/healthz
+          WISH_AUDIO_TEST_URL=http://localhost:9165/play node test_audio142.cjs
       - run: node test_anime_browser.cjs
       - uses: actions/upload-artifact@v4
         if: always()
