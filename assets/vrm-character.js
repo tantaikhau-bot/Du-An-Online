@@ -96,14 +96,33 @@
   function overlay(name,x,y,z,w){if(!w)return;const b=vrm.humanoid.getNormalizedBoneNode(name);if(b){b.rotation.x+=(x-b.rotation.x)*w;b.rotation.y+=(y-b.rotation.y)*w;b.rotation.z+=(z-b.rotation.z)*w}}
   const sitting=(weights.sit||0)+(weights.ride||0),dancing=(weights.dance||0)+(weights.duet||0);
   if(sitting){for(const side of ['left','right']){overlay(side+'UpperLeg',-sign*1.1,0,0,sitting);overlay(side+'LowerLeg',sign*1.2,0,0,sitting);overlay(side+'UpperArm',-.35,0,(side==='left'?left:right)*1.25,sitting)}}
+  // V14.9: independent pelvis, lumbar, chest and head response. Keep contact targets in the mount solver.
   if(j.mountHorse&&mode==='ride'){
    const phase=Number(j.mountPhase)||0,state=j.mountState||'ride_idle',blend=Math.max(0,Math.min(1,j.mountBlend??1)),gait=Math.max(0,Math.min(1,Number(j.mountGait)||0));
-   const poses={ride_idle:[.03,.02,.66,.86,.48,.72],ride_walk:[.05,.045,.69,.89,.50,.76],ride_trot:[.10,.095,.76,.96,.58,.79],ride_gallop:[.24,.13,.88,1.04,.72,.88],mount_start:[.20,.04,.75,.94,.58,.76],dismount:[.18,.04,.72,.91,.56,.74]};
-   const v=poses[state]||poses.ride_idle,bob=Math.sin(phase*2)*v[1]*gait,rock=Math.sin(phase)*v[1]*gait,w=1;
-   for(const side of ['left','right']){const lateral=side==='left'?1:-1,down=side==='left'?left:right;overlay(side+'UpperLeg',-sign*v[2]*blend,0,lateral*.65*blend,w);overlay(side+'LowerLeg',sign*v[3]*blend,0,0,w);overlay(side+'UpperArm',-sign*(v[4]+rock*.3)*blend,0,down*(1.35*blend),w);overlay(side+'LowerArm',-sign*v[5]*blend,0,0,w)}
-   overlay('spine',sign*(v[0]*blend+rock),0,bob*.35,w);overlay('chest',sign*rock*.45,0,-bob*.25,w);overlay('head',-sign*rock*.45,0,0,w);
-   if(state==='mount_start'||state==='dismount'){overlay('rightUpperLeg',-sign*(.5+Math.sin(Math.PI*blend)*.85),0,-Math.sin(Math.PI*blend)*.8,w);overlay('spine',sign*(.15+.28*Math.sin(Math.PI*blend)),0,.12*Math.sin(Math.PI*blend),w)}
-  }
+   // forward lean, pelvic pitch/roll, lumbar response, chest response, thigh/knee/elbow targets
+   const poses={ride_idle:[.025,.025,.012,.025,.015,.66,.86,.72],ride_walk:[.055,.11,.055,.085,.06,.69,.89,.76],ride_trot:[.12,.19,.075,.14,.10,.76,.96,.79],ride_gallop:[.29,.24,.095,.19,.13,.88,1.04,.88],mount_start:[.20,.04,.03,.06,.03,.75,.94,.76],dismount:[.18,.04,.03,.06,.03,.72,.91,.74]};
+   const target=poses[state]||poses.ride_idle,sm=a.mountMotion149??={pose:target.slice(),pitch:0,roll:0,breath:0};const alpha=1-Math.exp(-dt*7);
+   sm.pose=sm.pose.map((x,i)=>x+(target[i]-x)*alpha);const m=sm.pose;
+   const p=Math.sin(phase),p2=Math.sin(phase*2-.35),turn=Math.max(-1,Math.min(1,Number(j.turn)||0));
+   const pelvisPitch=p*m[1]*gait,pelvisRoll=Math.cos(phase)*m[2]*gait;
+   sm.pitch+=(pelvisPitch-sm.pitch)*(1-Math.exp(-dt*13));sm.roll+=(pelvisRoll-sm.roll)*(1-Math.exp(-dt*11));
+   const breath=Math.sin(t*2.1)*.016*(1-gait*.6),lumbar=-sm.pitch*.62+Math.sin(phase-.55)*m[3]*gait,chest=-lumbar*.45+Math.sin(phase*2-.8)*m[4]*gait*.45;
+   overlay('hips',sign*(sm.pitch-.025)*blend,Math.sin(phase)*.045*gait,sm.roll*blend,1);
+   overlay('spine',sign*(m[0]*blend+lumbar+breath),-turn*.055,-sm.roll*.7+turn*.06,1);
+   overlay('chest',sign*(chest+breath*.8),turn*.04,-sm.roll*.25,1);
+   overlay('upperChest',-sign*chest*.35,0,sm.roll*.12,1);
+   overlay('neck',-sign*(lumbar+chest)*.32,turn*.045,sm.roll*.1,1);
+   overlay('head',-sign*(lumbar+chest)*.42,turn*.08,sm.roll*.25,1);
+   for(const side of ['left','right']){const lateral=side==='left'?1:-1,down=side==='left'?left:right,shift=Math.sin(phase+lateral*.4)*gait;
+    overlay(side+'UpperLeg',-sign*(m[5]+.045*shift)*blend,0,lateral*.65*blend,1);
+    overlay(side+'LowerLeg',sign*(m[6]+.065*p2*gait)*blend,0,0,1);
+    overlay(side+'UpperArm',-sign*(.50+m[0]*.75+.065*shift)*blend,0,down*(1.30+.045*shift)*blend,1);
+    overlay(side+'LowerArm',-sign*(m[7]+.12*p2*gait+breath)*blend,0,0,1);
+    overlay(side+'Hand',sign*.045*shift,0,lateral*.035*shift,1);
+    overlay(side+'Foot',-sign*(.08+.065*p2*gait),0,0,1)
+   }
+   if(state==='mount_start'||state==='dismount'){overlay('rightUpperLeg',-sign*(.5+Math.sin(Math.PI*blend)*.85),0,-Math.sin(Math.PI*blend)*.8,1);overlay('spine',sign*(.15+.28*Math.sin(Math.PI*blend)),0,.12*Math.sin(Math.PI*blend),1)}
+  }else a.mountMotion149=null;
   if(dancing){overlay('leftUpperArm',Math.sin(t*4)*.4,0,left*.85,dancing);overlay('rightUpperArm',-Math.sin(t*4)*.4,0,right*.85,dancing);overlay('spine',0,Math.sin(t*2)*.15,Math.sin(t*4)*.09,dancing)}
   overlay('rightUpperArm',-.25,0,-right*.25,weights.wave);overlay('rightLowerArm',-.8,0,Math.sin(t*5)*.35,weights.wave);
   overlay('spine',sign*.27,0,0,weights.bow);overlay('head',sign*.12,0,0,weights.bow);
