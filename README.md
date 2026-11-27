@@ -62,3 +62,7 @@ Optional authored house and lantern clones are instantiated near the player with
 
 ### V24.3 World Preloading
 Terrain, forest and architecture use a common per-frame construction budget (one attempt on mobile or severe effect pressure, three on desktop), with rotating subsystem priority and urgent current-terrain priority. Speed-based bounded forward lookahead is used for all three. Shared source assets and procedural fallbacks are retained. This limits synchronous construction attempts, not all GPU work or background network downloads. Browser testing and FPS benchmarks are still required.
+
+
+### V24.4 Seamless World
+High-detail terrain border vertices follow the coarse edge interpolation, with a 2.2-unit smooth transition strip. Actor ground interpolation uses the same terrain vertex heights. Static scenery construction uses canonical detailed ground, while runtime grounding follows the visible LOD. Resident priority bias reduces model churn near streaming thresholds; hard caps and current tile priority remain. Numeric edge tests are not a real WebGL seam or FPS test.
