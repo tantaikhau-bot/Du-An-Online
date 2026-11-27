@@ -130,7 +130,18 @@
   for(const q of rows.slice(0,10)){if(!q||typeof q.id!=='string'||!['hand','hug','duet','photo'].includes(q.action)||!peers.get(q.id)?.friend||seen.has(q.id)||(ignored.get(q.id+':'+q.action)||0)>now)continue;seen.add(q.id);out.push({id:q.id,action:q.action,name:peers.get(q.id).name})}
   return out;
  }
- const api={addSnapshot,sample,serverSnapshot134,clockReading,clockSeconds,retryDelay,roster270,selectPeers270,ingest271,pose271,correction271,motion272,cadence273,network273,pairReady275,invitations275};
+ // V27.6: bounded recovery cache, never retain actionable remote state.
+ function recovery276(rows,lastGood,now,publicScene,sameAccount){
+  if(!publicScene||!sameAccount||!finite(lastGood)||lastGood<=0||!finite(now)||now<lastGood||now-lastGood>=8000||!Array.isArray(rows))return [];
+  return rows.map(r=>({...r,moving:false,gait109:0,jump:0,action:'idle',pair275:false,stale276:true}));
+ }
+ function accept276(ticket,current,uid,currentUid,visible,publicScene){
+  return ticket===current&&typeof uid==='string'&&uid===currentUid&&visible&&publicScene;
+ }
+ function retry276(failures,retryAfter,random=.5){
+  return Math.max(retryDelay(failures,random),clamp(finite(retryAfter)?retryAfter*1000:0,0,60000));
+ }
+ const api={addSnapshot,sample,serverSnapshot134,clockReading,clockSeconds,retryDelay,roster270,selectPeers270,ingest271,pose271,correction271,motion272,cadence273,network273,pairReady275,invitations275,recovery276,accept276,retry276};
  if(typeof module!=='undefined')module.exports=api;else root.WWRealtime=api;
 })(typeof globalThis!=='undefined'?globalThis:this);
 /* Opt-in transport, same-origin socket with HTTP fallback. */
