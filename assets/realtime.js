@@ -141,7 +141,21 @@
  function retry276(failures,retryAfter,random=.5){
   return Math.max(retryDelay(failures,random),clamp(finite(retryAfter)?retryAfter*1000:0,0,60000));
  }
- const api={addSnapshot,sample,serverSnapshot134,clockReading,clockSeconds,retryDelay,roster270,selectPeers270,ingest271,pose271,correction271,motion272,cadence273,network273,pairReady275,invitations275,recovery276,accept276,retry276};
+ // V27.7: bound freshness independently of request completion; keep permissions live.
+ function freshness277(lastGood,now,owner,uid,publicScene){
+  if(!publicScene||!uid||owner!==uid)return 'clear';
+  if(!finite(lastGood)||lastGood<=0||!finite(now)||now<lastGood||now-lastGood>=8000)return 'expired';
+  return 'fresh';
+ }
+ function pairFresh277(row,mode,now,lastGood){
+  return !!row&&!row.stale276&&row.friend===1&&row.pair275===true&&row.action===mode&&finite(now)&&finite(lastGood)&&lastGood>0&&now>=lastGood&&now-lastGood<4000;
+ }
+ function peerStats277(peers){
+  let count=0,vrm=0,fallback=0,visible=0,delay=0,stale=0;
+  for(const v of peers){count++;const a=!!v.avatar109?.root.visible,b=!!v.rig.visible,c=!!v.vehicle88?.visible;if(a)vrm++;if(b)fallback++;if(a||b||c)visible++;if(v.stale276)stale++;delay+=v.sample134?.delay271||850;}
+  return {count,vrm,fallback,visible,missing:count-visible,delayMs:count?Math.round(delay/count):0,stale};
+ }
+ const api={addSnapshot,sample,serverSnapshot134,clockReading,clockSeconds,retryDelay,roster270,selectPeers270,ingest271,pose271,correction271,motion272,cadence273,network273,pairReady275,invitations275,recovery276,accept276,retry276,freshness277,pairFresh277,peerStats277};
  if(typeof module!=='undefined')module.exports=api;else root.WWRealtime=api;
 })(typeof globalThis!=='undefined'?globalThis:this);
 /* Opt-in transport, same-origin socket with HTTP fallback. */
