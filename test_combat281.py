@@ -1,4 +1,4 @@
-"""V28.1 regression checks for the authoritative turn-based combat API."""
+"""V28.3 regression checks for the authoritative turn-based combat API."""
 import sqlite3
 import unittest
 from unittest.mock import patch
@@ -41,7 +41,7 @@ class Combat281Tests(unittest.TestCase):
         self.assertEqual(v['weapon'],'greatsword')
         self.assertEqual(v['combo'],0)
         self.assertEqual(v['stamina'],100)
-        self.assertEqual(v['combat_version'],'28.2')
+        self.assertEqual(v['combat_version'],'28.3')
         self.assertEqual(next(q for q in v['skills'] if q['id']=='strike')['damage'],23)
     @patch('dungeon.secrets.randbelow',return_value=99)
     def test_combo_and_guard_reset(self, _):
@@ -70,12 +70,12 @@ class Combat281Tests(unittest.TestCase):
     def test_magic_burn_and_cooldown(self):
         v=self.start()
         v=self.act(v,'fire')
-        self.assertEqual((v['enemy'],v['burn']),(36,1))
+        self.assertEqual((v['enemy'],v['burn']),(31,1))
         self.assertEqual(next(q for q in v['skills'] if q['id']=='fire')['cooldown'],2)
         code,_=self.call('act',{'rev':v['rev'],'skill':'fire'})
         self.assertEqual(code,409)
         v=self.act(v,'guard')
-        self.assertEqual((v['enemy'],v['burn']),(24,0))
+        self.assertEqual((v['enemy'],v['burn']),(19,0))
         self.assertEqual(next(q for q in v['skills'] if q['id']=='fire')['cooldown'],1)
         v=self.act(v,'dodge')
         self.assertEqual(next(q for q in v['skills'] if q['id']=='fire')['cooldown'],0)
@@ -98,6 +98,40 @@ class Combat281Tests(unittest.TestCase):
         self.assertEqual(code,200)
         self.assertEqual(v['burn'],0)
         self.assertTrue(all(q['cooldown']==0 for q in v['skills']))
+
+    def test_tactical_profiles(self):
+        for stage,mode in ((2,'dodge'),(3,'guard'),(4,'counter'),(5,'guard')):
+            v=dungeon.state(self.c,'other')
+            v.update(stage=stage,turn=1,enemy=dungeon.STAGES[stage-1][2])
+            self.assertEqual(dungeon.enemy_plan(v)[0],mode)
+            self.assertEqual(dungeon.view(v)['enemy_mode'],mode)
+        v.update(stage=2,turn=0,enemy=20)
+        self.assertEqual(dungeon.enemy_plan(v)[0],'rage')
+    def test_elemental_affinity(self):
+        v=dungeon.state(self.c,'other')
+        self.assertEqual(dungeon.adjusted_damage(v,'fire',20,'normal'),25)
+        self.assertEqual(dungeon.adjusted_damage(v,'shadow',20,'normal'),15)
+        self.assertEqual(dungeon.adjusted_damage(v,'strike',20,'guard'),12)
+        self.assertEqual(dungeon.adjusted_damage(v,'strike',20,'dodge'),10)
+    @patch('dungeon.secrets.randbelow',return_value=99)
+    def test_counter_resolution_matches_preview(self, _):
+        v=dungeon.state(self.c,'test')
+        v.update(stage=4,best=3,status='fight',turn=1,enemy=128)
+        dungeon.store(self.c,v)
+        self.c.commit()
+        preview=dungeon.view(v)
+        self.assertEqual(preview['enemy_mode'],'counter')
+        v=self.act(v,'strike')
+        self.assertEqual(v['hp'],100-preview['incoming_damage']-preview['enemy_counter_bonus'])
+    def test_guard_preview_matches_actual_damage(self):
+        v=dungeon.state(self.c,'test')
+        v.update(stage=3,best=2,status='fight',turn=1,enemy=106)
+        dungeon.store(self.c,v)
+        self.c.commit()
+        preview=dungeon.view(v)
+        with patch('dungeon.secrets.randbelow',return_value=99):
+            v=self.act(v,'strike')
+        self.assertEqual(v['enemy'],106-next(q for q in preview['skills'] if q['id']=='strike')['damage'])
 
 if __name__=='__main__':
     unittest.main()
