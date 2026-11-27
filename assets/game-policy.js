@@ -162,7 +162,7 @@ function mobileCap139(preset,pref){
 // V17.1: independent resolution and effects budgets; DPR expressed relative to CSS pixels.
 const MOBILE_CLARITY171=Object.freeze({
  battery:Object.freeze({floor:.85,base:1,max:1,budget:650000,scaleFloor:.85,aniso:4}),
- low:Object.freeze({floor:.90,base:1,max:1,budget:700000,scaleFloor:.90,aniso:4}),
+ low:Object.freeze({floor:1,base:1,max:1,budget:700000,scaleFloor:1,aniso:4}),
  balanced:Object.freeze({floor:1,base:1.2,max:1.35,budget:1100000,scaleFloor:.85,aniso:4}),
  high:Object.freeze({floor:1,base:1.35,max:1.5,budget:1400000,scaleFloor:.85,aniso:8}),
  sharp:Object.freeze({floor:1.15,base:1.5,max:1.65,budget:1800000,scaleFloor:.85,aniso:8})
@@ -177,9 +177,9 @@ function mobileStep139(v,fps,p95,cap,ceiling,tierFloor,scaleCeiling,manual=false
  const good=fps>=cap*.96&&p95<=1000/cap*1.16;
  let q={...v,slow:slow?(v.slow||0)+1:0,good:good?(v.good||0)+1:0,changed:false};
  if(severe||q.slow>=2){
-  if(q.tier<2){q.tier=2;if(!manual)q.quality=Math.max(0,q.quality-1)}
+  if(q.tier<2){q.tier++;if(severe&&!manual)q.quality=Math.max(0,q.quality-1)}
   else if(q.quality>0&&!manual)q.quality--;
-  else q.scale=Math.max((MOBILE_CLARITY171[preset]||MOBILE_CLARITY171.balanced).scaleFloor,q.scale*(severe?.90:.96));
+  else if(!manual)q.scale=Math.max((MOBILE_CLARITY171[preset]||MOBILE_CLARITY171.balanced).scaleFloor,q.scale*(severe?.90:.96));
   q.changed=q.tier!==v.tier||q.quality!==v.quality||Math.abs(q.scale-v.scale)>.001;q.slow=0;q.good=0;
  }else if(q.good>=12&&!manual){
   if(q.scale<scaleCeiling-.025)q.scale=Math.min(scaleCeiling,q.scale+.06);
