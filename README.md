@@ -46,3 +46,7 @@ Graphics-focused release; V5.7 social features remain intact. Six procedural mat
 
 ### V23.5 Engine Testing
 Run `node test_engine235.cjs` from the repository root for offline engine regression checks, and `python test_http_assets.py` for HTTP cache checks. Tests cover syntax, mobile quality policy, fixed-step simulation, avatar cache, nearby chat, decorative throttling, forest LOD and GLB header/size rejection. They do not measure GPU FPS or validate actual browser rendering. Render free storage remains ephemeral; do not use for production player data without durable storage.
+
+
+### V24.0 World Streaming (forest pilot)
+Shared GLB tree assets remain cached, while nearby forest instance batches are constructed incrementally (1 mobile / 2 desktop per tick), with directional prefetch and bounded resident cells. Distant instance buffers are disposed without disposing shared geometry/materials; original procedural trees remain as fallback. Buildings, collision and terrain still use the existing loading system. GPU/browser playtesting remains required.
