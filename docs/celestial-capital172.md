@@ -1,0 +1,3 @@
+# V17.2 Celestial Capital
+
+Replace six central village houses with ivory/gold fantasy civic buildings in their existing locations and collision footprints. Shared geometries and existing building batching. Upgrade central bridge material and rails, retain all 32 deck segments and walk height. Add gold/ivory plaza mosaic, ornamental fountain conditional on free space, and improve existing waterfall with a decorative structure. Keep mobile clarity policy and existing atlas, quests, pets, housing. No new lake, castle interior, or playable new realm in this patch. Models remain procedural, actual game visual quality and phone FPS need checking.
