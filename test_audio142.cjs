@@ -21,6 +21,8 @@ async function main() {
     await page.waitForFunction(() => WWAudio.stats().state === 'running');
     await panel.getByLabel('Chế độ nhẹ').check();
     await panel.getByLabel('Âm lượng tổng').fill('45');
+    await page.evaluate(()=>Promise.all([WWAudio.cue('land'),WWAudio.ui('heal')]));
+    await page.waitForFunction(()=>['movement','events'].every(k=>WWAudio.stats().loadedBanks.includes(k)));
     const counts = await page.evaluate(() => {
       for(let i=0;i<80;i++) WWAudio.cue('land');
       WWAudio.world(50000,-12,-4.2,0,[{id:'falls',x:-12,z:-4.2}],.4,{wind:1,rain:.5,snow:0,fog:.02},'',1,'grass');

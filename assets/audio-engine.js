@@ -22,6 +22,7 @@
   function refresh(){
     const b=document.getElementById('sound');
     if(b)b.textContent=running()?'♫ Tắt âm thanh':settings.enabled?'♫ Tiếp tục âm thanh':'♫ Bật âm thanh';
+    if(!settings.enabled&&voices.size)silence();
     if(ctx)for(const k in buses)buses[k].gain.setTargetAtTime(k==='master'&&!settings.enabled?0:settings[k],ctx.currentTime,.025);
   }
   function save(){try{localStorage.setItem('ww-audio142',JSON.stringify(settings))}catch{}refresh()}
@@ -38,7 +39,7 @@
     }catch{refresh()}
   }
   function toggle(){settings.enabled=!running()&&!(settings.enabled&&document.hidden);save();if(settings.enabled)wake();else ctx?.suspend().catch(()=>{})}
-  document.addEventListener('visibilitychange',()=>document.hidden?ctx?.suspend().catch(()=>{}):wake());
+  document.addEventListener('visibilitychange',()=>{if(document.hidden){silence();ctx?.suspend().catch(()=>{})}else wake()});
   document.addEventListener('pointerdown',()=>{if(settings.enabled&&!running())wake()},{passive:true});
   document.addEventListener('keydown',()=>{if(settings.enabled&&!running())wake()});
   const profiles={
@@ -75,9 +76,42 @@
     if(banks.size>=48)banks.delete(banks.keys().next().value);
     banks.set(id,buf);return buf;
   }
+  // Each file is a small same-origin collection of original one-shot samples.
+  const samples={"harp/330":{"group":"music","clips":[[0,1.6]]},"strings/220":{"group":"music","clips":[[1.7,2.2]]},"flute/440":{"group":"music","clips":[[4,1.6]]},"water":{"group":"nature","clips":[[0,1.65]]},"wind":{"group":"nature","clips":[[1.75,2.1]]},"rain":{"group":"nature","clips":[[3.95,1.8]]},"bird":{"group":"nature","clips":[[5.85,0.45]]},"cricket":{"group":"nature","clips":[[6.4,0.42]]},"thunder":{"group":"nature","clips":[[6.92,2.6]]},"grass":{"group":"movement","clips":[[0,0.16],[0.26,0.16],[0.52,0.16]]},"dirt":{"group":"movement","clips":[[0.78,0.12],[1,0.12],[1.22,0.12]]},"wood":{"group":"movement","clips":[[1.44,0.14],[1.68,0.14],[1.92,0.14]]},"stone":{"group":"movement","clips":[[2.16,0.09],[2.35,0.09],[2.54,0.09]]},"snow":{"group":"movement","clips":[[2.73,0.21],[3.04,0.21],[3.35,0.21]]},"sand":{"group":"movement","clips":[[3.66,0.18],[3.94,0.18],[4.22,0.18]]},"jump":{"group":"movement","clips":[[4.5,0.22],[4.82,0.22],[5.14,0.22]]},"land":{"group":"movement","clips":[[5.46,0.26],[5.82,0.26],[6.18,0.26]]},"cloth":{"group":"movement","clips":[[6.54,0.16],[6.8,0.16],[7.06,0.16]]},"emote":{"group":"movement","clips":[[7.32,0.24],[7.66,0.24],[8,0.24]]},"door":{"group":"movement","clips":[[8.34,0.32],[8.76,0.32],[9.18,0.32]]},"cat":{"group":"pets","clips":[[0,0.5],[0.6,0.5],[1.2,0.5]]},"rabbit":{"group":"pets","clips":[[1.8,0.18],[2.08,0.18],[2.36,0.18]]},"fox":{"group":"pets","clips":[[2.64,0.28],[3.02,0.28],[3.4,0.28]]},"deer":{"group":"pets","clips":[[3.78,0.55],[4.43,0.55],[5.08,0.55]]},"dragon":{"group":"pets","clips":[[5.73,0.85],[6.68,0.85],[7.63,0.85]]},"horse":{"group":"vehicles","clips":[[0,0.16]]},"bike":{"group":"vehicles","clips":[[0.26,0.29]]},"motor":{"group":"vehicles","clips":[[0.65,0.65]]},"car":{"group":"vehicles","clips":[[1.4,0.68]]},"brake":{"group":"vehicles","clips":[[2.18,0.21]]},"ignition":{"group":"vehicles","clips":[[2.49,0.48]]},"strike":{"group":"events","clips":[[0,0.28]]},"burst":{"group":"events","clips":[[0.38,0.64]]},"guard":{"group":"events","clips":[[1.12,0.32]]},"heal":{"group":"events","clips":[[1.54,0.62]]},"start":{"group":"events","clips":[[2.26,0.42]]},"lost":{"group":"events","clips":[[2.78,0.65]]},"retreat":{"group":"events","clips":[[3.53,0.38]]},"won":{"group":"events","clips":[[4.01,0.59]]},"hit":{"group":"events","clips":[[4.7,0.17]]},"warning":{"group":"events","clips":[[4.97,0.28]]},"click":{"group":"events","clips":[[5.35,0.06]]}};
+  const decoded=new Map(),pending=new Map(),failed=new Map();
+  let decodedBytes=0;
+  async function loadBank(group){
+    if(decoded.has(group))return decoded.get(group);
+    if(pending.has(group))return pending.get(group);
+    if(performance.now()<(failed.get(group)||0))return null;
+    const task=(async()=>{
+      try{
+        const response=await fetch('/assets/audio-'+group+'.mp3?v=1420');
+        if(!response.ok)throw Error('Audio resource '+response.status);
+        const raw=await response.arrayBuffer();
+        const result=await new Promise((resolve,reject)=>ctx.decodeAudioData(raw,resolve,reject));
+        const bytes=result.length*result.numberOfChannels*4;
+        while(decoded.size&&decodedBytes+bytes>12*1024*1024){
+          const oldest=decoded.keys().next().value,b=decoded.get(oldest);
+          decodedBytes-=b.length*b.numberOfChannels*4;decoded.delete(oldest);
+        }
+        decodedBytes+=bytes;decoded.set(group,result);return result;
+      }catch{failed.set(group,performance.now()+60000);return null}
+      finally{pending.delete(group)}
+    })();pending.set(group,task);return task;
+  }
+  let epoch=0;
+  function silence(){epoch++;for(const v of voices){v.src.stop();release(v)}}
   const priority={ambient:0,music:1,pet:2,vehicle:2,actor:3,ui:4,combat:5};
   function release(v){voices.delete(v);v.src.disconnect();v.g.disconnect();v.pan?.disconnect()}
-  function play(group,key,volume=1,speed=1,pan=0,depth=0){
+  async function play(group,key,volume=1,speed=1,pan=0,depth=0){
+    if(!running()||!settings[group]||!settings.master)return;
+    const [instrument,frequency]=key.split('/'),root={harp:330,strings:220,flute:440}[instrument];
+    const sample=samples[root?instrument+'/'+root:key];if(!sample)return;
+    const requested=performance.now(),startedEpoch=epoch,requestedRegion=region;
+    const loaded=decoded.get(sample.group)||await loadBank(sample.group);
+    if(epoch!==startedEpoch||performance.now()-requested>900||(group==='music'&&region!==requestedRegion))return;
+    const index=Math.floor(Math.random()*sample.clips.length),clip=sample.clips[index];
     if(!running()||!settings[group]||!settings.master)return;
     if(voices.size>=(settings.light?10:22)){
       const low=[...voices].sort((a,b)=>priority[a.group]-priority[b.group])[0];
@@ -85,13 +119,14 @@
       low.src.stop();release(low);
     }
     const src=ctx.createBufferSource(),g=ctx.createGain(),v={src,g,group};
-    src.buffer=buffer(key,key.includes('/')?0:Math.floor(Math.random()*3));
+    src.buffer=loaded||buffer(key,index);
+    if(loaded&&root)speed*=Number(frequency)/root;
     src.playbackRate.value=speed*(.986+Math.random()*.028);g.gain.value=volume;src.connect(g);
     if((pan||depth)&&settings.spatial&&!settings.light&&ctx.createPanner){
       v.pan=ctx.createPanner();v.pan.panningModel='HRTF';v.pan.rolloffFactor=0;
       v.pan.setPosition(pan,0,depth);g.connect(v.pan);v.pan.connect(buses[group]);
     }else if(pan&&settings.spatial&&ctx.createStereoPanner){v.pan=ctx.createStereoPanner();v.pan.pan.value=Math.max(-1,Math.min(1,pan));g.connect(v.pan);v.pan.connect(buses[group])}else g.connect(buses[group]);
-    voices.add(v);src.onended=()=>release(v);src.start();
+    voices.add(v);src.onended=()=>release(v);if(loaded)src.start(0,clip[0],clip[1]);else src.start();
   }
   let battle='',zone='login';
   function scene(name){
@@ -204,6 +239,6 @@
     }
     if(source){const dx=source.position.x-x,dz=source.position.z-z;
       play('ambient','water',.34*(1-best/12),1.22,(dx*Math.cos(yaw)+dz*Math.sin(yaw))/Math.max(1,best),(dz*Math.cos(yaw)-dx*Math.sin(yaw))/Math.max(1,best))}
-  },stats:()=>({state:ctx?.state||'inactive',voices:voices.size,buffers:banks.size,region}),peers,ui(key){play('ui',key,.27)},toggle,panel,cue,pet,world,scene,fight,leaveFight(){battle='';scene(zone)},room(){if(zone!=='housing')play('ambient','door',.24);scene('housing');surface='wood'},refresh};
+  },stats:()=>({state:ctx?.state||'inactive',voices:voices.size,buffers:banks.size+decoded.size,decodedBytes,loadedBanks:[...decoded.keys()],region}),peers,ui(key){play('ui',key,.27)},toggle,panel,cue,pet,world,scene,fight,leaveFight(){battle='';scene(zone)},room(){if(zone!=='housing')play('ambient','door',.24);scene('housing');surface='wood'},refresh};
   document.addEventListener('DOMContentLoaded',refresh);
 })();
