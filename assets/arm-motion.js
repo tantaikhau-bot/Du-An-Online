@@ -15,7 +15,14 @@
   const local=direction.clone().applyQuaternion(bone.parent.getWorldQuaternion(new T.Quaternion()).invert()).normalize();
   bone.quaternion.setFromUnitVectors(rest,local);bone.updateWorldMatrix(true,true);
  }
- function apply(a,v){
+ // V25.1: smooth scalar targets in body coordinates; turning the avatar does not drag its arms in world space.
+ function armResponse251(st,swing,flex,spread,dt,jump=0){
+  const k=1-Math.exp(-clamp(Number.isFinite(dt)?dt:0,0,.35)/(jump>.15?.045:.075));
+  const target={swing:clamp(swing,-.83,1.06),flex:clamp(flex,.08,1.35),spread:clamp(spread,.14,.64)};
+  for(const key of Object.keys(target))st[key]=Number.isFinite(st[key])?st[key]+(target[key]-st[key])*k:target[key];
+  return st;
+ }
+ function apply(a,v,dt=1/60){
   const T=a.T,hum=a.vrm.humanoid,get=n=>hum.getNormalizedBoneNode(n);
   const l=get('leftUpperArm'),r=get('rightUpperArm'),hips=get('hips');if(!l||!r||!hips)return;
   a.root.updateWorldMatrix(true,true);
@@ -28,7 +35,7 @@
   const jump=clamp(a.motion.jump||0,0,1),spread=Math.max(female?.25:.18,v.spread+.055)+run*.035;
   for(const [side,out,swing,flex] of [['left',left,v.armL,v.elbowL],['right',left.clone().negate(),v.armR,v.elbowR]]){
    const u=get(side+'UpperArm'),k=get(side+'LowerArm'),h=get(side+'Hand');if(!u||!k||!h)continue;
-   const d=directions(T,up,out,forward,-swing,flex,spread,jump);
+   a.armResponse251??={left:{},right:{}};const sm=armResponse251(a.armResponse251[side],-swing,flex,spread,dt,jump);const d=directions(T,up,out,forward,sm.swing,sm.flex,sm.spread,jump);
    aim(T,u,k,d.upper);aim(T,k,h,d.lower);
    h.quaternion.identity();h.updateWorldMatrix(true,true);
   }
@@ -43,5 +50,5 @@
    return {flex:B.clone().sub(A).angleTo(C.clone().sub(B)),elbowSide:B.clone().sub(mid).dot(out),wristSide:C.clone().sub(mid).dot(out),shoulderSide:A.clone().sub(mid).dot(out)};
   });
  }
- const api={directions,apply,measure};if(typeof module!=='undefined')module.exports=api;else root.WWArms=api;
+ const api={directions,apply,measure,armResponse251};if(typeof module!=='undefined')module.exports=api;else root.WWArms=api;
 })(typeof globalThis!=='undefined'?globalThis:this);

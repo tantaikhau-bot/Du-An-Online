@@ -74,3 +74,7 @@ Run `node test_world245.cjs` alongside `node test_engine235.cjs`. The world suit
 
 ### V25.0 Natural Motion
 Measured local speed gates locomotion phase and blends when available, reducing residual steps while blocked or stopped. Bounded braking and turning responses affect torso/head, idle posture retains subtle motion, and gait labels use hysteresis. Preview/peer animation without measured speed retains the previous gait input; horse mount IK and jump priority remain unchanged. Run `node test_motion250.cjs` for offline numerical regression checks across all 20 profiles. Real skeleton rendering, clothing intersections and mobile FPS still need playtesting.
+
+
+### V25.1 Hand Motion
+Body-local arm targets are eased before the directional arm solver. Each finger uses joint-specific closing/release response, and wrist follow-through is bounded. Riding keeps the existing rein IK; grip targets are refined but actual palm/rein contact and clothing clipping need real skeleton visual tests. Run `node test_hands251.cjs` for numerical regression checks.
