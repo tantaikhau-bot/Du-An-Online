@@ -54,3 +54,7 @@ Shared GLB tree assets remain cached, while nearby forest instance batches are c
 
 ### V24.1 Terrain Streaming
 All 64 low-resolution terrain tiles remain available as a visual fallback. Detailed tile geometry is generated near the player/camera incrementally, bounded by quality-dependent resident caps, and disposed outside the target set. Height interpolation follows the currently displayed LOD for actor grounding. Analytic collision, roads and bridge rules remain unchanged. Test browser seam transitions and mobile GPU performance before production.
+
+
+### V24.2 Architecture Streaming
+Optional authored house and lantern clones are instantiated near the player with directional prefetch, per-tick construction budgets and a bounded resident set. Original procedural structures remain as fallback and are restored when optional clones leave the resident set. Source asset geometry and materials remain shared; existing civic buildings, bridges, stage, collision and world coordinates are unchanged. Browser visual tests and GPU benchmarks remain required.
