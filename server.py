@@ -1,12 +1,42 @@
 import social, admin, economy, beta, friendship, festival, referral, royal, payment, save_guard, verified_rewards, runtime_guard, dungeon
 from static_files import serve_static
 from urllib.parse import urlsplit
+from urllib.request import urlopen, Request
+import struct
 import threading, ipaddress
 from contextlib import contextmanager
 import os, sqlite3, json, hashlib, secrets, hmac, time, re
 from http.server import ThreadingHTTPServer, BaseHTTPRequestHandler
 from pathlib import Path
 ROOT=Path(__file__).resolve().parent
+# Fixed, licensed upstream asset; never accept a caller-supplied URL.
+HORSE_URL148='https://vinish-models.pages.dev/horses/western-horse.glb'
+_horse_lock148=threading.Lock()
+_horse_data148=None
+_horse_retry148=0
+def horse_asset148():
+ global _horse_data148,_horse_retry148
+ if _horse_data148 is not None:return _horse_data148
+ if time.monotonic()<_horse_retry148 or not _horse_lock148.acquire(blocking=False):return None
+ try:
+  if _horse_data148 is not None:return _horse_data148
+  with urlopen(Request(HORSE_URL148,headers={'User-Agent':'WishWorld/14.8'}),timeout=12) as response:
+   data=response.read(9*1024*1024+1)
+  if len(data)<20 or len(data)>9*1024*1024:raise ValueError('invalid asset size')
+  magic,version,total,n,kind=struct.unpack_from('<4sIIII',data)
+  if magic!=b'glTF' or version!=2 or total!=len(data) or kind!=0x4e4f534a or n>len(data)-20:raise ValueError('invalid GLB')
+  meta=json.loads(data[20:20+n].decode('utf-8'))
+  clips={a.get('name','').lower() for a in meta.get('animations',[])}
+  if not {'idle','walk','trot','gallop'}<=clips:raise ValueError('missing animation')
+  if not meta.get('skins'):raise ValueError('missing skin')
+  _horse_data148=data
+  return data
+ except Exception as e:
+  print('horse asset unavailable:',type(e).__name__,str(e)[:140],flush=True)
+  _horse_retry148=time.monotonic()+30
+  return None
+ finally:_horse_lock148.release()
+
 DB=os.environ.get('WISH_DB',str(ROOT/'world.sqlite3'))
 @contextmanager
 def db():
@@ -79,6 +109,12 @@ class Handler(BaseHTTPRequestHandler):
   return self.reply(405,{'error':'Phương thức không được hỗ trợ'})
  def do_GET(self):
   page=urlsplit(self.path).path
+  if page=='/assets/western-horse-148.glb':
+   data=horse_asset148()
+   if data is None:return self.reply(503,{'error':'Horse asset unavailable; retry shortly'})
+   self.send_response(200);self.send_header('Content-Type','model/gltf-binary');self.send_header('Cache-Control','public, max-age=86400');self.send_header('Content-Length',str(len(data)));self.end_headers()
+   if self.command!='HEAD':self.wfile.write(data)
+   return
   if page.startswith('/assets/'):return serve_static(self,ROOT,page)
   if page in ('/favicon.ico','/favicon.svg'):
    b=b'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" rx="15" fill="#183c36"/><path d="M32 5 38 25 59 32 38 39 32 59 25 39 5 32 25 25Z" fill="#e5cc87"/></svg>'
@@ -86,7 +122,7 @@ class Handler(BaseHTTPRequestHandler):
    if self.command!='HEAD':self.wfile.write(b)
    return
   if page=='/api/version':
-   return self.reply(200,{'version':'14.5','build':'14.5-wildlife-mount-ik','name':'Wildlife & Mount IK','features':['optional-rigged-western-horse','mount-leg-ik','fantasy-companion-style','horse-saddle-anchor','horseback-vrm-pose','compact-hud','visible-audio-toggle','speaker-test','independent-audio-scheduler','procedural-audio-mixer','terrain-step-cues','weather-ambience','bounded-audio-voices','audio-mix-preferences','bounded-motion-substeps','time-consistent-jump','smoothed-mobile-camera-orbit','frame-time-physics-diagnostics','bounded-vrm-byte-cache','mobile-model-eviction','throttled-pose-diagnostics','asset-cache-telemetry','mobile-30fps-default','mobile-dynamic-render-budget','distance-bounded-vrm-actors','fast-degrade-slow-recover','server-resolved-solo-pve','five-dungeon-stages','telegraphed-boss-attacks','revision-protected-combat-progress','expanded-144x176-world','north-south-terrain-tiles','four-frontier-landmarks','expanded-presence-bounds','mutual-friend-adventure-consent','two-player-checkpoints','daily-coop-badge','pet-wellbeing-meters','pet-rest-and-care','corrected-pet-follow-direction','deduplicated-server-presence','stable-stale-peer-position','weekly-adventure-goals','two-session-browser-api-regression','weather-water-material','bounded-river-reeds','adaptive-mist-foam','visible-ground-contact-shadow','vrm-action-crossfade','blended-face-expressions','bounded-wearable-secondary-motion','expanded-vrm-emote-poses','lighting-style-presets','smoothed-camera-clearance','opt-in-movement-audio','immersive-discovery-actions','npc-loading-fallback','strict-json-input','account-write-quotas','cross-site-post-guard','runtime-admin-counters','secure-admin-cookie','sqlite-busy-retry-status','four-regional-landmark-candidates','local-region-atlas','hysteresis-cell-culling','account-daily-adventure-routes','ordered-presence-checkins','cosmetic-adventure-badges','pet-acceleration-controller','pet-obstacle-detours','pet-follow-wait-recall','pet-touch-reaction','server-world-clock','timestamped-presence-snapshots','bounded-peer-interpolation','jittered-network-retry','six-local-weather-profiles','continuous-weather-blending','wind-scaled-particles','continuous-city-lighting','quality-bounded-precipitation','bounded-independent-sagittal-stance','continuous-air-flex','five-performance-presets','device-quality-detection','heap-pressure-heuristic','cpu-frame-measurement','camera-vector-reuse','grass-distance-optimization','continuous-daylight','world-clock-hud','idle-support-anchor','velocity-shaped-jump-arms','cat-rabbit-skinned-meshes','cat-rabbit-distance-lod','pet-sniff-meow','peer-visible-fallback','peer-vrm-retry','rigged-animal-assets','recessed-animal-eyes','five-fantasy-creature-meshes','species-articulated-idle','creature-reactions','shared-creature-assets','bridge-lantern-clearance','balanced-avatar-scale','dual-sole-contact','mesh-sole-contact','visible-terrain-alignment','npc-ground-contact','grounded-idle','contact-shadow','soft-knee-stance','restored-vrm-roster','speed-synchronised-gait','relaxed-male-motion','turn-acceleration-lean','rabbit-sculpture','species-specific-motion','fur-vertex-detail','asymmetric-idle','weighted-landing','matte-animal-fur','optional-avatar-bases','bone-attached-accessories','continuous-gait','natural-body-counterrotation','directional-arm-flex','arm-clearance','twenty-motion-personalities','safe-sagittal-ik','motion-preview','pet-gait-hysteresis','foot-contact-ik','remote-vrm-presets','private-backup-download','enhanced-housing','blended-locomotion','four-phase-jump','npc-impostor-lod','pet-velocity-animation','corrected-humanoid-pose','twenty-avatar-presets','nearby-npc-vrm','smooth-animal-normals','ten-avatar-presets','shared-preview-world-model','same-origin-model-cache','automatic-fox-deer','vrm-skinned-avatar-beta','portrait-closeup','secondary-hair-motion','anime-toon-character','facial-expressions','jump-anticipation','head-and-icon','database-connection-cleanup','mobile-clarity-guard','verified-rewards','save-validation','local-asset-support','effects-first-adaptive-quality','river-static-instancing','lightweight-water','near-character-detail','performance-diagnostics','unified-inventory','shared-car','ceremony-rsvp','safe-sync','shared-world','version-check']})
+   return self.reply(200,{'version':'14.8','build':'14.8-mount-and-fantasy','name':'Mount & Fantasy','features':['same-origin-horse-asset','dedicated-mount-states','saddle-and-limb-targets','fantasy-silhouette-rework','optional-rigged-western-horse','mount-leg-ik','fantasy-companion-style','horse-saddle-anchor','horseback-vrm-pose','compact-hud','visible-audio-toggle','speaker-test','independent-audio-scheduler','procedural-audio-mixer','terrain-step-cues','weather-ambience','bounded-audio-voices','audio-mix-preferences','bounded-motion-substeps','time-consistent-jump','smoothed-mobile-camera-orbit','frame-time-physics-diagnostics','bounded-vrm-byte-cache','mobile-model-eviction','throttled-pose-diagnostics','asset-cache-telemetry','mobile-30fps-default','mobile-dynamic-render-budget','distance-bounded-vrm-actors','fast-degrade-slow-recover','server-resolved-solo-pve','five-dungeon-stages','telegraphed-boss-attacks','revision-protected-combat-progress','expanded-144x176-world','north-south-terrain-tiles','four-frontier-landmarks','expanded-presence-bounds','mutual-friend-adventure-consent','two-player-checkpoints','daily-coop-badge','pet-wellbeing-meters','pet-rest-and-care','corrected-pet-follow-direction','deduplicated-server-presence','stable-stale-peer-position','weekly-adventure-goals','two-session-browser-api-regression','weather-water-material','bounded-river-reeds','adaptive-mist-foam','visible-ground-contact-shadow','vrm-action-crossfade','blended-face-expressions','bounded-wearable-secondary-motion','expanded-vrm-emote-poses','lighting-style-presets','smoothed-camera-clearance','opt-in-movement-audio','immersive-discovery-actions','npc-loading-fallback','strict-json-input','account-write-quotas','cross-site-post-guard','runtime-admin-counters','secure-admin-cookie','sqlite-busy-retry-status','four-regional-landmark-candidates','local-region-atlas','hysteresis-cell-culling','account-daily-adventure-routes','ordered-presence-checkins','cosmetic-adventure-badges','pet-acceleration-controller','pet-obstacle-detours','pet-follow-wait-recall','pet-touch-reaction','server-world-clock','timestamped-presence-snapshots','bounded-peer-interpolation','jittered-network-retry','six-local-weather-profiles','continuous-weather-blending','wind-scaled-particles','continuous-city-lighting','quality-bounded-precipitation','bounded-independent-sagittal-stance','continuous-air-flex','five-performance-presets','device-quality-detection','heap-pressure-heuristic','cpu-frame-measurement','camera-vector-reuse','grass-distance-optimization','continuous-daylight','world-clock-hud','idle-support-anchor','velocity-shaped-jump-arms','cat-rabbit-skinned-meshes','cat-rabbit-distance-lod','pet-sniff-meow','peer-visible-fallback','peer-vrm-retry','rigged-animal-assets','recessed-animal-eyes','five-fantasy-creature-meshes','species-articulated-idle','creature-reactions','shared-creature-assets','bridge-lantern-clearance','balanced-avatar-scale','dual-sole-contact','mesh-sole-contact','visible-terrain-alignment','npc-ground-contact','grounded-idle','contact-shadow','soft-knee-stance','restored-vrm-roster','speed-synchronised-gait','relaxed-male-motion','turn-acceleration-lean','rabbit-sculpture','species-specific-motion','fur-vertex-detail','asymmetric-idle','weighted-landing','matte-animal-fur','optional-avatar-bases','bone-attached-accessories','continuous-gait','natural-body-counterrotation','directional-arm-flex','arm-clearance','twenty-motion-personalities','safe-sagittal-ik','motion-preview','pet-gait-hysteresis','foot-contact-ik','remote-vrm-presets','private-backup-download','enhanced-housing','blended-locomotion','four-phase-jump','npc-impostor-lod','pet-velocity-animation','corrected-humanoid-pose','twenty-avatar-presets','nearby-npc-vrm','smooth-animal-normals','ten-avatar-presets','shared-preview-world-model','same-origin-model-cache','automatic-fox-deer','vrm-skinned-avatar-beta','portrait-closeup','secondary-hair-motion','anime-toon-character','facial-expressions','jump-anticipation','head-and-icon','database-connection-cleanup','mobile-clarity-guard','verified-rewards','save-validation','local-asset-support','effects-first-adaptive-quality','river-static-instancing','lightweight-water','near-character-detail','performance-diagnostics','unified-inventory','shared-car','ceremony-rsvp','safe-sync','shared-world','version-check']})
   if page=='/healthz':
    try:
     with db() as c:c.execute('SELECT 1 FROM users LIMIT 1').fetchone()
