@@ -186,8 +186,13 @@
   overlay('head',-.04,0,.075,(weights.photo||0)+(weights.portrait||0));}
   // V29.1: combat overlay on the actual skinned avatar, before humanoid/IK update.
   const combat=j.combat291;
+  // V30.7: blend locomotion and combat through a persistent pose filter.
+  const names308=['hips','spine','chest','upperChest','neck','head','leftShoulder','rightShoulder','leftUpperArm','rightUpperArm','leftLowerArm','rightLowerArm','leftHand','rightHand','leftUpperLeg','rightUpperLeg','leftLowerLeg','rightLowerLeg','leftFoot','rightFoot'];
+  const filter308=a.combatFilter308??={bones:names308.map(name=>{const node=vrm.humanoid.getNormalizedBoneNode(name);return {node,q:new a.T.Quaternion()}}),weight:0};
+  const armed308=!!j.weapon307&&!socialBlocked256&&['idle','walk','run'].includes(mode);
+  if(armed308&&!combat){const bow=j.weapon307==='bow',dual=j.weapon307==='dual',hold=.30+.20*(1-Math.min(1,a.weight));overlay('rightLowerArm',-sign*.24,0,0,bow?0:hold);overlay('rightUpperArm',sign*.06,0,right*1.43,bow?0:hold);if(bow||dual){overlay('leftLowerArm',-sign*.28,0,0,hold);overlay('leftUpperArm',sign*.04,0,left*1.42,hold)}}
   if(combat&&!socialBlocked256){
-   const p=Math.max(0,Math.min(1,combat.progress)),w=Math.min(1,p*10,(1-p)*7),sweep=Math.sin(Math.PI*Math.min(1,p/.82)),wind=Math.sin(Math.PI*Math.min(1,p/.34)),cast=combat.kind==='fire'||combat.kind==='ice'||combat.kind==='storm';
+   const p=Math.max(0,Math.min(1,combat.progress)),smooth=u=>{u=Math.max(0,Math.min(1,u));return u*u*(3-2*u)},impact=Math.max(.18,Math.min(.82,combat.impact??.45)),w=smooth(p/.13)*smooth((1-p)/.24),sweep=p<impact?smooth((p-impact*.40)/(impact*.60)):1-smooth((p-impact)/(1-impact)),wind=Math.sin(Math.PI*Math.min(1,p/impact)),cast=combat.kind==='fire'||combat.kind==='ice'||combat.kind==='storm';
    if(combat.kind==='strike'&&combat.weapon==='bow'){
     const draw=Math.sin(Math.PI*Math.min(1,p/.72)),aim=Math.min(1,p*6);
     overlay('rightUpperArm',-sign*(.62+.28*aim),-.18,right*.55,w);
@@ -230,7 +235,7 @@
     overlay('spine',-sign*.24*sweep,0,0,w);overlay('rightUpperArm',sign*.30,0,right*1.15,w);overlay('leftUpperArm',-sign*.35,0,left*1.1,w);
    }else{
     const i=combat.kind==='spin'?4:Math.max(0,Math.min(4,combat.combo|0)),poses=[[.65,.55,.75,.92,.48,.42,.58,.30],[.72,.62,.82,.90,.43,.44,.62,.34],[.42,.84,.36,1.02,.38,.62,.43,.18],[.93,.38,.25,.80,.28,.50,.65,.24],[.90,.60,.95,.87,.50,.55,.72,.45]],v=poses[i];
-    const swing=(p<.34?-p/.34:Math.min(1,(p-.34)/.27)*2-1)*(i%2?-1:1);
+    const swing=(p<impact*.55?-smooth(p/(impact*.55)):2*smooth((p-impact*.55)/(impact*.45))-1)*(i%2?-1:1);
     overlay('rightUpperArm',-sign*(v[0]+v[1]*sweep),swing*v[2],right*(v[3]-v[4]*sweep),w);
     overlay('rightLowerArm',-sign*(v[5]+v[6]*wind),0,0,w);
     overlay('leftUpperArm',-sign*(i===4?.65:.30),0,left*(i===4?.78:1.04),w);overlay('leftLowerArm',-sign*.40,0,0,w);
@@ -252,12 +257,16 @@
    overlay('neck',-sign*.05*load,-twist*.25,0,w);overlay('upperChest',sign*.09*release,-twist*.5,0,w);
    const wrist=vrm.humanoid.getNormalizedBoneNode('rightHand');if(wrist){wrist.rotation.x+=w*(sword?-.20*load+.28*release:ult?-.18*load:.12*release);wrist.rotation.z+=w*(sword?dir*.21*release:0);}
   }
+  // Damp bone rotations on entry, release and recovery, rather than snapping to each procedural pose.
+  const engaged308=!!combat&&!socialBlocked256,blend308=1-Math.exp(-Math.min(dt,.08)/(engaged308?.055:.085));
+  if(engaged308||filter308.weight>.001){filter308.weight=engaged308?1:filter308.weight*(1-blend308);for(const item of filter308.bones){if(!item.node)continue;item.q.slerp(item.node.quaternion,blend308);item.node.quaternion.copy(item.q)}}else for(const item of filter308.bones)if(item.node)item.q.copy(item.node.quaternion);
+  if(socialBlocked256){filter308.weight=0;for(const item of filter308.bones)if(item.node)item.q.copy(item.node.quaternion)}
   const look=WWMotion.socialLook255(a.look255??={},mode==='ride'||WWMotion.phaseOf(j)?0:j.lookYaw,dt);
   if(!socialBlocked256&&Math.abs(look)>.001){const n=vrm.humanoid.getNormalizedBoneNode('neck'),hd=vrm.humanoid.getNormalizedBoneNode('head');if(n)n.rotation.y+=look*.35;if(hd)hd.rotation.y+=look*(n?.65:1)}
   a.secondary132??={};const secondary=WWMotion.secondary132(a.secondary132,dt,a.weight,a.motion.turn,j.wind);
   if(typeof WWIdentity!=='undefined')WWIdentity.animate(a,t,a.weight,secondary);
   const em=vrm.expressionManager,seed255=a.expressionSeed255??=Array.from(a.motionProfile||'m1').reduce((n,c)=>n+c.charCodeAt(0),0)%13,face=WWMotion.expression132(a.action132,mode,dt,t,seed255);
-  if(em){for(const k of ['happy','angry','surprised','blink','relaxed'])if(em.getExpression(k))em.setValue(k,face[k]||0)}
+  if(combat&&!socialBlocked256){face.angry=Math.max(face.angry||0,.32*Math.sin(Math.PI*Math.max(0,Math.min(1,combat.progress))));face.relaxed=(face.relaxed||0)*.4}if(em){for(const k of ['happy','angry','surprised','blink','relaxed'])if(em.getExpression(k))em.setValue(k,face[k]||0)}
   const fingers=animateFingers163(a,dt,mode,a.weight,a.motion.jump,t,j.mountHorse?Math.max(Math.abs(j.mountTurn||0),j.mountBrake||0):j.turn,mode==='ride'?null:j.weapon307);const airborne=!!(WWMotion.phaseOf(j)||a.motion.jump>.12),offGround=(j.height||0)>.006||(j.velocity||0)>.01;
   if(detail===0&&ground&&!(mode==='idle'&&gait<.15)){vrm.humanoid.update();a.footIK=WWFootIK.apply(a.T,a,ground,dt,gait,airborne,mode)}else{WWFootIK.reset(a);a.footIK=null}
   if(detail===0){for(let remain=dt;remain>0;){let d=Math.min(.033,remain);vrm.update(d);remain-=d}}else{vrm.humanoid.update();vrm.expressionManager?.update();}
