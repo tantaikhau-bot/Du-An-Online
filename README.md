@@ -106,3 +106,7 @@ Existing procedural crown animation uses a bounded nearest-first active set, sep
 
 ### V26.1 Dynamic Weather
 Rain and snow use wrapped world-coordinate particle positions, varying fall speeds and bounded wind response. Rain height follows the player's ground elevation; snow continues to sample terrain per flake. Mist uses drifting world-coordinate positions. Weather particle updates are capped at approximately 30 Hz mobile/60 Hz desktop, with immediate refresh on movement or quality change; existing shared weather schedule and transition blend remain intact. Run `node test_weather261.cjs`. Real GPU/visual tests, including weather clipping on slopes, remain required.
+
+
+### V26.2 Dynamic Sky
+Signed sun and moon paths move across the horizon with visibility fades; twilight follows celestial altitude. Cloud drift integrates weather wind continuously, and moon light is attenuated behind clouds. The existing shadow-light direction and water material are preserved for stability; no extra render passes are introduced. Run `node test_sky262.cjs` for numerical tests. Shader compilation and visual/device tests remain required.

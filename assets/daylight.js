@@ -17,6 +17,18 @@
  function mode(h){h=wrap(h);return h<5.5||h>=19.5?0:h>=16.5?2:1}
  function label(h){h=wrap(h);return h>=5&&h<7.5?'Bình minh':h>=7.5&&h<12?'Buổi sáng':h>=12&&h<16.5?'Buổi chiều':h>=16.5&&h<19.5?'Hoàng hôn':'Ban đêm'}
  function format(h){const m=Math.floor(wrap(h)*60);return String(Math.floor(m/60)).padStart(2,'0')+':'+String(m%60).padStart(2,'0')}
+ // V26.2: signed celestial paths, independent of the existing shadow-light rig.
+ function celestial262(h){
+  h=wrap(Number.isFinite(h)?h:12);const a=(h-6)*Math.PI/12,alt=Math.sin(a),x=-Math.cos(a)*.94,y=alt*.94,z=.342;
+  const norm=(x,y,z)=>{const n=Math.hypot(x,y,z);return [x/n,y/n,z/n]};
+  const smooth=v=>{v=clamp(v);return v*v*(3-2*v)};
+  const sun=norm(x,y,z),moon=norm(-x,-y,-z),sunVisible=smooth((sun[1]+.055)/.13),moonVisible=smooth((moon[1]+.035)/.16),twilight=1-smooth(Math.abs(alt)/.39);
+  return {sun,moon,sunVisible,moonVisible,twilight};
+ }
+ function cloudAdvance262(offset,dt,wind){
+  const seconds=Math.max(0,Math.min(.1,Number.isFinite(dt)?dt:0)),speed=Math.max(.35,Math.min(3,Number.isFinite(wind)?wind:1));
+  return (Number.isFinite(offset)?offset:0)+seconds*(.55+.45*speed);
+ }
  function sample(h){
   h=wrap(h);let i=keys.findIndex(k=>k[0]>h)-1;i=Math.max(0,i);const a=keys[i],b=keys[i+1],u=clamp((h-a[0])/(b[0]-a[0])),t=u*u*(3-2*u);
   const angle=(h-6)/24*Math.PI*2,alt=Math.sin(angle),dir=[-Math.cos(angle)*.86,Math.max(.10,Math.abs(alt)*.83),.48];
@@ -63,5 +75,5 @@
   }
   return result;
  }
- const api={duration,hour,mode,label,format,sample,approachHour,weatherProfiles,weatherAt,weatherState,blendWeather,weatherCount,waterLook133,sceneryBudget133,bankSites133};if(typeof module!=='undefined')module.exports=api;else root.WWDay=api;
+ const api={duration,hour,mode,label,format,sample,celestial262,cloudAdvance262,approachHour,weatherProfiles,weatherAt,weatherState,blendWeather,weatherCount,waterLook133,sceneryBudget133,bankSites133};if(typeof module!=='undefined')module.exports=api;else root.WWDay=api;
 })(typeof globalThis!=='undefined'?globalThis:this);
