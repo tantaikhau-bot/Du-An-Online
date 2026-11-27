@@ -101,5 +101,28 @@
  // V26.7: reset trail continuity when surface, mount or world context changes.
  function trailReset267(previous,surface,hoof,zone,distance){return !previous||!surface||previous.surface!==surface||previous.hoof!==hoof||previous.zone!==zone||!Number.isFinite(distance)||distance>2.8}
  function festivalKey267(hour,shared){return festival266(hour).id+':'+(shared?'shared':'local')}
- const api={duration,hour,mode,label,format,sample,routine263,festival266,trailReset267,festivalKey267,environment265,groundTrack265,bankRipple265,celestial262,cloudAdvance262,approachHour,weatherProfiles,weatherAt,weatherState,blendWeather,weatherCount,waterLook133,sceneryBudget133,bankSites133};if(typeof module!=='undefined')module.exports=api;else root.WWDay=api;
+ // V27.4: deterministic world schedule and travel sampling, independent of local frame history.
+ function world274(seconds){
+  const s=Math.max(0,Number.isFinite(seconds)?seconds:0),h=hour(s);
+  return {seconds:s,day:Math.floor((s+duration/3)/duration),hour:h,weather:weatherAt(s),festival:festival266(h).id};
+ }
+ function citizenPlan274(id,seconds,guest){
+  const h=hour(seconds),at=x=>guest&&festival266(x).gather?'festival':routine263(id,x).anchor;
+  const anchor=at(h),base=Math.floor(h*2)/2;
+  for(let i=0;i<48;i++){const edge=base-i*.5,previous=at(edge-.001);if(previous!==anchor)return {anchor,previous,elapsed:Math.max(0,(h-edge)*duration/24)}}
+  return {anchor,previous:anchor,elapsed:duration};
+ }
+ function travel274(points,elapsed,speed){
+  if(!Array.isArray(points)||!points.length)return null;
+  let remaining=Math.max(0,Number.isFinite(elapsed)?elapsed:0)*Math.max(0,Number.isFinite(speed)?speed:0);
+  for(let i=1;i<points.length;i++){const a=points[i-1],b=points[i],d=Math.hypot(b.x-a.x,b.z-a.z);if(d>.001&&remaining<d)return {x:a.x+(b.x-a.x)*remaining/d,z:a.z+(b.z-a.z)*remaining/d,heading:Math.atan2(a.x-b.x,a.z-b.z),moving:true};remaining-=d}
+  const p=points.at(-1),a=points.at(-2)||p;return {x:p.x,z:p.z,heading:Math.atan2(a.x-p.x,a.z-p.z),moving:false};
+ }
+ function wildlifeSlot274(id,seconds){
+  const n=Math.floor(Math.max(0,Number.isFinite(seconds)?seconds:0)/12),offset=Math.max(0,Number.isFinite(seconds)?seconds:0)-n*12;
+  let seed=2166136261;for(const ch of String(id)+':'+n){seed=Math.imul(seed^ch.charCodeAt(0),16777619)}seed=(seed>>>0)/4294967296;
+  const angle=seed*Math.PI*2,progress=offset<4?offset/4:offset<8?1:(12-offset)/4;
+  return {slot:n,seed,angle,progress,offset,start:n*12,heading:offset<8?Math.atan2(-Math.cos(angle),-Math.sin(angle)):Math.atan2(Math.cos(angle),Math.sin(angle))};
+ }
+ const api={duration,hour,mode,label,format,sample,routine263,festival266,trailReset267,festivalKey267,world274,citizenPlan274,travel274,wildlifeSlot274,environment265,groundTrack265,bankRipple265,celestial262,cloudAdvance262,approachHour,weatherProfiles,weatherAt,weatherState,blendWeather,weatherCount,waterLook133,sceneryBudget133,bankSites133};if(typeof module!=='undefined')module.exports=api;else root.WWDay=api;
 })(typeof globalThis!=='undefined'?globalThis:this);
