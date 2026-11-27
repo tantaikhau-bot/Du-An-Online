@@ -44,6 +44,7 @@ const fs=require('node:fs'),os=require('node:os'),path=require('node:path'),asse
   const desert=await page.evaluate(()=>({arrival:walkable4(DESERT179.arrivalX,DESERT179.arrivalZ),water:walkable4(DESERT179.oasisX,DESERT179.oasisZ),scene:window.wwGraphics59.desert179}));assert.ok(desert.arrival&&!desert.water&&desert.scene?.pyramid&&desert.scene?.oasis,JSON.stringify(desert));
   console.log('V17.9 desert arrival, oasis collision and scene initialization passed');
   const coast=await page.evaluate(()=>({arrival:walkable4(0,123),pier:segment4({x:0,z:111},{x:0,z:130}),water:walkable4(9,125),scene:window.wwGraphics59.sea180}));assert.ok(coast.arrival&&coast.pier&&!coast.water&&coast.scene?.boats===3,JSON.stringify(coast));
+  const heaven=await page.evaluate(()=>({arrival:walkable4(27,-126),height:walkHeight4(27,-126),gap:walkable4(27,-110),bridge:segment4({x:27,z:-126},{x:9,z:-119}),scene:window.wwGraphics59.heaven190}));assert.ok(heaven.arrival&&heaven.height===28&&!heaven.gap&&heaven.bridge&&heaven.scene?.islands===3,JSON.stringify(heaven));
   await page.waitForFunction(()=>window.wwGraphics59?.weather120?.auto===true,{},{timeout:30000});
   await page.evaluate(()=>{const b=document.getElementById('nWeather');b.click();b.click()});
   await page.waitForFunction(()=>window.wwGraphics59?.weather120?.index===1&&window.wwGraphics59.weather120.rain>.01,{},{timeout:30000});
