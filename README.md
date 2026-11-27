@@ -82,3 +82,7 @@ Body-local arm targets are eased before the directional arm solver. Each finger 
 
 ### V25.2 Locomotion
 Landing compression peaks earlier and recovers more gradually without changing jump physics. Running now uses a short, low-weight vertical support window without horizontal foot locking. Walking stance Jacobian probes update the humanoid pose after vertical correction. Run `node test_locomotion252.cjs` for numerical tests across 20 motion profiles. Ground contact, skin deformation and slopes still need browser visual testing.
+
+
+### V25.3 Horse Motion
+Normalize the four existing horse animation clip weights, smooth cadence and add dominant-gait hysteresis. Rider pose, reins and horse head use a common smoothed brake/turn response; residual brake fades at rest so idle motion can return. Existing clip phase alignment, mount IK and collision remain unchanged. Run `node test_horse253.cjs`; real horse skeletal clip transitions and hand contact still require browser playtesting.
