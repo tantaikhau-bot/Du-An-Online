@@ -1,4 +1,4 @@
-"""V28.3 regression checks for the authoritative turn-based combat API."""
+"""V28.4 regression checks for the authoritative turn-based combat API."""
 import sqlite3
 import unittest
 from unittest.mock import patch
@@ -41,7 +41,7 @@ class Combat281Tests(unittest.TestCase):
         self.assertEqual(v['weapon'],'greatsword')
         self.assertEqual(v['combo'],0)
         self.assertEqual(v['stamina'],100)
-        self.assertEqual(v['combat_version'],'28.3')
+        self.assertEqual(v['combat_version'],'28.4')
         self.assertEqual(next(q for q in v['skills'] if q['id']=='strike')['damage'],23)
     @patch('dungeon.secrets.randbelow',return_value=99)
     def test_combo_and_guard_reset(self, _):
@@ -132,6 +132,39 @@ class Combat281Tests(unittest.TestCase):
         with patch('dungeon.secrets.randbelow',return_value=99):
             v=self.act(v,'strike')
         self.assertEqual(v['enemy'],106-next(q for q in preview['skills'] if q['id']=='strike')['damage'])
+
+    def test_boss_thresholds(self):
+        for hp,phase in ((100,1),(71,1),(70,2),(41,2),(40,3),(16,3),(15,4)):
+            self.assertEqual(dungeon.boss_phase(hp,100),phase)
+        v=dungeon.state(self.c,'other')
+        v.update(stage=5,enemy=20,turn=1)
+        self.assertEqual(dungeon.enemy_plan(v)[0],'nova')
+        self.assertEqual(dungeon.view(v)['boss_phase'],4)
+
+    def world_call(self, uid, action, data, now):
+        try:
+            return dungeon.handle(Handler(action),self.c,{'id':uid},data,now)
+        finally:
+            if self.c.in_transaction:self.c.rollback()
+
+    def test_world_boss_shared_health_and_cooldown(self):
+        now=7201
+        code,v=self.world_call('a','world-status',{},now)
+        self.assertEqual(code,200)
+        self.assertTrue(v['active'])
+        event=v['event']
+        code,v=self.world_call('a','world-strike',{'event':event},now)
+        self.assertEqual((code,v['hp'],v['my_damage']),(200,11970,30))
+        code,_=self.world_call('a','world-strike',{'event':event},now+1)
+        self.assertEqual(code,429)
+        code,v=self.world_call('b','world-strike',{'event':event},now+1)
+        self.assertEqual((code,v['hp'],v['my_damage']),(200,11940,30))
+        code,v=self.world_call('a','world-strike',{'event':event},now+4)
+        self.assertEqual((code,v['hp'],v['my_damage']),(200,11910,60))
+        code,_=self.world_call('a','world-strike',{'event':event},9000)
+        self.assertEqual(code,409)
+        code,_=self.world_call('a','world-strike',{'event':event},14401)
+        self.assertEqual(code,409)
 
 if __name__=='__main__':
     unittest.main()
