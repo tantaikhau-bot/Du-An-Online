@@ -1492,7 +1492,7 @@ let walkPhase62=0;const blend62=new WeakMap();
    q.root.visible=d<range+(q.root.visible?2:0);
    if(!q.root.visible){q.speed264=0;q.next=0;continue}
    counts.visible++;
-   const fear=WWCreatures.wildlife264(q.kind,hour,weather,q.seed264,d,false,q.mode).mode==='flee';
+   const radius=q.kind==='rabbit'?3.2:q.kind==='deer'?3:2.2,fear=d<radius||(q.mode==='flee'&&d<radius+1.4);
    if(!blocked&&(t>=q.next||(fear&&q.mode!=='flee'))){
     q.seed264=(q.seed264+.61803398875)%1;
     const bank=wildWater264(q),r=WWCreatures.wildlife264(q.kind,hour,weather,q.seed264,d,!!bank,q.mode);
