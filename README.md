@@ -58,3 +58,7 @@ All 64 low-resolution terrain tiles remain available as a visual fallback. Detai
 
 ### V24.2 Architecture Streaming
 Optional authored house and lantern clones are instantiated near the player with directional prefetch, per-tick construction budgets and a bounded resident set. Original procedural structures remain as fallback and are restored when optional clones leave the resident set. Source asset geometry and materials remain shared; existing civic buildings, bridges, stage, collision and world coordinates are unchanged. Browser visual tests and GPU benchmarks remain required.
+
+
+### V24.3 World Preloading
+Terrain, forest and architecture use a common per-frame construction budget (one attempt on mobile or severe effect pressure, three on desktop), with rotating subsystem priority and urgent current-terrain priority. Speed-based bounded forward lookahead is used for all three. Shared source assets and procedural fallbacks are retained. This limits synchronous construction attempts, not all GPU work or background network downloads. Browser testing and FPS benchmarks are still required.
