@@ -1,5 +1,9 @@
 # WISH WORLD — Release history
 
+## V14.2 — Immersive Audio Experience (candidate)
+
+Original procedural score, environmental Foley, distance-based footsteps, pet care and confirmed dungeon cues. Persistent mixer, background suspension and bounded sample cache.
+
 ## V14.1 — Mobile Physics (candidate)
 - Bound simulation catch-up to 100 ms and collision-checked movement to at most four substeps of 25 ms, preventing unbounded work after stalls. Smooth character heading with time-based angle damping.
 - Integrate jump height analytically and consume preparation time separately; preserve existing jump speed and gravity, landing cue, and collision routine.
