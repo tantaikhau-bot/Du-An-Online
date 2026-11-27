@@ -2,6 +2,9 @@
 import time
 import secrets
 import json
+PARTY_ROLES={'damage':'Tấn công','tank':'Hộ vệ','support':'Hỗ trợ'}
+PARTY_TTL=1800
+PARTY_COOLDOWN=3
 MAGIC={
  'fire':('Hỏa cầu',18,22,2,'Thiêu đốt 2 lượt, mỗi lượt 6 ST'),
  'ice':('Băng trói',16,15,2,'Giảm 50% đòn phản công hiện tại'),
@@ -125,6 +128,87 @@ def init(c):
  if 'burn' not in columns:c.execute('ALTER TABLE ww_dungeon138 ADD COLUMN burn INTEGER NOT NULL DEFAULT 0')
  c.execute("CREATE TABLE IF NOT EXISTS ww_world_boss284(event INTEGER PRIMARY KEY,hp INTEGER NOT NULL,rev INTEGER NOT NULL DEFAULT 0)")
  c.execute("CREATE TABLE IF NOT EXISTS ww_world_boss_player284(event INTEGER NOT NULL,uid TEXT NOT NULL,damage INTEGER NOT NULL DEFAULT 0,last REAL NOT NULL DEFAULT 0,PRIMARY KEY(event,uid))")
+ init_party(c)
+
+def init_party(c):
+ c.execute("CREATE TABLE IF NOT EXISTS ww_party286(code TEXT PRIMARY KEY,leader TEXT NOT NULL,stage INTEGER NOT NULL,status TEXT NOT NULL DEFAULT 'lobby',hp INTEGER NOT NULL DEFAULT 0,max_hp INTEGER NOT NULL DEFAULT 0,enemy INTEGER NOT NULL DEFAULT 0,enemy_max INTEGER NOT NULL DEFAULT 0,rev INTEGER NOT NULL DEFAULT 0,updated REAL NOT NULL)")
+ c.execute("CREATE TABLE IF NOT EXISTS ww_party_member286(uid TEXT PRIMARY KEY,code TEXT NOT NULL,role TEXT NOT NULL,damage INTEGER NOT NULL DEFAULT 0,healing INTEGER NOT NULL DEFAULT 0,last REAL NOT NULL DEFAULT 0)")
+ c.execute("CREATE INDEX IF NOT EXISTS ww_party_member_code286 ON ww_party_member286(code)")
+ c.execute("CREATE TABLE IF NOT EXISTS ww_combat_badge286(uid TEXT NOT NULL,kind TEXT NOT NULL,level INTEGER NOT NULL,PRIMARY KEY(uid,kind,level))")
+ 
+def party_snapshot(c,uid,now):
+ p=c.execute('SELECT p.* FROM ww_party286 p JOIN ww_party_member286 m ON m.code=p.code WHERE m.uid=? AND p.updated>?',(uid,now-PARTY_TTL)).fetchone()
+ badges=[r[0] for r in c.execute("SELECT level FROM ww_combat_badge286 WHERE uid=? AND kind='party' ORDER BY level",(uid,))]
+ if not p:return {'party':None,'badges':badges}
+ members=[]
+ for m in c.execute('SELECT m.*,u.name FROM ww_party_member286 m LEFT JOIN users u ON u.id=m.uid WHERE m.code=? ORDER BY m.uid',(p['code'],)):
+  members.append({'name':m['name'] or 'Lữ khách','role':m['role'],'damage':m['damage'],'healing':m['healing'],'mine':m['uid']==uid,'leader':m['uid']==p['leader'],'cooldown':max(0,PARTY_COOLDOWN-(now-m['last'])) if m['uid']==uid else 0})
+ return {'party':{k:p[k] for k in ('code','stage','status','hp','max_hp','enemy','enemy_max','rev')}|{'leader':p['leader']==uid,'members':members,'enemy_name':STAGES[p['stage']-1][0]},'badges':badges}
+
+def party_handle(h,c,uid,d,now,action):
+ def err(code,msg):return h.reply(code,{'error':msg})
+ if not isinstance(d,dict):return err(400,'Yêu cầu không hợp lệ')
+ if action=='party-status':
+  if d:return err(400,'Không nhận tham số')
+  return h.reply(200,party_snapshot(c,uid,now))
+ fields={'party-create':{'stage','role'},'party-join':{'code','role'},'party-start':set(),'party-leave':set(),'party-act':{'skill','rev'}}
+ if action not in fields or set(d)!=fields[action]:return err(400,'Yêu cầu không hợp lệ')
+ c.execute('BEGIN IMMEDIATE')
+ c.execute('DELETE FROM ww_party_member286 WHERE code IN (SELECT code FROM ww_party286 WHERE updated<=?)',(now-PARTY_TTL,))
+ c.execute('DELETE FROM ww_party286 WHERE updated<=?',(now-PARTY_TTL,))
+ p=c.execute('SELECT p.* FROM ww_party286 p JOIN ww_party_member286 m ON m.code=p.code WHERE m.uid=?',(uid,)).fetchone()
+ if action in ('party-create','party-join'):
+  if p:return err(409,'Bạn đang ở trong tổ đội')
+  role=d['role']
+  if not isinstance(role,str) or role not in PARTY_ROLES:return err(400,'Vai trò không hợp lệ')
+  if action=='party-create':
+   stage=d['stage']
+   if type(stage) is not int or not 1<=stage<=min(len(STAGES),state(c,uid)['best']+1):return err(403,'Ải chưa mở khóa')
+   code=secrets.token_hex(6).upper()
+   c.execute('INSERT INTO ww_party286(code,leader,stage,updated) VALUES(?,?,?,?)',(code,uid,stage,now))
+  else:
+   code=d['code']
+   if not isinstance(code,str) or len(code)!=12:return err(400,'Mã tổ đội không hợp lệ')
+   code=code.upper()
+   target=c.execute('SELECT * FROM ww_party286 WHERE code=?',(code,)).fetchone()
+   if not target or target['status']!='lobby':return err(409,'Tổ đội không còn mở')
+   if target['stage']>state(c,uid)['best']+1:return err(403,'Bạn chưa mở khóa ải này')
+   if c.execute('SELECT COUNT(*) FROM ww_party_member286 WHERE code=?',(code,)).fetchone()[0]>=4:return err(409,'Tổ đội đã đủ 4 người')
+   c.execute('UPDATE ww_party286 SET updated=?,rev=rev+1 WHERE code=?',(now,code))
+  c.execute('INSERT INTO ww_party_member286(uid,code,role) VALUES(?,?,?)',(uid,code,role))
+ elif not p:return err(409,'Chưa có tổ đội')
+ else:
+  code=p['code']
+  if action=='party-leave':
+   c.execute('DELETE FROM ww_party_member286 WHERE uid=?',(uid,))
+   if p['leader']==uid or p['status']=='fight':
+    c.execute('DELETE FROM ww_party_member286 WHERE code=?',(code,))
+    c.execute('DELETE FROM ww_party286 WHERE code=?',(code,))
+   else:c.execute('UPDATE ww_party286 SET updated=?,rev=rev+1 WHERE code=?',(now,code))
+  elif action=='party-start':
+   if p['leader']!=uid or p['status']!='lobby':return err(403,'Chỉ trưởng nhóm được bắt đầu')
+   count=c.execute('SELECT COUNT(*) FROM ww_party_member286 WHERE code=?',(code,)).fetchone()[0]
+   if count<2:return err(409,'Cần ít nhất 2 người')
+   hp=player_caps(p['stage'])[0]*count;enemy=STAGES[p['stage']-1][2]*count
+   c.execute("UPDATE ww_party286 SET status='fight',hp=?,max_hp=?,enemy=?,enemy_max=?,updated=?,rev=rev+1 WHERE code=?",(hp,hp,enemy,enemy,now,code))
+  elif action=='party-act':
+   if p['status']!='fight':return err(409,'Không có trận đang diễn ra')
+   if type(d['rev']) is not int or d['rev']!=p['rev']:return err(409,'Trạng thái đã đổi, hãy làm mới')
+   m=c.execute('SELECT * FROM ww_party_member286 WHERE uid=?',(uid,)).fetchone()
+   if now-m['last']<PARTY_COOLDOWN:return err(429,'Kỹ năng đang hồi chiêu')
+   skill=d['skill'];role=m['role']
+   if not isinstance(skill,str) or skill not in ('strike','guard','heal') or (skill=='guard' and role!='tank') or (skill=='heal' and role!='support'):return err(400,'Kỹ năng không phù hợp vai trò')
+   damage=min(p['enemy'],(24 if role=='damage' else 16)*power_percent(p['stage'])//100) if skill=='strike' else 0
+   heal=min(p['max_hp']-p['hp'],28*power_percent(p['stage'])//100) if skill=='heal' else 0
+   incoming=mitigate(STAGES[p['stage']-1][3]);incoming=max(1,incoming//4) if skill=='guard' else incoming
+   enemy=p['enemy']-damage;hp=max(0,p['hp']+heal-(incoming if enemy else 0))
+   status='won' if not enemy else 'lost' if not hp else 'fight'
+   c.execute('UPDATE ww_party_member286 SET damage=damage+?,healing=healing+?,last=? WHERE uid=?',(damage,heal,now,uid))
+   c.execute('UPDATE ww_party286 SET hp=?,enemy=?,status=?,updated=?,rev=rev+1 WHERE code=?',(hp,enemy,status,now,code))
+   if status=='won':
+    c.execute("INSERT OR IGNORE INTO ww_combat_badge286(uid,kind,level) SELECT uid,'party',? FROM ww_party_member286 WHERE code=? AND (damage>0 OR healing>0 OR last>0)",(p['stage'],code))
+ c.commit()
+ return h.reply(200,party_snapshot(c,uid,now))
 
 WORLD_PERIOD=7200
 WORLD_WINDOW=1800
@@ -137,7 +221,8 @@ def world_snapshot(c,uid,now):
  hp,rev=(row['hp'],row['rev']) if row else (WORLD_HP,0)
  player=c.execute('SELECT damage,last FROM ww_world_boss_player284 WHERE event=? AND uid=?',(event,uid)).fetchone()
  wait=max(0,WORLD_COOLDOWN-(now-player['last'])) if player else 0
- return {'event':event,'server_now':now,'start':start,'ends':ends,'next_start':start+WORLD_PERIOD,'active':now<ends and hp>0,'hp':hp,'max_hp':WORLD_HP,'phase':boss_phase(hp,WORLD_HP),'rev':rev,'my_damage':player['damage'] if player else 0,'cooldown':wait}
+ leaders=[{'name':r['name'] or 'Lữ khách','damage':r['damage']} for r in c.execute('SELECT u.name,p.damage FROM ww_world_boss_player284 p LEFT JOIN users u ON u.id=p.uid WHERE p.event=? ORDER BY p.damage DESC,p.uid LIMIT 10',(event,))]
+ return {'event':event,'server_now':now,'start':start,'ends':ends,'next_start':start+WORLD_PERIOD,'active':now<ends and hp>0,'hp':hp,'max_hp':WORLD_HP,'phase':boss_phase(hp,WORLD_HP),'rev':rev,'my_damage':player['damage'] if player else 0,'cooldown':wait,'leaders':leaders}
 
 def world_handle(h,c,uid,d,now,action):
  def err(code,msg):return h.reply(code,{'error':msg})
@@ -166,13 +251,14 @@ def view(v):
  boss=is_boss(v['stage'])
  mode,incoming_name,incoming=enemy_plan(v)
  _,weak,resist=AI_PROFILES[ai_kind(v['stage'])-1]
- return {k:v[k] for k in ('stage','best','rev','hp','energy','enemy','turn','status','notice','stamina','weapon','combo','burn')}|{'combat_version':'28.5','region':REGIONS[region_index(v['stage'])],'region_index':region_index(v['stage']),'regions':list(REGIONS),'boss_floors':[i for i in range(1,len(STAGES)+1) if is_boss(i)],'power_percent':power_percent(v['stage']),'milestones':[i for i in range(10,v['best']+1,10)],'boss_phase':boss_phase(v['enemy'],maxhp) if boss else 0,'boss_phase_name':('Thức tỉnh','Tinh thể','Long tức','Cuồng nộ')[boss_phase(v['enemy'],maxhp)-1] if boss else '', 'boss_phases':4 if boss else 0,'enemy_mode':mode,'enemy_weakness':weak,'enemy_resistance':resist,'enemy_counter_bonus':6 if mode=='counter' else 0,'weapon_name':WEAPONS[v['weapon']][0],'weapons':[{'id':k,'name':w[0],'strike':w[1],'burst':w[2],'stamina':w[3]} for k,w in WEAPONS.items()],'combo_max':3,'max_hp':player_caps(v['stage'])[0],'max_energy':player_caps(v['stage'])[1],'max_stamina':MAX_STAMINA,'armor':ARMOR,'crit_chance':5,'count':len(STAGES),'enemy_name':name,'enemy_icon':icon,'enemy_max':maxhp,'boss':boss,'incoming':incoming_name,'incoming_damage':incoming,'skills':[skill_view(v,k,cost) for k,(cost,damage) in SKILLS.items()]}
+ return {k:v[k] for k in ('stage','best','rev','hp','energy','enemy','turn','status','notice','stamina','weapon','combo','burn')}|{'combat_version':'28.6','region':REGIONS[region_index(v['stage'])],'region_index':region_index(v['stage']),'regions':list(REGIONS),'boss_floors':[i for i in range(1,len(STAGES)+1) if is_boss(i)],'power_percent':power_percent(v['stage']),'milestones':[i for i in range(10,v['best']+1,10)],'boss_phase':boss_phase(v['enemy'],maxhp) if boss else 0,'boss_phase_name':('Thức tỉnh','Tinh thể','Long tức','Cuồng nộ')[boss_phase(v['enemy'],maxhp)-1] if boss else '', 'boss_phases':4 if boss else 0,'enemy_mode':mode,'enemy_weakness':weak,'enemy_resistance':resist,'enemy_counter_bonus':6 if mode=='counter' else 0,'weapon_name':WEAPONS[v['weapon']][0],'weapons':[{'id':k,'name':w[0],'strike':w[1],'burst':w[2],'stamina':w[3]} for k,w in WEAPONS.items()],'combo_max':3,'max_hp':player_caps(v['stage'])[0],'max_energy':player_caps(v['stage'])[1],'max_stamina':MAX_STAMINA,'armor':ARMOR,'crit_chance':5,'count':len(STAGES),'enemy_name':name,'enemy_icon':icon,'enemy_max':maxhp,'boss':boss,'incoming':incoming_name,'incoming_damage':incoming,'skills':[skill_view(v,k,cost) for k,(cost,damage) in SKILLS.items()]}
 def store(c,v):
  keys=('uid','stage','best','rev','hp','energy','enemy','turn','status','updated','notice','stamina','weapon','combo','magic_cd','burn')
  c.execute('INSERT INTO ww_dungeon138('+','.join(keys)+') VALUES('+','.join('?' for _ in keys)+') ON CONFLICT(uid) DO UPDATE SET '+','.join(k+'=excluded.'+k for k in keys[1:]),tuple(v[k] for k in keys))
 def handle(h,c,u,d,now=None):
  now=time.time() if now is None else now;uid=u['id'];action=h.path.rsplit('/',1)[-1]
  def err(code,msg):return h.reply(code,{'error':msg})
+ if action.startswith('party-'):return party_handle(h,c,uid,d,now,action)
  if action in ('world-status','world-strike'):return world_handle(h,c,uid,d,now,action)
  if action=='status':
   if d:return err(400,'Không nhận tham số')
