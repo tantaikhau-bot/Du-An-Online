@@ -13,9 +13,21 @@
  };
  const cache=new WeakMap(),clamp=(x,a=0,b=1)=>Math.max(a,Math.min(b,x)),mix=(a,b,t)=>a+(b-a)*t;
  function resources(T){let r=cache.get(T);if(r)return r;
-  function bump(scales){let n=64,bytes=new Uint8Array(n*n*4);for(let y=0;y<n;y++)for(let x=0;x<n;x++){let u=x/n,v=y/n;let a=scales?Math.sin((u*8+Math.floor(v*12)%2*.5)*Math.PI*2)*Math.sin(v*12*Math.PI*2):Math.sin((u*22+.26*Math.sin(v*6.283))*Math.PI*2)*.65+Math.sin((u*13-v*3)*6.283)*.22;let k=Math.round(128+40*a),i=4*(y*n+x);bytes.set([k,k,k,255],i)}let t=new T.DataTexture(bytes,n,n,T.RGBAFormat);t.wrapS=t.wrapT=T.RepeatWrapping;t.magFilter=T.LinearFilter;t.minFilter=T.LinearMipmapLinearFilter;t.generateMipmaps=true;t.needsUpdate=true;return t}
-  const mat=(rough,bumpMap=null,bumpScale=0)=>new T.MeshStandardMaterial({color:0xffffff,vertexColors:true,roughness:rough,metalness:0,bumpMap,bumpScale,envMapIntensity:.25,side:T.DoubleSide});
-  r={sphere:new T.SphereGeometry(1,16,12),small:new T.SphereGeometry(1,10,8),materials:{fur:mat(.96,bump(false),.012),scale:mat(.86,bump(true),.014),plain:mat(.91),eye:mat(.42),wing:mat(.91)},templates:new Map()};cache.set(T,r);return r}
+  // Small shared procedural hand-painted-style maps. No per-frame texture generation.
+  function surface(scales){const n=128,bytes=new Uint8Array(n*n*4),tone=new Uint8Array(n*n*4);
+   for(let y=0;y<n;y++)for(let x=0;x<n;x++){const u=x/n,v=y/n;
+    const wave=Math.sin((u*18+.32*Math.sin(v*12.566))*6.2831853),fine=Math.sin((u*37+.16*Math.sin(v*25.13))*6.2831853);
+    const sx=(u*12+(Math.floor(v*16)%2)*.5)%1,sy=(v*16)%1;
+    const scale=Math.max(0,1-Math.hypot((sx-.5)*1.45,(sy-.42)*1.15)*1.7),grain=Math.sin((u*53+v*29)*6.2831853)*Math.sin((u*17-v*61)*6.2831853);
+    const relief=scales?scale*.8+grain*.06:wave*.36+fine*.20+grain*.12;
+    const lum=scales?(.73+.24*scale+.035*grain):(.89+.055*wave+.027*fine+.025*grain);
+    const k=Math.max(0,Math.min(255,Math.round(128+relief*75))),a=Math.max(0,Math.min(255,Math.round(lum*255))),i=(y*n+x)*4;bytes.set([k,k,k,255],i);tone.set([a,a,a,255],i)}
+   const tex=data=>{const t=new T.DataTexture(data,n,n,T.RGBAFormat);t.wrapS=t.wrapT=T.RepeatWrapping;t.magFilter=T.LinearFilter;t.minFilter=T.LinearMipmapLinearFilter;t.generateMipmaps=true;t.needsUpdate=true;return t};
+   return {bump:tex(bytes),map:tex(tone)}
+  }
+  const fur=surface(false),scales=surface(true);
+  const mat=(rough,reflect=0.15,maps=null,strength=0)=>new T.MeshPhysicalMaterial({color:0xffffff,vertexColors:true,roughness:rough,metalness:0,clearcoat:0,ior:1.33,specularIntensity:reflect,envMapIntensity:.09,map:maps?.map||null,bumpMap:maps?.bump||null,bumpScale:strength,side:T.DoubleSide});
+  r={sphere:new T.SphereGeometry(1,20,16),small:new T.SphereGeometry(1,12,10),materials:{fur:mat(1,.08,fur,.021),scale:mat(.91,.16,scales,.016),plain:mat(.97,.09),eye:mat(.50,.35),wing:mat(.97,.08)},templates:new Map()};cache.set(T,r);return r}
  function asset(T,kind){const r=resources(T),p=palettes[kind];if(!p)throw Error('Unknown creature '+kind);const root=new T.Group();root.name=kind;
   const rig=new T.Group();rig.name='rig';root.add(rig);
   const body=new T.Group();body.name='body';rig.add(body);
@@ -26,8 +38,8 @@
    let id=parent.uuid+material,a=layers.get(id);if(!a){a={parent,material,P:[],N:[],C:[],U:[],I:[]};layers.set(id,a)}
    Q.setFromEuler(new T.Euler(...rotation));M.compose(new T.Vector3(...position),Q,new T.Vector3(...scale));NM.getNormalMatrix(M);const pos=geo.attributes.position,n=geo.attributes.normal,uv=geo.attributes.uv,start=a.P.length/3;col.set(color);
    for(let i=0;i<pos.count;i++){tmp.fromBufferAttribute(pos,i).applyMatrix4(M);normal.fromBufferAttribute(n,i).applyMatrix3(NM).normalize();a.P.push(tmp.x,tmp.y,tmp.z);a.N.push(normal.x,normal.y,normal.z);a.U.push(uv?uv.getX(i):0,uv?uv.getY(i):0);
-    const noise=material==='fur'||material==='scale'? .94+.05*Math.sin(tmp.x*43+tmp.z*27+tmp.y*53)*Math.sin(tmp.z*65-tmp.y*31)+.025*normal.y:1;
-    a.C.push(clamp(col.r*noise),clamp(col.g*noise),clamp(col.b*noise));}
+    const surface=material==='fur'||material==='scale',grain=Math.sin(tmp.x*43+tmp.z*27+tmp.y*53)*Math.sin(tmp.z*65-tmp.y*31),gradient=surface?(.81+.13*normal.y+.10*Math.sin(tmp.z*6+tmp.y*3)+.045*grain):1;
+    const warm=surface?Math.max(0,normal.y)*.025:0;a.C.push(clamp(col.r*gradient+warm),clamp(col.g*gradient+warm*.65),clamp(col.b*gradient+warm*.28));}
    if(geo.index)for(let i=0;i<geo.index.count;i++)a.I.push(start+geo.index.getX(i));else for(let i=0;i<pos.count;i++)a.I.push(start+i);
   }
   function ell(parent,x,y,z,rx,ry,rz,c,mat=type,rot=[0,0,0],tiny=false){append(parent,tiny?r.small:r.sphere,c,mat,[x,y,z],[rx,ry,rz],rot)}
@@ -48,6 +60,8 @@
   if(kind==='deer'){tube(body,[[0,.71,-.22],[0,.86,-.28],[0,1.00,-.34],[0,1.12,-.34]],[.12,.105,.083,.066],p.coat);ell(body,0,.83,-.28,.085,.22,.10,p.cream);for(let sg of [-1,1])for(let i=0;i<9;i++){let z=-.04+(i%5)*.073,y=.73+Math.floor(i/5)*.071,x=sg*w*Math.sqrt(Math.max(.1,1-((y-h)/(.276))**2-(z/len)**2));ell(body,x,y,z,.012,.021,.034,p.cream,'plain',[0,0,sg*.13],true)}}
   if(kind==='dragon'){ell(body,0,.40,-.14,.18,.23,.21,p.cream);for(let i=0;i<6;i++)blade(body,[0,.55,.02+i*.065],[0,.73-i*.014,.05+i*.07],.06,p.shade,'scale');for(let sg of [-1,1])for(let i=0;i<5;i++)blade(body,[sg*.13,.43,.08+i*.038],[sg*.21,.49,.11+i*.045],.028,p.shade,'scale');for(let i=0;i<5;i++)ell(body,0,.22+i*.046,-.264+Math.abs(i-2)*.008,.112+i*.009,.018,.015,0xd8bfa7,'plain',[],true);for(let i=0;i<5;i++)blade(body,[0,.51,.02+i*.071],[0,.64-i*.016,.055+i*.075],.045,p.shade,'scale')}
   ell(head,0,0,0,hx,hh,hd,p.coat);
+  if(kind!=='dragon'){for(let sg of [-1,1]){const fluffy=kind==='fox'?1.2:kind==='rabbit'?1.05:kind==='cat'?.85:.55;for(let i=0;i<4;i++){let y=-hh*.30+i*.024,z=.035+i*.014,x=sg*hx*.76;blade(head,[x,y,z],[sg*(hx+.026*fluffy),y-.045*fluffy,z+.048*fluffy],.024*fluffy,i%2?p.coat:p.cream)}}}
+  else{for(let sg of [-1,1])for(let i=0;i<3;i++){blade(head,[sg*.14,.045+i*.032,.035],[sg*(.20+i*.015),.02+i*.04,.105],.038-i*.006,p.shade,'scale')}}
   let muzzle=group(head,'muzzle',0,-hh*.35,-hd*.75),nose=group(muzzle,'nose',0,.02,kind==='fox'?-.151:-.066);
   if(kind==='fox'){tube(muzzle,[[0,0,.025],[0,-.01,-.035],[0,0,-.10],[0,.01,-.145]],[[.085,.073],[.09,.063],[.055,.044],[.034,.027]],p.cream);for(let sg of [-1,1])for(let j=0;j<3;j++)blade(head,[sg*.10,-.02,.00],[sg*(.19-j*.012),-.07-j*.027,.07+j*.025],.042,p.cream)}
   else if(kind==='deer'){ell(muzzle,0,0,-.035,.085,.065,.12,p.cream);nose.position.z=-.13}
@@ -66,6 +80,8 @@
    if(kind==='cat'||kind==='rabbit'||kind==='fox'){for(let i=0;i<2;i++)tube(muzzle,[[sg*.068,-.015,-.07],[sg*.128,-.013-i*.025,-.075],[sg*.185,-.008-i*.033,-.067]],[.0025,.0019,.0008],p.cream,'plain',5)}
    if(kind==='cat')for(let i=0;i<2;i++)ell(head,sg*(.11+i*.018),.025+i*.036,-.079,.028,.010,.025,p.shade,type,[0,sg*.45,sg*.45],true);
   }
+  // Tapered clumps break the round silhouette of fur; grouped in existing geometry batches.
+  if(kind==='fox'||kind==='rabbit'||kind==='cat'){for(let sg of [-1,1])for(let i=0;i<5;i++){const z=-len*.58+i*.055,y=h+.075-i*.014;blade(body,[sg*w*.68,y,z],[sg*w*.99,y-.055,z+.09],kind==='fox'?.038:.026,i%2?p.coat:p.shade)}}
   // Articulated fore and hind legs, not one rigid straight cylinder.
   for(let sg of [-1,1])for(let back of [-1,1]){
    const L=kind==='deer'?.70:kind==='rabbit'?.21:kind==='dragon'?.32:kind==='fox'?.36:.29;
