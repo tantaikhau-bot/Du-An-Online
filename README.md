@@ -98,3 +98,7 @@ Action weights are bounded and action clocks start with each interaction. VRM ex
 
 ### V25.6 Animation Testing
 Re-run all Engine/World and Natural Motion regression suites (test_engine235.cjs, test_world245.cjs, test_motion250.cjs, test_hands251.cjs, test_locomotion252.cjs, test_horse253.cjs, test_spirit254.cjs, test_expression255.cjs, test_animation256.cjs). The new mixed-action numerical suite covers 25,200 frames across 20 profiles and three time steps. Prevent stale social overlays from overriding mounted/airborne poses, correct duet clock selection, and guard invalid animation inputs. Offline numerical tests do not establish visual contact, GPU FPS or multiplayer correctness.
+
+
+### V26.0 Living World
+Existing procedural crown animation uses a bounded nearest-first active set, separate from slower visibility checks, with coherent weather-driven gusts and a 30/60 Hz target update cadence on mobile/desktop. Butterfly wing motion is also decoupled from coarse visibility updates. River surface shader time advances continuously at a wind-dependent rate, without adding render passes. Existing GLB tree models, water geometry, collisions and world events remain unchanged. Run `node test_living260.cjs` for numerical checks. Real GPU, shader and visual testing remain required.
