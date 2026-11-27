@@ -1,5 +1,11 @@
 # WISH WORLD — Release history
 
+## V14.8 — Mount & Fantasy (candidate, combines V14.6–V14.8)
+- Removed the primitive horse fallback. Require the Western Horse GLB (vinish.dev, CC BY 4.0) with validated same-origin server cache and explicit error if unavailable. Idle, Walk, Trot, Gallop; no separate Canter clip upstream.
+- Spine-relative estimated saddle, stirrup and rein sockets; two-link raw VRM leg and arm IK; gait-specific procedural rider pose states and mount/dismount transitions. These are not authored mocap clips. Model socket calibration, cloth collision and real-browser visuals remain unverified.
+- Changed the five original fantasy companion shape recipes (body proportions, rabbit ears, fox brush, cat tail, deer antlers and legs, dragon wings and spines). Prefer these visible templates rather than old GLBs; retained original per-species motion and following logic.
+- JavaScript syntax checked; full runtime, performance and asset-delivery tests remain open.
+
 ## V14.5 — Wildlife & Mount IK (candidate)
 - Optional animated Western Horse by vinish.dev (CC BY 4.0); external GLB lazy loaded with procedural fallback. Rest saddle estimate follows spine; hips offset and raw-bone two-link leg targets outside mount width.
 - Refined five procedural companion palettes and adornments; dragon GLB material tint and roughness. Existing skinned animal geometry retained.
