@@ -1,5 +1,10 @@
 # WISH WORLD — Release history
 
+## V14.4 — Equestrian & HUD (candidate)
+- Rebuilt procedural horse with refined head, mane, articulated legs, saddle and stirrups; speed-smoothed gait and saddle-relative rider hip alignment; dedicated VRM horseback pose.
+- Compact two-column quick actions, improved hotbar and touch button contrast, visible mount/dismount and retained V14.3 audio recovery.
+- Syntax checked; visual rider/cloth contact, real-device FPS and listening tests remain open.
+
 ## V14.3 — Audio Recovery (candidate)
 - Expose sound toggle on main HUD and mobile settings; explicit user-gesture AudioContext resume, audible two-note speaker test and persistent opt-in.
 - Independent 250 ms audio scheduler, suspend when muted or hidden; resume on interaction after interruption. Increased music level. Real device listening QA remains open.
