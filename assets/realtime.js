@@ -45,7 +45,29 @@
  }
  function clockSeconds(c,now){return c&&finite(now)?(c.serverMs+Math.max(0,now-c.receivedMs))/1000:null}
  function retryDelay(failures,random=.5){return Math.round(Math.min(30000,700*2**clamp(failures,1,6))*(.8+.4*clamp(random,0,1)))}
- const api={addSnapshot,sample,serverSnapshot134,clockReading,clockSeconds,retryDelay};
+ // V27.0: validate authoritative public presence snapshots before touching scene objects.
+ function roster270(rows,uid,serverMs,receivedMs,rtt){
+  if(!Array.isArray(rows)||!finite(serverMs)||!finite(receivedMs))return null;
+  const own=String(uid),byId=new Map();
+  for(const r of rows.slice(0,100)){
+   if(!r||typeof r.id!=='string'||!r.id||r.id.length>100||r.id===own||r.area!==0||![r.x,r.y,r.sample_ms].every(finite)||r.x< -3710||r.x>4690||r.y< -1329||r.y>2479||r.sample_ms<0||r.sample_ms>serverMs+1000||serverMs-r.sample_ms>12000)continue;
+   const prev=byId.get(r.id);if(prev&&prev.sample_ms>=r.sample_ms)continue;
+   const pick=(key,choices,fallback)=>choices.includes(r[key])?r[key]:fallback;
+   const body=pick('body',['male','female'],'male'),moving=r.moving===true||r.moving===1;
+   byId.set(r.id,{id:r.id,name:typeof r.name==='string'?r.name.slice(0,30):'Lữ khách',area:0,x:r.x,y:r.y,sample_ms:r.sample_ms,body,
+    skin:pick('skin',['warm','fair','deep'],'warm'),hair:pick('hair',['chestnut','silver','dark','auburn','blond'],'chestnut'),style:pick('style',['short','long','tied','bob','wavy','bun','swept'],'short'),dye:pick('dye',['original','moss','navy','wine','sand','ivory','charcoal'],'original'),
+    height:pick('height',['compact','normal','tall'],'normal'),build:pick('build',['slim','normal','athletic'],'normal'),face:pick('face',['soft','classic','angular'],'classic'),eye:pick('eye',['brown','green','blue','amber'],'brown'),
+    heading:finite(r.heading)?clamp(r.heading,-Math.PI*2,Math.PI*2):0,jump:finite(r.jump)?clamp(r.jump,0,2):0,moving,gait109:moving?(finite(r.gait109)?clamp(r.gait109,0,1):.65):0,
+    avatar109:typeof r.avatar109==='string'&&/^[mf](?:[1-9]|10)$/.test(r.avatar109)?r.avatar109:body==='female'?'f1':'m1',
+    vehicle:pick('vehicle',['bike','motor','car'],''),pet:pick('pet',['fox','rabbit','deer','cat','dragon'],''),action:pick('action',['idle','wave','bow','cheer','smile','happy','angry','surprised','sit','dance','hand','photo','hug','duet','portrait'],'idle'),friend:r.friend===1?1:0,received121:receivedMs,worldMs121:serverMs,rtt134:finite(rtt)?clamp(rtt,0,12000):0});
+  }
+  return [...byId.values()];
+ }
+ function selectPeers270(rows,x,z,range,cap,resident){
+  if(![x,z,range,cap].every(finite)||range<=0||cap<=0)return [];
+  return rows.map(r=>{const d=Math.hypot((r.x-490)/35-x,-(r.y-575)/14-z),kept=resident.has(r.id);return {r,d,score:d-(kept?2:0),kept}}).filter(v=>v.d<=range+(v.kept?3:0)).sort((a,b)=>a.score-b.score||a.r.id.localeCompare(b.r.id)).slice(0,Math.min(100,Math.floor(cap))).map(v=>v.r);
+ }
+ const api={addSnapshot,sample,serverSnapshot134,clockReading,clockSeconds,retryDelay,roster270,selectPeers270};
  if(typeof module!=='undefined')module.exports=api;else root.WWRealtime=api;
 })(typeof globalThis!=='undefined'?globalThis:this);
 /* Opt-in transport, same-origin socket with HTTP fallback. */
