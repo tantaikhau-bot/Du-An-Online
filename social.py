@@ -77,7 +77,7 @@ def handle(h,c,u,d):
   if type(x) not in (int,float) or type(y) not in (int,float) or not math.isfinite(x) or not math.isfinite(y) or not -3710<=x<=4690 or not -1329<=y<=2479 or type(a)!=int or not 0<=a<=7:return reply(400,{'error':'Vị trí không hợp lệ'})
   if a!=0:
    leave(c,uid);c.commit()
-   return reply(200,{'protocol270':2,'world_ms':int(time.time()*1000),'players':[],'match':'','incoming':[],'near':[],'outings':[]})
+   return reply(200,{'protocol270':3,'world_ms':int(time.time()*1000),'players':[],'match':'','incoming':[],'near':[],'outings':[]})
   def pick(key,allowed,default):
    v=d.get(key)
    return v if isinstance(v,str) and v in allowed else default
@@ -102,24 +102,30 @@ def handle(h,c,u,d):
   moving=int(d.get('moving') is True)
   preset=pick('avatar109',tuple(f'{g}{i}' for g in ('m','f') for i in range(1,11)),'f1' if body=='female' else 'm1')
   gait=num('gait109',0,1,.65 if moving else 0) if moving else 0
-  c.execute('INSERT OR REPLACE INTO avatar109 VALUES(?,?,?)',(uid,preset,gait))
+  c.execute('INSERT INTO avatar109(uid,preset,gait) VALUES(?,?,?) ON CONFLICT(uid) DO UPDATE SET preset=excluded.preset,gait=excluded.gait WHERE avatar109.preset IS NOT excluded.preset OR avatar109.gait IS NOT excluded.gait',(uid,preset,gait))
   pet=pick('pet',('fox','rabbit','deer','cat','dragon'),'')
   vehicle=pick('vehicle',('bike','motor','car','horse'),'') if a==0 else ''
-  c.execute('INSERT OR REPLACE INTO vehicle88 VALUES(?,?)',(uid,vehicle))
-  c.execute('INSERT OR REPLACE INTO pet70 VALUES(?,?)',(uid,pet))
+  c.execute('INSERT INTO vehicle88(uid,kind) VALUES(?,?) ON CONFLICT(uid) DO UPDATE SET kind=excluded.kind WHERE vehicle88.kind IS NOT excluded.kind',(uid,vehicle))
+  c.execute('INSERT INTO pet70(uid,kind) VALUES(?,?) ON CONFLICT(uid) DO UPDATE SET kind=excluded.kind WHERE pet70.kind IS NOT excluded.kind',(uid,pet))
   c.execute('INSERT OR REPLACE INTO presence VALUES(?,?,?,?,?)',(uid,x,y,a,now))
-  c.execute('INSERT OR REPLACE INTO motion68 VALUES(?,?,?,?)',(uid,heading,moving,jump))
-  c.execute('INSERT OR REPLACE INTO character61 VALUES(?,?,?,?,?,?,?,?)',(uid,body,skin,hair,style,dye,action,target))
-  c.execute('INSERT OR REPLACE INTO character64 VALUES(?,?,?,?,?)',(uid,height,build,face,eye))
-  c.execute('DELETE FROM presence WHERE seen<?',(now-30,))
-  c.execute('DELETE FROM character61 WHERE uid NOT IN (SELECT uid FROM presence)')
-  c.execute('DELETE FROM character64 WHERE uid NOT IN (SELECT uid FROM presence)')
-  c.execute('DELETE FROM motion68 WHERE uid NOT IN (SELECT uid FROM presence)')
-  c.execute('DELETE FROM pet70 WHERE uid NOT IN (SELECT uid FROM presence)')
-  c.execute('DELETE FROM vehicle88 WHERE uid NOT IN (SELECT uid FROM presence)')
-  c.execute('DELETE FROM avatar109 WHERE uid NOT IN (SELECT uid FROM presence)')
+  c.execute('INSERT INTO motion68(uid,heading,moving,jump) VALUES(?,?,?,?) ON CONFLICT(uid) DO UPDATE SET heading=excluded.heading,moving=excluded.moving,jump=excluded.jump WHERE motion68.heading IS NOT excluded.heading OR motion68.moving IS NOT excluded.moving OR motion68.jump IS NOT excluded.jump',(uid,heading,moving,jump))
+  c.execute('INSERT INTO character61(uid,body,skin,hair,style,dye,action,target) VALUES(?,?,?,?,?,?,?,?) ON CONFLICT(uid) DO UPDATE SET body=excluded.body,skin=excluded.skin,hair=excluded.hair,style=excluded.style,dye=excluded.dye,action=excluded.action,target=excluded.target WHERE character61.body IS NOT excluded.body OR character61.skin IS NOT excluded.skin OR character61.hair IS NOT excluded.hair OR character61.style IS NOT excluded.style OR character61.dye IS NOT excluded.dye OR character61.action IS NOT excluded.action OR character61.target IS NOT excluded.target',(uid,body,skin,hair,style,dye,action,target))
+  c.execute('INSERT INTO character64(uid,height,build,face,eye) VALUES(?,?,?,?,?) ON CONFLICT(uid) DO UPDATE SET height=excluded.height,build=excluded.build,face=excluded.face,eye=excluded.eye WHERE character64.height IS NOT excluded.height OR character64.build IS NOT excluded.build OR character64.face IS NOT excluded.face OR character64.eye IS NOT excluded.eye',(uid,height,build,face,eye))
+  expired=c.execute('DELETE FROM presence WHERE seen<?',(now-30,)).rowcount
+  if expired:
+   c.execute('DELETE FROM character61 WHERE uid NOT IN (SELECT uid FROM presence)')
+   c.execute('DELETE FROM character64 WHERE uid NOT IN (SELECT uid FROM presence)')
+   c.execute('DELETE FROM motion68 WHERE uid NOT IN (SELECT uid FROM presence)')
+   c.execute('DELETE FROM pet70 WHERE uid NOT IN (SELECT uid FROM presence)')
+   c.execute('DELETE FROM vehicle88 WHERE uid NOT IN (SELECT uid FROM presence)')
+   c.execute('DELETE FROM avatar109 WHERE uid NOT IN (SELECT uid FROM presence)')
   c.commit()
+  match_cache={}
   def mutually_ready(first,second,kind):
+   key=(first,second,kind)
+   if key not in match_cache:match_cache[key]=check_mutual(first,second,kind)
+   return match_cache[key]
+  def check_mutual(first,second,kind):
    if not second or kind not in ('hand','photo','hug','duet'):return False
    if together.blocked(c,first,second) or not together.available(c,second):return False
    if not c.execute("SELECT 1 FROM friends WHERE status='accepted' AND ((sender=? AND receiver=?) OR (sender=? AND receiver=?))",(first,second,second,first)).fetchone():return False
@@ -130,14 +136,14 @@ def handle(h,c,u,d):
   friend_ids={row[0] for row in c.execute("SELECT CASE WHEN sender=? THEN receiver ELSE sender END FROM friends WHERE status='accepted' AND (sender=? OR receiver=?)",(uid,uid,uid))}
   for r in c.execute('SELECT p.uid AS id,u.name,p.x,p.y,p.area,p.seen,q.body,q.skin,q.hair,q.style,q.dye,q.action,q.target,f.height,f.build,f.face,f.eye,m.heading,m.moving,m.jump,k.kind AS pet,veh.kind AS vehicle,av.preset AS avatar109,av.gait AS gait109 FROM presence p JOIN users u ON u.id=p.uid LEFT JOIN character61 q ON q.uid=p.uid LEFT JOIN character64 f ON f.uid=p.uid LEFT JOIN motion68 m ON m.uid=p.uid LEFT JOIN pet70 k ON k.uid=p.uid LEFT JOIN vehicle88 veh ON veh.uid=p.uid LEFT JOIN avatar109 av ON av.uid=p.uid WHERE p.uid!=? AND p.area=0 AND p.seen>? AND p.uid NOT IN (SELECT uid FROM blocked) AND NOT EXISTS(SELECT 1 FROM ww_blocks b WHERE (b.owner=? AND b.target=p.uid) OR (b.target=? AND b.owner=p.uid)) ORDER BY CASE WHEN p.area=? THEN 0 ELSE 1 END, ((p.x-?)/35.0)*((p.x-?)/35.0)+((p.y-?)/14.0)*((p.y-?)/14.0), p.uid LIMIT 100',(uid,now-12,uid,uid,a,x,x,y,y)):
    v=dict(r)
-   v['sample_ms']=int(v.pop('seen')*1000)
+   seen=v.pop('seen');v['sample_ms']=int(seen*1000)
    v['friend']=int(v['id'] in friend_ids)
-   if v['friend'] and v['target']==uid and v['action'] in ('hand','photo','hug','duet') and v['area']==a and math.hypot((v['x']-x)/35,(v['y']-y)/14)<3 and c.execute('SELECT 1 FROM presence WHERE uid=? AND seen>?',(v['id'],now-4)).fetchone():
+   if v['friend'] and v['target']==uid and v['action'] in ('hand','photo','hug','duet') and v['area']==a and math.hypot((v['x']-x)/35,(v['y']-y)/14)<3 and seen>now-4:
     incoming.append({'id':v['id'],'name':v['name'],'action':v['action']})
    if v['action'] in ('hand','photo','hug','duet') and not mutually_ready(v['id'],v['target'],v['action']):v['action']='idle'
    v.pop('target',None)
    players.append(v)
-  return reply(200,{'protocol270':2,'world_ms':int(time.time()*1000),'players':players,'match':target if mutually_ready(uid,target,action) else '', 'incoming':incoming[:10], 'near':nearby69(c,uid,now) if a==0 else [], 'outings':outings70(c,uid,now) if a==0 else []})
+  return reply(200,{'protocol270':3,'world_ms':int(time.time()*1000),'players':players,'match':target if mutually_ready(uid,target,action) else '', 'incoming':incoming[:10], 'near':nearby69(c,uid,now) if a==0 else [], 'outings':outings70(c,uid,now) if a==0 else []})
  if path=='/api/social/list':
   return reply(200,{'friends':[dict(r) for r in c.execute('SELECT f.sender,f.receiver,f.status,u.name,u.id FROM friends f JOIN users u ON u.id=CASE WHEN f.sender=? THEN f.receiver ELSE f.sender END WHERE f.sender=? OR f.receiver=?',(uid,uid,uid))], 'greetings':[dict(r) for r in c.execute('SELECT u.name,g.kind,g.created FROM greetings g JOIN users u ON u.id=g.sender WHERE g.receiver=? ORDER BY g.created DESC LIMIT 20',(uid,))]})
  if path=='/api/social/search':
