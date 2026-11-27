@@ -271,6 +271,7 @@
    overlay('leftLowerLeg',sign*bend*1.8,0,0,w);overlay('rightLowerLeg',sign*bend*1.8,0,0,w);
    overlay('leftFoot',-sign*bend*.75,0,0,w);overlay('rightFoot',-sign*bend*.75,0,0,w);
    overlay('neck',-sign*.05*load,-twist*.25,0,w);overlay('upperChest',sign*.09*release,-twist*.5,0,w);
+   const contact=combat.contact&&p>=(combat.impact??.45)?Math.max(0,1-(p-(combat.impact??.45))/.16):0;if(contact){const strength=combat.weapon==='great'?.13:combat.weapon==='dual'?.055:.08;overlay('rightLowerArm',-sign*strength*contact,0,0,w);overlay('rightShoulder',sign*strength*contact*.45,0,0,w);overlay('chest',-sign*strength*contact*.4,0,0,w);}
    const wrist=vrm.humanoid.getNormalizedBoneNode('rightHand'),leftWrist=vrm.humanoid.getNormalizedBoneNode('leftHand');if(wrist){wrist.rotation.x+=w*(sword?-.15*load+.20*release:ult?-.14*load:.09*release);wrist.rotation.z+=w*(sword?dir*.16*release:0);}if(leftWrist&&['great','dual','bow'].includes(combat.weapon)){leftWrist.rotation.x+=w*(.08*load-.10*release);leftWrist.rotation.z-=w*dir*.09*release;}
   }
   // Damp bone rotations on entry, release and recovery, rather than snapping to each procedural pose.
