@@ -38,6 +38,7 @@ jobs:
       - run: node test_arm_motion.cjs
       - run: node test_original_avatar.cjs
       - run: node test_fantasy_creatures.cjs
+      - run: node test_jade_dragon156.cjs
       - run: npx playwright install --with-deps chromium
       - run: python tools/fetch_vrm.py
       - run: node test_anime_browser.cjs
