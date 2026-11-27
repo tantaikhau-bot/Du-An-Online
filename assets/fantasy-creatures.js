@@ -135,9 +135,20 @@
  function bind(root){const find=n=>root.getObjectByName(n),kind=root.userData.kind;return {kind,root,rig:find('rig'),body:find('body'),head:find('head'),tail:find('tail'),paws:[0,1,2,3].map(i=>find('leg'+i)),knees:[0,1,2,3].map(i=>find('leg'+i).getObjectByName('knee')),eyes:['eyeL','eyeR'].map(find),ears:['earL','earR'].map(find),wings:[-1,1].map(i=>find('wing'+i)).filter(Boolean),nose:find('nose'),muzzle:find('muzzle'),fantasy116:true,clock:0,weight:0,phase:0,reaction:0}}
  function create(T,kind){const r=resources(T);if(!r.templates.has(kind))r.templates.set(kind,asset(T,kind));return bind(r.templates.get(kind).clone(true))}
  function react(a){if(a?.fantasy116)a.reaction=1}
- function animate(a,speed,dt,time){dt=clamp(dt/1000,0,.1);speed=Number.isFinite(speed)?clamp(speed,0,5):0;a.clock+=dt;let t=a.clock+(Number.isFinite(time)?Math.sin(time*.1)*.05:0),kind=a.kind;
+ // V25.4: per-species gait and smoothed animation playback, independent of collision.
+ function spiritMotion254(st,kind,speed,dt,hasTrot=false,refWalk=.85,refRun=2.5){
+  dt=clamp(Number.isFinite(dt)?dt:0,0,.1);speed=clamp(Number.isFinite(speed)?speed:0,0,8);
+  const prev=st.speed254||0;st.speed254=mix(prev,speed,1-Math.exp(-dt*(speed>prev?12:15)));
+  const v=st.speed254,old=st.gait254||'idle',runAt=kind==='cat'?1.65:kind==='rabbit'?1.55:kind==='deer'?2.25:2.0;
+  const next=v<(old==='idle'?.20:.09)?'idle':v>(old==='run'?runAt*.82:runAt)?'run':hasTrot&&v>(old==='trot'?1.00:1.25)?'trot':'walk';
+  st.gait254=next;const ref=next==='run'?refRun:next==='trot'?(refWalk+refRun)*.5:refWalk;
+  const rate=next==='idle'?1:clamp(v/Math.max(.1,ref),.35,1.65);
+  st.rate254=mix(st.rate254??rate,rate,1-Math.exp(-dt*12));
+  return st;
+ }
+ function animate(a,speed,dt,time){dt=clamp(dt/1000,0,.1);speed=Number.isFinite(speed)?clamp(speed,0,5):0;spiritMotion254(a,a.kind,speed,dt);speed=a.speed254;a.clock+=dt;let t=a.clock+(Number.isFinite(time)?Math.sin(time*.1)*.05:0),kind=a.kind;
   a.weight=mix(a.weight,clamp(speed/1.05),1-Math.exp(-dt*8));let w=a.weight,idle=1-w,run=clamp((speed-1.4)/1.8);
-  a.phase=(a.phase+dt*(kind==='rabbit'?4.8+speed*4.1:kind==='deer'?2.5+speed*3.1:3.2+speed*3.6))%6.2831853;let p=a.phase,hop=Math.max(0,Math.sin(p)),breath=Math.sin(t*(kind==='deer'?2.1:3)),r=a.reaction||0;a.reaction=Math.max(0,r-dt*.95);let joy=Math.sin(r*Math.PI),lift=kind==='rabbit'?hop*.11*w:.008*Math.sin(p*2)*w;
+  a.phase=(a.phase+dt*(kind==='rabbit'?4.8+speed*4.1:kind==='deer'?2.5+speed*3.1:3.2+speed*3.6)*Math.min(1,speed/.20))%6.2831853;let p=a.phase,hop=Math.max(0,Math.sin(p)),breath=Math.sin(t*(kind==='deer'?2.1:3)),r=a.reaction||0;a.reaction=Math.max(0,r-dt*.95);let joy=Math.sin(r*Math.PI),lift=kind==='rabbit'?hop*.11*w:.008*Math.sin(p*2)*w;
   a.body.scale.set(1+.014*breath*idle,1+.021*breath*idle,1+.012*breath*idle);
   a.head.rotation.set(idle*(.045*Math.sin(t*1.1))+.035*Math.sin(p)*w-joy*.16,idle*.15*Math.sin(t*.73),idle*.05*Math.sin(t*.9));
   a.tail.rotation.set(.08*Math.sin(p)*w+.05*joy,.15*Math.sin(t*(kind==='cat'?2.1:1.6))*(.45+w)+.22*joy*Math.sin(t*10),.06*Math.sin(t*1.3));
@@ -201,7 +212,7 @@
  }
  // V12.2: controller independent of geometry and rendering. Distances are world units.
  const followProfiles={rabbit:{walk:1.6,run:4.3,gap:1.05},fox:{walk:1.9,run:4.8,gap:1.25},cat:{walk:1.65,run:4.2,gap:1.05},deer:{walk:2.0,run:5.0,gap:1.5},dragon:{walk:1.8,run:4.6,gap:1.35}};
- function follower(){return {speed:0,side:1,idle:0,mode:'idle',blocked:0}}
+ function follower(){return {speed:0,side:1,idle:0,mode:'idle',blocked:0,settled254:false}}
  const dist=(a,b)=>Math.hypot(a.x-b.x,a.z-b.z);
  function followTarget(kind,owner,heading,side=1){
   const gap=(followProfiles[kind]||followProfiles.fox).gap;
@@ -219,9 +230,10 @@
   state.idle=ownerSpeed<.12?state.idle+dt:0;
   let target=followTarget(kind,owner,heading);
   if(!walkable(target.x,target.z)){const other=followTarget(kind,owner,heading,-1);target=walkable(other.x,other.z)?other:{...owner};}
-  const len=dist(pos,target),want=stop||len<.22?0:Math.min(gap>2.5||ownerSpeed>2.4?cfg.run:cfg.walk,len*2.8+Math.max(0,ownerSpeed)*.6);
+  const len=dist(pos,target);if(stop||ownerSpeed<.12&&len<.20)state.settled254=true;else if(ownerSpeed>.25||len>.38)state.settled254=false;
+  const want=stop||state.settled254||len<.22?0:Math.min(gap>2.5||ownerSpeed>2.4?cfg.run:cfg.walk,len*2.8+Math.max(0,ownerSpeed)*.6);
   state.speed=mix(state.speed||0,want,1-Math.exp(-dt/(want>state.speed?.23:.14)));
-  if(stop||len<.10||!dt){state.speed=stop?0:state.speed;state.mode=stop?'wait':'idle';return {...pos,speed:0,mode:state.mode};}
+  if(stop||state.settled254||len<.10||!dt){state.speed=stop||state.settled254?0:state.speed;state.mode=stop?'wait':'idle';return {...pos,speed:0,mode:state.mode};}
   const step=Math.min(len,state.speed*dt),a=Math.atan2(target.z-pos.z,target.x-pos.x);
   // Check direct segment, then a bounded detour; never snap through a wall.
   const offsets=[0,state.side*.65,-state.side*.65,state.side*1.15,-state.side*1.15];
@@ -254,5 +266,5 @@
  function careTravel135(raw,kind,seconds,now=Date.now()){
   const v=careState135(raw,kind,now);v.energy=Math.max(35,v.energy-clamp(Number.isFinite(seconds)?seconds:0,0,60)*.09);return v;
  }
- const api={KINDS,ELEMENTS150,updateVFX150,create,bind,animate,react,followProfiles,follower,followTarget,safeSpawn,followStep,careState135,careAction135,careTravel135};if(typeof module!=='undefined')module.exports=api;else global.WWCreatures=api;
+ const api={KINDS,ELEMENTS150,spiritMotion254,updateVFX150,create,bind,animate,react,followProfiles,follower,followTarget,safeSpawn,followStep,careState135,careAction135,careTravel135};if(typeof module!=='undefined')module.exports=api;else global.WWCreatures=api;
 })(typeof globalThis!=='undefined'?globalThis:this);

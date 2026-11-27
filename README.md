@@ -86,3 +86,7 @@ Landing compression peaks earlier and recovers more gradually without changing j
 
 ### V25.3 Horse Motion
 Normalize the four existing horse animation clip weights, smooth cadence and add dominant-gait hysteresis. Rider pose, reins and horse head use a common smoothed brake/turn response; residual brake fades at rest so idle motion can return. Existing clip phase alignment, mount IK and collision remain unchanged. Run `node test_horse253.cjs`; real horse skeletal clip transitions and hand contact still require browser playtesting.
+
+
+### V25.4 Spirit Motion
+Species-specific gait thresholds and smoothed playback rates drive equipped GLB spirits and procedural fallback animation. Locomotion clips transfer normalized phase on gait changes (existing clip alignment is not reauthored). Companion stop hysteresis reduces near-owner shuffling while preserving segment collision checks and immediate wait commands. Dragon flight uses filtered speed and late loads are guarded. Run `node test_spirit254.cjs`. Visual contact and actual skeletal animations still require browser testing.
