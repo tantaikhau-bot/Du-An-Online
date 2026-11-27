@@ -86,9 +86,9 @@
   let p=sample(history,now,delay);if(!p)return null;
   let gait=first.gait||0,discrete=first,velocity=0;
   if(at>=last.t){gait=last.gait||0;discrete=last;}
-  else if(at>first.t)for(let i=1;i<history.length;i++){const b=history[i],a=history[i-1];if(at<=b.t){const k=clamp((at-a.t)/(b.t-a.t),0,1);gait=(a.gait||0)+((b.gait||0)-(a.gait||0))*k;discrete=a;velocity=clamp((b.jump-a.jump)*1000/Math.max(1,b.t-a.t),-8,8);break}}
+  else if(at>first.t)for(let i=1;i<history.length;i++){const b=history[i],a=history[i-1];if(at<=b.t){const k=clamp((at-a.t)/(b.t-a.t),0,1);gait=(a.gait||0)+((b.gait||0)-(a.gait||0))*k;discrete=k>=1?b:a;velocity=clamp((b.jump-a.jump)*1000/Math.max(1,b.t-a.t),-8,8);break}}
   const age=Math.max(0,now-last.t);
-  const stale=age>Math.max(2200,(state.interval271||750)*2.5);if(stale){p={...last,moving:false,jump:0};gait=0;velocity=0}
+  const stale=age>Math.max(2200,(state.interval271||750)*2.5);if(stale){p={...last,moving:false,jump:0};discrete=last;gait=0;velocity=0}
   return {...p,gait:p.moving?clamp(gait,0,1):0,action:stale?'idle':discrete.action||'idle',vehicle:discrete.vehicle||'',velocity,age,delay};
  }
  function correction271(distance,dt,hasSnapshot,force){
