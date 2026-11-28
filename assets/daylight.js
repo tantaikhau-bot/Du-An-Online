@@ -124,5 +124,23 @@
   const angle=seed*Math.PI*2,progress=offset<4?offset/4:offset<8?1:(12-offset)/4;
   return {slot:n,seed,angle,progress,offset,start:n*12,heading:offset<8?Math.atan2(-Math.cos(angle),-Math.sin(angle)):Math.atan2(Math.cos(angle),Math.sin(angle))};
  }
- const api={duration,hour,mode,label,format,sample,routine263,festival266,trailReset267,festivalKey267,world274,citizenPlan274,travel274,wildlifeSlot274,environment265,groundTrack265,bankRipple265,celestial262,cloudAdvance262,approachHour,weatherProfiles,weatherAt,weatherState,blendWeather,weatherCount,waterLook133,sceneryBudget133,bankSites133};if(typeof module!=='undefined')module.exports=api;else root.WWDay=api;
+ // V35.1.3: bounded lighting response; no extra lights or render passes.
+ function atmosphere3513(h,w={},out={}){
+  const k=sample(Number.isFinite(h)?h:12),n=k.night,cel=celestial262(h),f=(v,d)=>Number.isFinite(v)?clamp(v):d;
+  const cloud=f(w.cloud,.4),rain=f(w.rain,0),snow=f(w.snow,0),gray=f(w.gray,0),cover=clamp((cloud-.4)/.6),wet=Math.max(rain,snow),twilight=cel.twilight*(1-n*.65);
+  out.skyTint=clamp(.10*cover+.14*wet);out.groundTint=clamp(.12*wet+.18*n);out.direct=1-.12*cover-.06*wet;out.ambient=1+.09*cover+.15*n;out.exposure=1+.06*n+.025*cover-.025*twilight;out.env=1-.13*cover+.12*n;
+  out.fog= Math.max(.008,Math.min(.068,(Number.isFinite(w.fog)?w.fog:.012)+.003*twilight+.0015*n));
+  out.glow=.08+.60*n*(1-.22*gray);out.shadowRadius=1.5+2*cover+.5*twilight;out.contact=.76+.24*(1-cover)*(1-n*.5);
+  return out;
+ }
+ function shadowAnchor3513(x,y,z,dir,extent,mapSize,out={}){
+  if(![x,y,z,extent,mapSize,...dir].every(Number.isFinite)||extent<=0||mapSize<1){out.x=x;out.y=y;out.z=z;return out;}
+  // Snap in the light's image plane, not the world X/Z plane.
+  const len=Math.hypot(...dir)||1,dx=dir[0]/len,dy=dir[1]/len,dz=dir[2]/len,r=Math.hypot(dx,dz);
+  if(r<.001){out.x=x;out.y=y;out.z=z;return out}
+  const rx=dz/r,rz=-dx/r,ux=dy*rz,uy=dz*rx-dx*rz,uz=-dy*rx;
+  const step=2*extent/mapSize,a=x*rx+z*rz,b=x*ux+y*uy+z*uz,da=Math.round(a/step)*step-a,db=Math.round(b/step)*step-b;
+  out.x=x+rx*da+ux*db;out.y=y+uy*db;out.z=z+rz*da+uz*db;return out;
+ }
+ const api={atmosphere3513,shadowAnchor3513,duration,hour,mode,label,format,sample,routine263,festival266,trailReset267,festivalKey267,world274,citizenPlan274,travel274,wildlifeSlot274,environment265,groundTrack265,bankRipple265,celestial262,cloudAdvance262,approachHour,weatherProfiles,weatherAt,weatherState,blendWeather,weatherCount,waterLook133,sceneryBudget133,bankSites133};if(typeof module!=='undefined')module.exports=api;else root.WWDay=api;
 })(typeof globalThis!=='undefined'?globalThis:this);

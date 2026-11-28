@@ -75,6 +75,7 @@ const fs=require('node:fs'),os=require('node:os'),path=require('node:path'),asse
   await page.waitForFunction(()=>window.wwGraphics59?.weather120?.auto===true,{},{timeout:30000});
   await page.evaluate(()=>{const b=document.getElementById('nWeather');b.click();b.click()});
   await page.waitForFunction(()=>window.wwGraphics59?.weather120?.index===1&&window.wwGraphics59.weather120.rain>.01,{},{timeout:30000});
+  const lighting=await page.evaluate(()=>window.wwGraphics59.lighting3513);assert(lighting&&lighting.extraRenderPasses===0&&lighting.fog>=.008&&lighting.fog<=.068&&Number.isFinite(lighting.exposure));
   const wet=await page.evaluate(()=>window.wwGraphics59.weather120);assert.ok(wet.rain<1&&wet.auto===false&&Number.isFinite(wet.fog));
   await page.evaluate(()=>{const b=document.getElementById('nWeather');for(let i=0;i<5;i++)b.click()});
   await page.waitForFunction(()=>window.wwGraphics59?.weather120?.auto===true,{},{timeout:30000});
