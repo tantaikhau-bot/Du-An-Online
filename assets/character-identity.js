@@ -7,7 +7,13 @@
  f1:['Nguyệt Hoa · trăng và hoa','moon',0xd3d9f2,0xfff2ca],f2:['Lam Ngọc · ngọc xanh','gem',0x427da6,0xade9fa],f3:['Ánh Mai · hoa mùa xuân','flower',0xf3c36d,0xffefc1],f4:['Tử Vân · mây tím','scarf',0x8274ae,0xe1d2fa],f5:['Bạch Linh · linh quang trắng','crest',0xd2e7ed,0xffffff],
  f6:['Hồng Liên · cánh sen','flower',0xbc5375,0xffbdcf],f7:['Thanh Trúc · trúc xanh','leaf',0x629b78,0xd9f1b9],f8:['Băng Tâm · tinh thể băng','gem',0x9acfe8,0xf1fdff],f9:['Dạ Nguyệt · trăng đêm','moon',0x494464,0xc6c9fc],f10:['Kim Vũ · lông vũ vàng','feather',0xc89a4e,0xffe2a2]
  };
- function clear(a){for(const group of a.identityMeshes||[]){group.removeFromParent();const gs=new Set(),ms=new Set();group.traverse(o=>{if(o.isMesh){gs.add(o.geometry);ms.add(o.material)}});for(const g of gs)g.dispose();for(const m of ms)m.dispose()}a.identityMeshes=[];a.identityMotion=[];a.identityType=null}
+ function clear(a){const gs=new Set(),ms=new Set(a.identityMaterials342||[]);for(const group of a.identityMeshes||[]){group.removeFromParent();group.traverse(o=>{if(o.isMesh){if(o.geometry)gs.add(o.geometry);for(const m of Array.isArray(o.material)?o.material:[o.material])if(m)ms.add(m)}})}for(const g of gs)g.dispose();for(const m of ms)m.dispose();a.identityMeshes=[];a.identityMotion=[];a.identityMaterials342=[];a.identityType=null;a.identityDetail342=null}
+ // V34.2: low-poly embossed medallion geometry, shared vertex layout, no added textures.
+ function badgeProfile342(type,variant=1){
+  const sides=['moon','gem','blade'].includes(type)?6:['flower','leaf','feather'].includes(type)?8:10;
+  const radius=.021+(Math.max(1,Math.min(10,Number(variant)||1))%3)*.002;
+  return {sides,radius,depth:.0035,metalness:['crest','blade','gem','moon'].includes(type)?.48:.28};
+ }
  function apply(T,a,p){
   if(!a.vrm||!a.root?.isObject3D)return;clear(a);
   const d=designs[p.id];if(!d)return;
@@ -21,14 +27,14 @@
   const right=new T.Vector3(0,1,0).cross(forward).normalize();
   const orient=new T.Quaternion().setFromRotationMatrix(new T.Matrix4().makeBasis(right,new T.Vector3(0,1,0),forward));
   const fabric=new T.MeshStandardMaterial({color,roughness:.91,metalness:0,side:T.DoubleSide});
-  const trim=new T.MeshStandardMaterial({color:accent,roughness:.62,metalness:.12,side:T.DoubleSide});
+  const trim=new T.MeshStandardMaterial({color:accent,roughness:.58,metalness:.18,side:T.DoubleSide});const badge=badgeProfile342(type,variant),metal=new T.MeshStandardMaterial({color:accent,roughness:.43,metalness:badge.metalness});a.identityMaterials342=[fabric,trim,metal];
   function groupAt(bone,x,y,z){const g=new T.Group();g.position.copy(root.worldToLocal(bone.getWorldPosition(new T.Vector3()))).addScaledVector(right,x*base).addScaledVector(new T.Vector3(0,1,0),y*base).addScaledVector(forward,z*base);g.quaternion.copy(orient);g.scale.setScalar(base);root.add(g);g.updateWorldMatrix(true,true);bone.attach(g);a.identityMeshes.push(g);return g}
   function mesh(g,geo,mat,x=0,y=0,z=0){let m=new T.Mesh(geo,mat);m.position.set(x,y,z);g.add(m);return m}
   function shape(g,pts,mat,z=0){let s=new T.Shape();pts.forEach(([x,y],i)=>i?s.lineTo(x,y):s.moveTo(x,y));s.closePath();return mesh(g,new T.ExtrudeGeometry(s,{depth:.006,bevelEnabled:true,bevelThickness:.0015,bevelSize:.002,bevelSegments:1,steps:1}),mat,0,0,z)}
   function line(g,pts,r,mat){return mesh(g,new T.TubeGeometry(new T.CatmullRomCurve3(pts.map(v=>new T.Vector3(...v))),12,r,5,false),mat)}
   const emblem=groupAt(chest,0,.045,.145);
   shape(emblem,[[0,.043],[.026,.014],[.020,-.027],[0,-.044],[-.020,-.027],[-.026,.014]],trim);
-  shape(emblem,[[0,.030],[.014,0],[0,-.026],[-.014,0]],fabric,.009);
+  shape(emblem,[[0,.030],[.014,0],[0,-.026],[-.014,0]],fabric,.009);const medallion=mesh(emblem,new T.CylinderGeometry(badge.radius,badge.radius*.94,badge.depth,badge.sides,1),metal,0,0,.018);medallion.rotation.x=Math.PI/2;medallion.rotation.y=variant*.21;
   if(type==='cape'||type==='scarf'||type==='hood'){
    let g=groupAt(chest,0,.13,-.13),w=type==='cape'?.20:.12,h=type==='cape'?.49:type==='hood'?.24:.31;
    let pts=[[-w,0],[-w*.83,-h*.55],[-w*.63,-h],[0,-h*.86],[w*.63,-h],[w*.83,-h*.55],[w,0]];
@@ -57,7 +63,7 @@
    else if(type==='crest'){for(let i=-1;i<=1;i++){let m=shape(g,[[0,0],[.019,.027],[0,.071],[-.019,.027]],trim);m.position.x=i*.027;m.rotation.z=i*-.27}}
   }
   // Each group can reference shared materials; dispose unused ones on next preset.
-  a.identityType=type;
+  a.identityType=type;a.identityDetail342={type,variant,badgeSides:badge.sides,additionalMeshes:1};
  }
  // V33.7: shoulder-pinned fabric, smooth inertia, bounded hem curl and two moving trim edges.
  function fabricPoint337(x,y,z,u,v,t,pitch,roll,flutter,phase=0,out=[]){
@@ -78,5 +84,5 @@
    b.needsUpdate=true;border.computeVertexNormals();
   }
  }
- const api={designs,apply,clear,animate,fabricPoint337};if(typeof module!=='undefined')module.exports=api;else root.WWIdentity=api;
+ const api={badgeProfile342,designs,apply,clear,animate,fabricPoint337};if(typeof module!=='undefined')module.exports=api;else root.WWIdentity=api;
 })(typeof globalThis!=='undefined'?globalThis:this);
