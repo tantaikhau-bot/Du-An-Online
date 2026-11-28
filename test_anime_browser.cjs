@@ -58,13 +58,13 @@ const fs=require('node:fs'),os=require('node:os'),path=require('node:path'),asse
   console.log('All five fantasy creature assets active in world:',creatureKinds);
   // Switch to fox to prove the authored skinned GLB replaces the procedural fallback.
   await page.evaluate(()=>{window.__savedPet117=s.pet;s.pet='fox';document.querySelectorAll('dialog[open]').forEach(d=>d.close())});
-  await page.waitForFunction(()=>window.wwGraphics59?.riggedAnimals?.includes('fox'),{},{timeout:90000});
+  await page.waitForFunction(()=>window.wwGraphics59?.activePetModel351?.kind==='fox'&&window.wwGraphics59.activePetModel351.source==='spirit161',{},{timeout:90000});
   console.log('Skinned fox model and authored animation loaded');
   fs.mkdirSync('test-output',{recursive:true});
   await page.screenshot({path:'test-output/rigged-fox-world.png',timeout:120000});
   for(const kind of ['cat','rabbit']){
    await page.evaluate(k=>{s.pet=k},kind);
-   await page.waitForFunction(k=>window.wwGraphics59?.activePetRig118===k,kind,{timeout:90000});
+   await page.waitForFunction(k=>window.wwGraphics59?.activePetModel351?.kind===k&&window.wwGraphics59.activePetModel351.source==='spirit161',kind,{timeout:90000});
    console.log('V11.6.2 visible skinned pet:',kind);
    await page.screenshot({path:'test-output/rigged-'+kind+'-world.png',timeout:120000});
   }
