@@ -24,6 +24,8 @@ jobs:
       - run: node test_housing358.cjs
       - run: node test_ready359.cjs
       - run: node test_fortress3510.cjs
+      - run: node test_environment3511.cjs
+      - run: node test_desktop_pressure3511.cjs
       - run: python test_foundation350.py
       - run: node test_performance349.cjs
       - run: node test_character352.cjs

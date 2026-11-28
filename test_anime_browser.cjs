@@ -46,6 +46,8 @@ const fs=require('node:fs'),os=require('node:os'),path=require('node:path'),asse
   await page.keyboard.down('w');
   try{await page.waitForFunction(p=>Math.hypot(player.x-p.x,player.y-p.y)>.3,startPos,{timeout:15000});}
   finally{await page.keyboard.up('w')}
+  // Wait for the initial avatar load and shader warm-up before testing user input.
+  await page.waitForFunction(()=>window.wwGraphics59?.avatarAsset?.startsWith('VRM '),{},{timeout:90000});
   await page.locator('.ww291-strike').click({timeout:30000});
   try{await page.waitForFunction(()=>window.wwGraphics59?.footwork320?.kind==='strike',null,{timeout:15000});}catch(e){console.log('COMBAT_QA '+JSON.stringify(await page.evaluate(()=>{const g=window.wwGraphics59;return {input:g.combatInput353,outcome:g.combatOutcome353,delay:g.strikeDelay352,faults:g.frameFaults343,footwork:g.footwork320,stage:g.stage,fps:g.fps};})));throw e;}
   console.log('V35.0.1 onboarding, actual keyboard movement and basic attack passed');
@@ -61,6 +63,9 @@ const fs=require('node:fs'),os=require('node:os'),path=require('node:path'),asse
   assert(forts.arrivals&&forts.centres,JSON.stringify(forts));assert.equal(Object.keys(forts.rows).length,3);
   for(const [id,v] of Object.entries(forts.rows)){const q=await page.evaluate(k=>FORTRESS3510[k],id);assert(v.width<=q.w+.02&&v.depth<=q.d+.02&&v.height>=q.h-.35&&v.height<=q.h+.1&&v.towers===4&&v.openings>=40&&v.saved>20,JSON.stringify(v))}
   console.log('Three fortress 3D envelopes, recessed facades, batch savings and arrival paths passed');
+  const routes=await page.evaluate(()=>window.wwGraphics59.approach3511);
+  assert.equal(Object.keys(routes).length,3);for(const [key,q] of Object.entries(routes)){assert(q.arrival&&q.walkway&&q.surfaces===6,JSON.stringify({key,q}))}
+  console.log('Regional paved approaches and arrival paths passed');
   const frontier=await page.evaluate(()=>({north:walkable4(-22,-82),south:walkable4(22,82),outside:walkable4(0,WW_WORLD137.halfZ+1),bridge:segment4({x:0,z:-11},{x:0,z:-3}),water:segment4({x:10,z:-11},{x:10,z:-3})}));assert.ok(frontier.north&&frontier.south&&!frontier.outside&&frontier.bridge&&!frontier.water,JSON.stringify(frontier));
   console.log('V13.7 expanded walkability and bridge regression passed');
   const desert=await page.evaluate(()=>({arrival:walkable4(DESERT179.arrivalX,DESERT179.arrivalZ),water:walkable4(DESERT179.oasisX,DESERT179.oasisZ),scene:window.wwGraphics59.desert179}));assert.ok(desert.arrival&&!desert.water&&desert.scene?.pyramid&&desert.scene?.oasis,JSON.stringify(desert));
