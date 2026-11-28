@@ -12,9 +12,9 @@ import os, sqlite3, json, hashlib, secrets, hmac, time, re
 from http.server import ThreadingHTTPServer, BaseHTTPRequestHandler
 from pathlib import Path
 ROOT=Path(__file__).resolve().parent
-RELEASE_VERSION='35.2.8'
-RELEASE_BUILD='35.2.8-vrm-model-recovery'
-RELEASE_NAME='VRM Model Recovery'
+RELEASE_VERSION='35.3.0'
+RELEASE_BUILD='35.3.0-traveler-preview'
+RELEASE_NAME='Traveler Preview'
 def canonical_avatar3528(path):
  parts=urlsplit(path)
  if parts.path!='/play':return None
