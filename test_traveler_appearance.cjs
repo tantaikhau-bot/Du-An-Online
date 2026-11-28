@@ -91,3 +91,21 @@ V.syncTravelerSword(swordGroup,sheathGroup,variant,false);assert(!variant.sword.
 assert(variant.sword.children.length<=8&&variant.sheath.children.length<=5);
 const html=require('node:fs').readFileSync('index.html','utf8');assert(html.includes('WWVRM.buildTravelerSword(T)'));assert(html.includes('!child.userData.travelerVariant'));assert(html.includes('WWVRM.syncTravelerSword(c.weapons303.sword'));
 console.log('Traveler V5 weapon mesh, visibility restoration and integration checks passed');
+
+for(let form=0;form<5;form++)for(const impact of [.18,.45,.82])for(let i=0;i<=100;i++){
+ const p=i/100,pose=V.travelerArmPose(form,p,impact);
+ assert(pose.every(Number.isFinite));assert(pose[0]>=0&&pose[0]<=1.85);assert(Math.abs(pose[1])<=1.18);
+ const c={kind:'strike',weapon:'sword',combo:form,progress:p,impact,profile334:'m1'};
+ const base=V.combatBody320(c,0,{}),body=V.travelerBodyPose('m1',c,'sword',0,{...base});
+ assert(body.width>=.19&&body.width<=.39);
+ assert(body.leftKnee>=.12&&body.leftKnee<=1.18&&body.rightKnee>=.12&&body.rightKnee<=1.18);
+ assert.deepEqual(V.travelerBodyPose('m2',c,'sword',0,{...base}),base);
+ assert.deepEqual(V.travelerBodyPose('m1',c,'great',0,{...base}),base);
+}
+assert.equal(new Set(Array.from({length:5},(_,i)=>JSON.stringify(V.travelerArmPose(i,.45,.45)))).size,5);
+assert.deepEqual(V.travelerArmPose(0,0,.45),V.travelerArmPose(4,1,.45));
+assert(V.travelerStanceMin('m1','sword',1)>V.travelerStanceMin('m2','sword',1));
+const airborne={kind:'strike',weapon:'sword',combo:3,progress:.4,impact:.45,airborne:true};
+const airBase=V.combatBody320(airborne,0,{}),air=V.travelerBodyPose('m1',airborne,'sword',0,{...airBase});
+for(const k of ['leftHip','rightHip','leftKnee','rightKnee','drop','shift'])assert.equal(air[k],airBase[k]);
+console.log('Traveler V6 dedicated arm tracks, stance bounds and character isolation checks passed');
