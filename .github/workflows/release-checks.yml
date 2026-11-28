@@ -19,6 +19,7 @@ jobs:
           node-version: '22'
       - run: python -m compileall -q .
       - run: python test_release347.py
+      - run: python test_release3520.py
       - run: python -m unittest test_stability
       - run: node test_peer_cleanup357.cjs
       - run: node test_housing358.cjs

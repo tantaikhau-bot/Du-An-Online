@@ -38,6 +38,10 @@ class Stability(unittest.TestCase):
      self.assertIsNotNone(match)
      release=json.loads(req('GET','/api/version')[2])
      self.assertEqual(release['build'],match.group(1))
+     health=json.loads(req('GET','/healthz')[2])
+     self.assertEqual(health['status'],'ok')
+     self.assertEqual(health['build'],release['build'])
+     self.assertEqual(health['version'],release['version'])
      self.assertEqual(release['version'],match.group(1).split('-')[0])
      from html import unescape
      for path in ('/','/play'):
