@@ -25,10 +25,18 @@
  f9:[.92,1.02,.98,.89,1.10,18,16,0x42445f,0x28273b,0xb6bce7],
  f10:[.88,.94,.95,1.11,.96,19,17,0xc19449,0xa87a36,0xffe3a0]
  };
+ // Separate face morphology and proportions; no material tint is needed for silhouette differences.
+ const morphology3524=Object.freeze({
+ m1:[1.00,1.00,1.00,1.00,.98,1.00],m2:[1.12,.87,.92,.94,1.13,.96],m3:[.86,1.10,1.13,1.08,.88,1.08],m4:[1.17,.96,.85,.90,1.12,1.04],m5:[.94,1.06,.96,1.13,1.05,.91],
+ m6:[1.04,.94,1.08,1.14,.93,1.02],m7:[1.13,1.12,1.15,.88,1.10,.94],m8:[.99,1.16,.91,1.08,1.03,1.10],m9:[1.08,.88,1.02,.86,1.18,.90],m10:[.91,1.05,.88,1.00,.97,1.13],
+ f1:[.95,1.06,1.10,1.02,.95,1.04],f2:[.86,.92,1.04,1.10,.90,.98],f3:[1.08,1.11,1.16,.90,.91,1.06],f4:[1.12,.97,.89,1.08,1.04,.94],f5:[1.03,1.14,.97,.94,1.09,1.02],
+ f6:[1.15,.90,1.12,.87,1.14,.95],f7:[.89,1.02,.92,1.17,.85,1.13],f8:[.92,1.15,1.06,1.13,.99,1.07],f9:[1.06,.88,.87,.97,1.13,.96],f10:[1.01,1.04,1.15,.86,.96,1.09]
+ });
+ function facePoint3524(x,y,z,d,out=[]){const [cheek,jaw,eye,nose,brow,lip]=d,t=Math.max(0,Math.min(1,(y+.13)/.24)),lower=Math.max(0,1-t*2),middle=Math.sin(Math.PI*t);out[0]=x*(1+(cheek-1)*middle+(jaw-1)*lower);out[1]=y;out[2]=z*(1+(nose-1)*middle*.42);return out;}
  const clamp=(x,a,b)=>Math.max(a,Math.min(b,x));
  function build(T,p){
   const d=designs[p.id]||designs.m1,[width,headH,depth,headW,chin,hairStyle,garment,clothColor,hairColor,accent]=d;
-  const female=p.gender==='female',root=new T.Group(),nodes={},all=[];
+  const female=p.gender==='female',root=new T.Group(),nodes={},all=[],morph=morphology3524[p.id]||morphology3524.m1;
   const skin=new T.MeshStandardMaterial({color:female?0xe6b697:0xd9a584,roughness:.88,side:T.DoubleSide});
   const cloth=new T.MeshStandardMaterial({color:clothColor,roughness:.96,metalness:0,side:T.DoubleSide});
   const dark=new T.MeshStandardMaterial({color:new T.Color(clothColor).multiplyScalar(.46),roughness:.92,side:T.DoubleSide});
@@ -43,6 +51,7 @@
   for(const [side,sign] of [['left',1],['right',-1]]){
    let sh=b(side+'Shoulder',upperChest,sign*shoulderWidth*.65,.02,0);
    let arm=b(side+'UpperArm',sh,sign*shoulderWidth*.40,0,0),elbow=b(side+'LowerArm',arm,sign*.245,0,0),hand=b(side+'Hand',elbow,sign*.205,0,0);
+   for(const [digit,offset,len] of [['Index',.027,.043],['Middle',.009,.048],['Ring',-.010,.044],['Little',-.027,.035],['Thumb',.040,.032]]){let parent=hand;const names=digit==='Thumb'?['Metacarpal','Proximal','Distal']:['Proximal','Intermediate','Distal'];for(let i=0;i<3;i++){parent=b(side+digit+names[i],parent,sign*(i===0?(digit==='Thumb'?.016:.073):len*(i===1?.55:.30)),i===0&&digit==='Thumb'?-.016:0,i===0?offset:0);}}
    let leg=b(side+'UpperLeg',hips,sign*.092*width,-.025,0),knee=b(side+'LowerLeg',leg,0,-.355,0),foot=b(side+'Foot',knee,0,-.345,0);b(side+'Toes',foot,0,-.045,.115);
   }
   function mesh(parent,geo,mat,x=0,y=0,z=0){const m=new T.Mesh(geo,mat);m.position.set(x,y,z);parent.add(m);return m}
@@ -72,7 +81,7 @@
    let A=at(u),B=at(e),C=at(h),R=(female?.058:.068)*width;
    let ar=(x,r,b1,b2,w)=>[x,A.y,A.z,r,r*.90,b1,b2,w];
    tube([ar(A.x-sg*.025,R*.82,u,u,0),ar(A.x+sg*.07,R,u,u,0),ar(B.x-sg*.055,R*.78,u,e,.13),ar(B.x,R*.69,u,e,.5),ar(B.x+sg*.065,R*.68,e,u,.12),ar(C.x-sg*.035,R*.51,e,e,0),ar(C.x,R*.47,e,e,0)],'x',garment%3===0?skin:cloth);
-   ell(h,skin,sg*.052,0,.005,.074,.035,.040);
+   ell(h,skin,sg*.038,0,.003,.052,.025,.040);for(const digit of ['Index','Middle','Ring','Little','Thumb']){const names=digit==='Thumb'?['Metacarpal','Proximal','Distal']:['Proximal','Intermediate','Distal'];for(let i=0;i<3;i++){const bone=nodes[side+digit+names[i]];ell(bone,skin,sg*(i===2?.009:.012),0,0,i===2?.014:.018,digit==='Thumb'?.010:.0085,digit==='Thumb'?.010:.009);}}
    let L=at(l),K=at(k),F=at(f),r=(female?.075:.087)*width;
    let lr=(y,rad,b1,b2,w)=>[L.x,y,0,rad,rad*.95,b1,b2,w];
    tube([lr(L.y+.04,r,l,l,0),lr(L.y-.11,r,l,l,0),lr(K.y+.065,r*.73,l,k,.12),lr(K.y,r*.66,l,k,.5),lr(K.y-.075,r*.68,k,l,.1),lr(F.y+.075,r*.54,k,k,0),lr(F.y,r*.49,k,k,0)],'y',dark);
@@ -80,19 +89,18 @@
    if(garment%4===1||garment%4===3)ell(u,trim,sg*.045,.012,0,R*1.45,R*1.2,R*1.22);
   }
   // Independent geometry: cheek/jaw proportions and eye placement vary by identity.
-  ell(head,skin,0,.035,0,.119*headW,.157*headH,.108*depth);
-  ell(head,skin,0,-.038,.018,.094*headW*chin,.099*headH,.093*depth);
-  ell(head,skin,0,-.005,.102*depth,.019,.031,.032);
+  const faceGeo=new T.SphereGeometry(1,32,24),facePos=faceGeo.attributes.position,tmp=[];for(let i=0;i<facePos.count;i++){const x=facePos.getX(i)*.119*headW,y=facePos.getY(i)*.157*headH,z=facePos.getZ(i)*.108*depth;facePoint3524(x,y,z,morph,tmp);facePos.setXYZ(i,tmp[0]*(y<-.04?chin:1),tmp[1],tmp[2]);}facePos.needsUpdate=true;faceGeo.computeVertexNormals();mesh(head,faceGeo,skin,0,.025,0);
+  ell(head,skin,0,-.005,.102*depth,.019*morph[3],.031*morph[3],.032*morph[3]);
   let eyeGroups=[];
   for(const sg of [-1,1]){
    ell(head,skin,sg*.119*headW,-.006,-.004,.021,.039,.021);
-   const eye=new T.Group();eye.position.set(sg*.048*headW,.027*headH,.097*depth);head.add(eye);eyeGroups.push(eye);
-   ell(eye,white,0,0,0,.029*(female?1.10:1),.015*(female?1.16:.88),.013);
+   const eye=new T.Group();eye.position.set(sg*.048*headW*morph[2],.027*headH,.097*depth);head.add(eye);eyeGroups.push(eye);
+   ell(eye,white,0,0,0, .029*(female?1.10:1)*morph[2],.015*(female?1.16:.88)/morph[2],.013);
    ell(eye,eyesMat,0,0,.010,.012,.014*(female?1.12:.88),.006);
    ell(eye,white,-.004,.005,.016,.0035,.0035,.002);
-   let brow=ell(head,hair,sg*.048*headW,.058*headH,.101*depth,.030,.008,.008);brow.rotation.z=sg*(hairStyle%3-.8)*.14;
+   let brow=ell(head,hair,sg*.048*headW,.058*headH,.101*depth, .030*morph[4],.006*morph[4],.008);brow.rotation.z=sg*(hairStyle%3-.8)*.14;
   }
-  const mouth=ell(head,lip,0,-.058*headH,.103*depth,.025,.005,.006);
+  const mouth=ell(head,lip,0,-.058*headH,.103*depth, .025*morph[5],.005,.006);
   // Hair is sculpted from separate curved masses with 20 distinct arrangements.
   let cap=mesh(head,new T.SphereGeometry(1,20,14,0,Math.PI*2,0,Math.PI*.63),hair,0,.055,0);cap.scale.set(.127*headW,.145*headH,.119*depth);
   const hairParts=[];
@@ -114,11 +122,11 @@
   if(garment%3===1||garment%3===2){let cape=panel(upperChest,cloth,[[-top,.04],[top,.04],[top*.86,-.32-.05*(coat%3)],[0,-.39],[-top*.75,-.31]],-.128*depth);cape.rotation.y=Math.PI;hairParts.push({g:cape,sg:1,small:true})}
   if(garment%4===2||female){let deco=mesh(head,new T.TorusGeometry(.025+.004*(garment%3),.006,6,12),trim,-.096*headW,.115,.07);deco.rotation.z=.3}
   let expression={blink:0,happy:0};
-  const expressionManager={getExpression:k=>k==='blink'||k==='happy'?{}:null,setValue:(k,v)=>expression[k]=v,update(){for(const e of eyeGroups)e.scale.y=clamp(1-(expression.blink||0)*.94,.06,1);mouth.scale.y=.005+(expression.happy||0)*.012;}};
+  const expressionManager={getExpression:k=>k==='blink'||k==='happy'?{}:null,setValue:(k,v)=>expression[k]=v,update(){for(const e of eyeGroups)e.scale.y=clamp(1-(expression.blink||0)*.94,.06,1);mouth.scale.y=.005+(expression.happy||0)*.008;}};
   const humanoid={getNormalizedBoneNode:n=>nodes[n]||null,getRawBoneNode:n=>nodes[n]||null,update(){root.updateMatrixWorld(true)},resetNormalizedPose(){for(const n of all)n.quaternion.identity();hips.position.set(0,.82,0)}};
   let clock=0;const vrm={scene:root,humanoid,expressionManager,update(dt){clock+=dt;for(const q of hairParts){q.g.rotation.x=Math.sin(clock*3.7+q.sg)* (q.small?.035:.065);if(!q.small)q.g.rotation.z=q.sg*Math.sin(clock*2.8)*.05}expressionManager.update();root.updateMatrixWorld(true)}};
   root.rotation.y=Math.PI;root.updateMatrixWorld(true);
   return {root,vrm,kind:'original-'+p.id,original:true,baseScale:1,colors:[],armDown:{left:-1,right:1},legSign:1,modelForward:new T.Vector3(0,0,1),motionProfile:p.id,motion:WWMotion.newState(),elapsed:0,weight:0,hipsRest:hips.position.clone(),soleHeight:{left:.10,right:.10},T,dispose(){const gs=new Set(),ms=new Set();root.traverse(o=>{if(o.geometry)gs.add(o.geometry);if(o.material)ms.add(o.material)});for(const g of gs)g.dispose();for(const m of ms)m.dispose();skeleton.dispose?.()}};
  }
- const api={designs,build};if(typeof module!=='undefined')module.exports=api;else global.WWOriginal=api;
+ const api={designs,morphology3524,facePoint3524,build};if(typeof module!=='undefined')module.exports=api;else global.WWOriginal=api;
 })(typeof globalThis!=='undefined'?globalThis:this);

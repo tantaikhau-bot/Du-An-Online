@@ -52,7 +52,7 @@ class ReleaseTests(unittest.TestCase):
         actual = [(i, a) for i, (a, _) in enumerate(scripts())
                   if a.get("src", "").startswith("/assets/ww346-")]
         self.assertEqual([a["src"] for _, a in actual],
-                         ["/assets/ww346-" + n + ".js?v=3523" for n in MODULES])
+                         ["/assets/ww346-" + n + ".js?v=3524" for n in MODULES])
         self.assertEqual([i for i, _ in actual], list(range(actual[0][0], actual[0][0]+14)))
         for _, a in actual:
             self.assertFalse({"async", "defer", "type"} & a.keys())
@@ -71,7 +71,7 @@ class ReleaseTests(unittest.TestCase):
                 serve_static(h, ROOT, path)
                 self.assertEqual(h.status, 200)
                 self.assertIn("javascript", h.response_headers["Content-Type"])
-                self.assertEqual(urlsplit(src).query, 'v=3523')
+                self.assertEqual(urlsplit(src).query, 'v=3524')
                 self.assertEqual(h.response_headers['Cache-Control'], 'public, no-cache')
                 self.assertEqual(h.wfile.getvalue(), (ROOT / "assets" / name).read_bytes())
                 h2 = Handler({"If-None-Match": h.response_headers["ETag"]})

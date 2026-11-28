@@ -58,7 +58,7 @@
   if(Number.isFinite(original.outlineWidthFactor))m.outlineWidthFactor=original.outlineWidthFactor*q.outline;
   return m;
  }
- // V35.2.3: independent rest-mesh silhouettes, not root height or material tint.
+ // V35.2.4: independent rest-mesh silhouettes, not root height or material tint.
  const bodyShapes3523=Object.freeze({
  m1:[1,.98,1,1,1,1,1],m2:[1.24,.98,1.11,1.12,1.08,.94,1.10],m3:[.90,.86,.92,.88,.94,1.06,.92],m4:[1.13,1.08,1.15,1.08,1.05,1.04,1.12],m5:[1.15,.87,.94,1.02,1.08,.90,.96],
  m6:[1.07,.91,1.05,.97,.92,.94,1.06],m7:[1.02,1.12,1.18,1.14,1.12,1.08,1.03],m8:[1.20,.92,1.02,1.06,.96,1.02,1.14],m9:[.94,.94,.88,.95,1.02,.92,1.03],m10:[1.12,1.15,1.12,1.06,1.04,1.12,.94],
@@ -92,7 +92,7 @@
  function applyPreset(T,a,p){
   if(a.applied===p.id)return;
   a.root.scale.setScalar(a.baseScale*heightFactor(p));applyShape3523(T,a,p.id);
-  const roles342={};for(const record of a.colors){finishMaterial342(T,record,p);roles342[record.role]=(roles342[record.role]||0)+1;}a.appearance342={preset:p.id,roles:roles342,base:a.kind,geometry:'rest-mesh-silhouette',shape:a.shape3523||null,finish:'authored-shader'};
+  const roles342={};for(const record of a.colors){finishMaterial342(T,record,p);roles342[record.role]=(roles342[record.role]||0)+1;}a.appearance342={preset:p.id,roles:roles342,base:a.kind,geometry:a.original?'original-skinned-mesh':'rest-mesh-silhouette',shape:a.shape3523||null,finish:'authored-shader'};
   if(a.vrm&&!a.original&&typeof WWIdentity!=='undefined'){try{a.vrm.humanoid.resetNormalizedPose?.();a.vrm.humanoid.update();WWIdentity.apply(T,a,p)}catch(e){WWIdentity.clear(a);console.warn('Optional wearable fallback',e)}}
   a.applied=p.id;a.motionProfile=p.id;a.lastDiagnostic140=undefined;a.rawDiagnostics140=null;a.action132={};a.secondary132={};a.combatFilter308=null;a.kinetic341=null;a.idleCombat341=null;if(a.spring316?.active)springMotion316(a,{},false);if(a.fingers163)for(const side of ['left','right'])for(const f of a.fingers163[side]){f.node.quaternion.copy(f.rest);f.curl=0;f.spread=0}a.idleGroundWeight=0;a.idleAnchor1170=null;a.contacts={};a.contactFrame=null;if(typeof WWMotion!=='undefined')a.motion=WWMotion.newState();
  }
@@ -123,7 +123,8 @@
  // V33.5: serialize expensive VRM decoding on mobile; local avatar jumps ahead of optional actors.
  function createLoadQueue335(limit=1,maxPending=12){let active=0,peak=0,seq=0,skipped=0;const pending=[];function pump(){while(active<limit&&pending.length){pending.sort((a,b)=>b.priority-a.priority||a.seq-b.seq);const q=pending.shift();if(q.valid&&!q.valid()){skipped++;q.reject(Error('Avatar request obsolete'));continue;}active++;peak=Math.max(peak,active);Promise.resolve().then(q.run).then(q.resolve,q.reject).finally(()=>{active--;pump();});}}return {enqueue(run,priority=0,valid=null){return new Promise((resolve,reject)=>{if(pending.length>=maxPending){let index=-1;for(let i=0;i<pending.length;i++)if(pending[i].priority<priority&&(index<0||pending[i].priority<pending[index].priority))index=i;if(index<0){reject(Error('Avatar load queue full'));return;}pending.splice(index,1)[0].reject(Error('Avatar request superseded'));skipped++;}pending.push({run,priority,valid,resolve,reject,seq:seq++});pump();});},stats:()=>({active,pending:pending.length,peak,skipped,limit,maxPending})};}
  const loadQueue335=createLoadQueue335(mobile140?1:2,mobile140?6:12);
- function load(T,kind,options={}){return loadQueue335.enqueue(()=>loadWithFallback335(T,kind),options.priority||0,options.valid||null);}
+ function modelKey3524(p,original=false){return original?'original-'+p.id:p.source;}
+ function load(T,kind,options={}){return loadQueue335.enqueue(async()=>{if(kind.startsWith('original-')){const p=roster.find(q=>q.id===kind.slice(9));if(!p||typeof WWOriginal==='undefined')throw Error('Original model unavailable');const a=WWOriginal.build(T,p);try{WWFootIK.calibrateSoles(T,a)}catch{}return a}return loadWithFallback335(T,kind)},options.priority||0,options.valid||null);}
  async function loadWithFallback335(T,kind){try{return await loadBase(T,kind)}catch(e){if(kind==='female3'||kind==='female4'){console.warn('Optional avatar base fallback',kind,e);const a=await loadBase(T,kind==='female3'?'female2':'female');a.fallbackBase=kind;return a}throw e}}
  async function loadBase(T,kind){
   lib??=Promise.all([import('three/addons/loaders/GLTFLoader.js'),import('/assets/three-vrm.module.js').catch(()=>import('https://cdn.jsdelivr.net/npm/@pixiv/three-vrm@2.1.2/lib/three-vrm.module.js'))]);
@@ -539,5 +540,5 @@
   if(measure140&&mode==='idle'&&a.weight<.05&&!WWMotion.phaseOf(j)){vrm.scene.updateMatrixWorld(true);const h=vrm.humanoid.getRawBoneNode('head'),l=vrm.humanoid.getRawBoneNode('leftHand'),r=vrm.humanoid.getRawBoneNode('rightHand'),ls=vrm.humanoid.getRawBoneNode('leftUpperArm'),rs=vrm.humanoid.getRawBoneNode('rightUpperArm');if(h&&l&&r&&ls&&rs){const hy=h.matrixWorld.elements[13];a.handsBelowHead=l.matrixWorld.elements[13]<hy&&r.matrixWorld.elements[13]<hy;a.handsDown=l.matrixWorld.elements[13]<ls.matrixWorld.elements[13]&&r.matrixWorld.elements[13]<rs.matrixWorld.elements[13]}}
  }
  function release(a){if(!a||a.released335)return;a.released335=true;try{if(a.spring316?.active)springMotion316(a,{},false)}catch{}try{if(typeof WWIdentity!=='undefined')WWIdentity.clear(a)}finally{a.root.removeFromParent();try{a.dispose?.()}finally{a.contacts={};a.combatFilter308=null;a.dispose=null;}}}
- const api={bodyShapes3523,shapePoint3523,stanceSpread3523,carry3523,readyWeight359,comboEnvelope353,idleStance352,appearance342,materialRole342,materialPolicy342,snapshotMaterial342,finishMaterial342,expression341,kineticFrame341,idleCombat341,smoothKey339,blendRate339,ultimate338,ultimateFrame338,ultimatePath338,createLoadQueue335,loadQueueStats335:()=>loadQueue335.stats(),dodgePose334,weaponKeyframe321,clips321,actionFootwork320,boundedFootwork320,danceProfiles320,combatBody320,combatGrip312,fingerTargets163,fingerResponse251,setupFingers163,animateFingers163,load,animate,sources,roster,preset,applyPreset,release,heightFactor,createBufferCache140,bufferStats140:()=>buffers.stats()};if(typeof module!=='undefined')module.exports=api;else window.WWVRM=api;
+ const api={modelKey3524,bodyShapes3523,shapePoint3523,stanceSpread3523,carry3523,readyWeight359,comboEnvelope353,idleStance352,appearance342,materialRole342,materialPolicy342,snapshotMaterial342,finishMaterial342,expression341,kineticFrame341,idleCombat341,smoothKey339,blendRate339,ultimate338,ultimateFrame338,ultimatePath338,createLoadQueue335,loadQueueStats335:()=>loadQueue335.stats(),dodgePose334,weaponKeyframe321,clips321,actionFootwork320,boundedFootwork320,danceProfiles320,combatBody320,combatGrip312,fingerTargets163,fingerResponse251,setupFingers163,animateFingers163,load,animate,sources,roster,preset,applyPreset,release,heightFactor,createBufferCache140,bufferStats140:()=>buffers.stats()};if(typeof module!=='undefined')module.exports=api;else window.WWVRM=api;
 })();
