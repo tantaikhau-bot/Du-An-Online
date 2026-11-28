@@ -19,6 +19,7 @@ jobs:
           node-version: '22'
       - run: python -m compileall -q .
       - run: python test_release347.py
+      - run: node test_performance349.cjs
       - run: python test_http_assets.py
       - run: python test_together.py
       - run: python test_guild.py
