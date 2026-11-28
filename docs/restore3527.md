@@ -1,0 +1,3 @@
+# V35.2.7 — Character Quality Restoration
+
+User screenshot shows simplified avatar and loading state. Preserve authored semi-realistic VRM geometry as default; procedural Original and experimental rest-mesh deformation require explicit URL modes. Prioritize local avatar using dedicated queue, try bounded same-gender VRM alternatives, retain already loaded avatar while switching, expose load errors, hide weapons until avatar is ready and move greatsword carry anchor away from centerline. Fluid animation changes stay enabled. Root cause of screenshot is not confirmed; live visual checks remain necessary.
