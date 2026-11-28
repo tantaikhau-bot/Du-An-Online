@@ -51,3 +51,30 @@ assert(Math.abs(hairMesh.geometry.attributes.position.getX(0)-expectedHair[0])<1
 assert.equal(hairAvatar.travelerSculpt.hairMeshes,1);
 V.restoreTravelerSculpt(hairAvatar);assert.equal(hairMesh.geometry,hairGeometry);
 console.log('Traveler V3 hair shape, isolation and spring checks passed');
+
+const Identity=require('./assets/character-identity.js');
+for(let r=0;r<=40;r++)for(let c=0;c<=40;c++){
+ const v=r/40,u=c/20-1,p=Identity.travelerMantlePoint(u,v);
+ const l=Identity.travelerLapels(-1,c/40,v),q=Identity.travelerLapels(1,c/40,v);
+ assert([...p,...l,...q].every(Number.isFinite));
+ assert(Math.abs(p[0])<=.27);assert(p[1]>=-.4);assert(p[1]<=0);
+ assert(Math.abs(l[0]+q[0])<1e-10);assert.equal(l[1],q[1]);
+}
+function fakeAvatar(){
+ const root=new T.Group(),chest=new T.Bone(),hips=new T.Bone(),head=new T.Bone();
+ root.add(hips);hips.position.y=.85;hips.add(chest);chest.position.y=.35;chest.add(head);head.position.y=.23;
+ const bones={hips,chest,head};
+ return {root,baseScale:1,modelForward:new T.Vector3(0,0,1),vrm:{humanoid:{getRawBoneNode:n=>bones[n]}}};
+}
+const outfitAvatar=fakeAvatar();
+Identity.apply(T,outfitAvatar,V.preset('m1'));
+assert.equal(outfitAvatar.identityType,'traveler-mantle');assert.equal(outfitAvatar.identityMeshes.length,4);
+assert.equal(outfitAvatar.identityMotion.length,1);assert(outfitAvatar.identityDetail342.additionalMeshes>=12);
+const panel=outfitAvatar.identityMotion[0],restPanel=Array.from(panel.cloth.array);
+Identity.animate(outfitAvatar,.5,1,{clothPitch:.4,clothRoll:.2,flutter:.2});
+assert(panel.cloth.array.every(Number.isFinite));assert.notDeepEqual(Array.from(panel.cloth.array),restPanel);
+const oldGroups=outfitAvatar.identityMeshes.slice();
+Identity.apply(T,outfitAvatar,V.preset('m3'));
+assert.equal(outfitAvatar.identityType,'scarf');assert(oldGroups.every(g=>g.parent===null));
+Identity.clear(outfitAvatar);assert.equal(outfitAvatar.identityMeshes.length,0);
+console.log('Traveler V4 garment surfaces, animation and cleanup checks passed');
