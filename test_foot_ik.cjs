@@ -44,3 +44,6 @@ const other=IK.stance119(T,wa,'right',wu,wk,wf,wf,()=>0,.2,.55);assert.equal(oth
 assert.equal(IK.stance119(T,wa,'left',wu,wk,wf,wf,()=>0,.6,.55),null);
 walkRoot.position.z+=1;walkRoot.updateMatrixWorld(true);const released=IK.stance119(T,wa,'left',wu,wk,wf,wf,()=>0,.2,.55);assert.equal(released.corrected,0);assert.ok(released.anchor.distanceTo(first.anchor)>.5);
 console.log('V11.9 stance anchor independence, bounded correction and release passed');
+
+// Both combat and relaxed standing retain bounded ground support.
+r3.position.y=.09;const armed=IK.groundCombat320(T,a3,()=>.035,1,null);assert.equal(armed.mode,'combat-support');assert.equal(armed.planted,2);assert(armed.maxError<.004&&Math.abs(armed.offset)<=.24);assert.equal(a3.idleAnchor1170,null);for(let i=0;i<90;i++){r3.position.y=.09;c3=IK.groundIdle(T,a3,()=>.035,1/60,0,false,'idle')}assert(c3.weight>.95&&c3.planted===2&&c3.maxError<.004);console.log('Combat-to-relaxed sole contact passed');

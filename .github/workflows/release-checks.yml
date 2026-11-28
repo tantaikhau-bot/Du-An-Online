@@ -22,6 +22,7 @@ jobs:
       - run: python -m unittest test_stability
       - run: node test_peer_cleanup357.cjs
       - run: node test_housing358.cjs
+      - run: node test_ready359.cjs
       - run: python test_foundation350.py
       - run: node test_performance349.cjs
       - run: node test_character352.cjs

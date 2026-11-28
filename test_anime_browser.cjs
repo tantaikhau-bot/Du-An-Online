@@ -56,6 +56,7 @@ const fs=require('node:fs'),os=require('node:os'),path=require('node:path'),asse
   assert(housing.road&&housing.centres,JSON.stringify(housing));assert.equal(housing.audit.houses.length,4);
   for(const q of housing.audit.houses){const spec=await page.evaluate(({x,z})=>HOUSING358.find(q=>q.x===x&&q.z===z),{x:q.x,z:q.z});assert(Math.abs(q.height-spec.h)<.01&&Math.abs(q.width-spec.w)<.01&&Math.abs(q.depth-spec.d)<.01&&Math.abs(q.base)<.01,JSON.stringify(q))}
   console.log('Public housing proportions and main road collision passed');
+  fs.mkdirSync('test-output',{recursive:true});await page.screenshot({path:'test-output/housing-world.png',timeout:120000});
   const frontier=await page.evaluate(()=>({north:walkable4(-22,-82),south:walkable4(22,82),outside:walkable4(0,WW_WORLD137.halfZ+1),bridge:segment4({x:0,z:-11},{x:0,z:-3}),water:segment4({x:10,z:-11},{x:10,z:-3})}));assert.ok(frontier.north&&frontier.south&&!frontier.outside&&frontier.bridge&&!frontier.water,JSON.stringify(frontier));
   console.log('V13.7 expanded walkability and bridge regression passed');
   const desert=await page.evaluate(()=>({arrival:walkable4(DESERT179.arrivalX,DESERT179.arrivalZ),water:walkable4(DESERT179.oasisX,DESERT179.oasisZ),scene:window.wwGraphics59.desert179}));assert.ok(desert.arrival&&!desert.water&&desert.scene?.pyramid&&desert.scene?.oasis,JSON.stringify(desert));
@@ -139,7 +140,7 @@ const fs=require('node:fs'),os=require('node:os'),path=require('node:path'),asse
   await page.waitForFunction(()=>window.wwGraphics59?.look131?.key==='original',{},{timeout:30000});
   await page.evaluate(()=>{lookKey131='clear'});await page.waitForFunction(()=>window.wwGraphics59?.look131?.key==='clear',{},{timeout:30000});await page.evaluate(()=>{lookKey131='original'});
   const day0=await page.evaluate(()=>window.wwGraphics59.daylight.hour);await page.waitForFunction(h=>window.wwGraphics59.daylight.hour>h+.01,day0,{timeout:30000});console.log('Continuous game clock active');
-  await page.waitForFunction(()=>window.wwGraphics59?.footIK?.mode==='grounded-idle'&&window.wwGraphics59.footIK.weight>.95&&window.wwGraphics59.footIK.anchorLocked,{},{timeout:30000});
+  try{await page.waitForFunction(()=>window.wwGraphics59?.footIK?.mode==='grounded-idle'&&window.wwGraphics59.footIK.weight>.95&&window.wwGraphics59.footIK.anchorLocked,{},{timeout:30000});}catch(e){console.log('IDLE_CONTACT_QA '+JSON.stringify(await page.evaluate(()=>({foot:window.wwGraphics59?.footIK,motion:window.wwGraphics59?.motionState,body:window.wwGraphics59?.poseCheck?.combatBody320,frame:window.wwGraphics59?.frameFaults343}))));throw e;}
   const contact=await page.evaluate(()=>window.wwGraphics59.footIK);assert.ok(Math.abs(contact.offset)<=.34);assert.equal(contact.planted,2,JSON.stringify(contact));assert.equal(contact.source,'mesh',JSON.stringify(contact));assert.ok(Math.max(...contact.contacts.map(c=>Math.abs(c.gap)))<.025,JSON.stringify(contact));console.log('Idle ground contact:',JSON.stringify(contact));
   await page.keyboard.down('d');try{await page.waitForFunction(()=>window.wwGraphics59?.motionState==='walk',{},{timeout:30000});}finally{await page.keyboard.up('d')}
   await checkPose('m1');
