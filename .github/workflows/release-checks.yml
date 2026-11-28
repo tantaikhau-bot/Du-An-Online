@@ -35,6 +35,7 @@ jobs:
       - run: node test_fluid3526.cjs
       - run: node test_restore3527.cjs
       - run: node test_avatar3528.cjs
+      - run: node test_traveler_appearance.cjs
       - run: node test_lighting3513.cjs
       - run: node test_startup3521.cjs
       - run: node test_clarity3522.cjs

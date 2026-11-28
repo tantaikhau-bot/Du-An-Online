@@ -46,7 +46,23 @@
   const d=appearance342[id]||appearance342.m1;
   return role==='skin'?{rgb:[d[0],d[1]+.025,d[2]],roughness:.82,metalness:0,toon:.94,outline:.72}:role==='hair'?{rgb:[1,1,1],roughness:d[3],metalness:0,toon:.92,outline:.80}:role==='cloth'?{rgb:[1,1,1],roughness:.88,metalness:0,toon:.96,outline:.90}:role==='eye'?{rgb:[1,1,1],roughness:.35,metalness:0,toon:1,outline:1}:{rgb:[1,1,1],roughness:null,metalness:null,toon:1,outline:1};
  }
- function snapshotMaterial342(m){return {roughness:m.roughness,metalness:m.metalness,shadingToonyFactor:m.shadingToonyFactor,outlineWidthFactor:m.outlineWidthFactor};}
+ // Traveler prototype: preserve the original VRM maps, skinning, expressions and shader.
+ // This finish is intentionally limited to m1; source meshes are not modified.
+ function travelerFinish(m,original,role,id){
+  if(Number.isFinite(original.shadingShiftFactor)){
+   const delta=id==='m1'?({skin:.035,hair:.02,cloth:.015}[role]||0):0;
+   m.shadingShiftFactor=delta===0?original.shadingShiftFactor:Math.max(-1,Math.min(1,original.shadingShiftFactor+delta));
+  }
+  if(id!=='m1')return;
+  const soften={skin:.80,hair:.88,cloth:.94}[role];
+  if(soften!==undefined&&Number.isFinite(m.outlineWidthFactor))m.outlineWidthFactor*=soften;
+  if(soften!==undefined&&Number.isFinite(m.shadingToonyFactor))m.shadingToonyFactor*=({skin:.87,hair:.91,cloth:.96}[role]);
+  if(m.isMeshStandardMaterial&&Number.isFinite(m.roughness)){
+   const target={skin:.72,hair:.58,cloth:.85,eye:.27}[role];
+   if(target!==undefined)m.roughness=m.roughness*.55+target*.45;
+  }
+ }
+ function snapshotMaterial342(m){return {roughness:m.roughness,metalness:m.metalness,shadingToonyFactor:m.shadingToonyFactor,outlineWidthFactor:m.outlineWidthFactor,shadingShiftFactor:m.shadingShiftFactor};}
  function finishMaterial342(T,record,p){
   const {material:m,base,role}=record,original=record.original342??=snapshotMaterial342(m),q=materialPolicy342(role,p.id);
   m.color.copy(base);
@@ -56,9 +72,10 @@
   if(m.isMeshStandardMaterial&&q.metalness!==null&&Number.isFinite(original.metalness))m.metalness=Math.min(original.metalness,.08);
   if(Number.isFinite(original.shadingToonyFactor))m.shadingToonyFactor=Math.max(0,Math.min(1,original.shadingToonyFactor*q.toon));
   if(Number.isFinite(original.outlineWidthFactor))m.outlineWidthFactor=original.outlineWidthFactor*q.outline;
+  travelerFinish(m,original,role,p.id);
   return m;
  }
- // V35.2.8: independent rest-mesh silhouettes, not root height or material tint.
+ // V35.3.0: independent rest-mesh silhouettes, not root height or material tint.
  const bodyShapes3523=Object.freeze({
  m1:[1,.98,1,1,1,1,1],m2:[1.24,.98,1.11,1.12,1.08,.94,1.10],m3:[.90,.86,.92,.88,.94,1.06,.92],m4:[1.13,1.08,1.15,1.08,1.05,1.04,1.12],m5:[1.15,.87,.94,1.02,1.08,.90,.96],
  m6:[1.07,.91,1.05,.97,.92,.94,1.06],m7:[1.02,1.12,1.18,1.14,1.12,1.08,1.03],m8:[1.20,.92,1.02,1.06,.96,1.02,1.14],m9:[.94,.94,.88,.95,1.02,.92,1.03],m10:[1.12,1.15,1.12,1.06,1.04,1.12,.94],
@@ -89,10 +106,130 @@
   const speed=want?Math.min(160,Math.max(35,deadline-now+dt)):380;state.amount=Math.max(0,Math.min(1,state.amount+(want?dt/speed:-dt/speed)));if(active&&now>=deadline)state.amount=1;
   return {amount:state.amount,phase:state.amount<=0?'sheathed':state.amount>=1?'drawn':want?'drawing':'stowing'};
  }
+ // Traveler V2: a bounded, reversible rest-space sculpt on the original m1 VRM.
+ // No bone scaling; all head surfaces (including eyes and hair) receive the same field.
+ function travelerSculptPoint(x,y,z,headX,headY,out=[]){
+  const smooth=t=>{t=Math.max(0,Math.min(1,t));return t*t*(3-2*t)};
+  const band=(v,a,b,c,d)=>smooth((v-a)/(b-a))*(1-smooth((v-c)/(d-c)));
+  const h=y-headY,dx=x-headX;
+  const jaw=band(h,-.035,.015,.055,.105),crown=smooth((h-.065)/.11);
+  const shoulders=band(h,-.39,-.30,-.19,-.10),waist=band(h,-.71,-.60,-.48,-.37);
+  const core=1-smooth((Math.abs(dx)-.15)/.16);
+  out[0]=headX+dx*(1+.045*jaw-.065*crown+core*(.045*shoulders-.055*waist));
+  out[1]=y;out[2]=z;return out;
+ }
+ // Traveler V3: an asymmetric swept crown and narrower temples, anchored at the scalp.
+ // Only fully hair-material meshes are eligible; mixed face/hair geometry is left alone.
+ // Traveler V5: original tapered steel blade and fitted leather sheath, +Y blade axis.
+ const travelerBladeRows=Object.freeze([[.115,.033,.010],[.19,.044,.013],[.48,.039,.011],[.76,.029,.009],[.91,.017,.006],[.98,0,0]].map(Object.freeze));
+ function travelerSwordEnabled(id,weapon){return id==='m1'&&weapon==='sword';}
+ function travelerSection(rows,inner=false){
+  const positions=[],indices=[];
+  for(const [y,w,d] of rows)positions.push(-w,y,0,-w*.66,y,d*.72,0,y,d,w*.66,y,d*.72,w,y,0,w*.66,y,-d*.72,0,y,-d,-w*.66,y,-d*.72);
+  for(let i=0;i<rows.length-1;i++)for(let j=0;j<8;j++){const a=i*8+j,b=i*8+(j+1)%8;indices.push(a,b,a+8,b,b+8,a+8);}
+  if(inner)for(let i=0;i<indices.length;i+=3){const v=indices[i+1];indices[i+1]=indices[i+2];indices[i+2]=v;}
+  return {positions,indices};
+ }
+ function buildTravelerSword(T){
+  const sword=new T.Group(),sheath=new T.Group();
+  const steel=new T.MeshStandardMaterial({color:0xa9b6c2,metalness:.77,roughness:.32}),edge=new T.MeshStandardMaterial({color:0xdbe4e8,metalness:.68,roughness:.24}),bronze=new T.MeshStandardMaterial({color:0xa48754,metalness:.65,roughness:.44}),hide=new T.MeshStandardMaterial({color:0x403126,roughness:.86}),dark=new T.MeshStandardMaterial({color:0x27241f,roughness:.83,side:T.DoubleSide});
+  function put(g,geo,mat,x=0,y=0,z=0){const m=new T.Mesh(geo,mat);m.position.set(x,y,z);g.add(m);return m}
+  function section(g,rows,mat,inside=false){const {positions,indices}=travelerSection(rows,inside),geo=new T.BufferGeometry();geo.setAttribute('position',new T.Float32BufferAttribute(positions,3));geo.setIndex(indices);const flat=geo.toNonIndexed();geo.dispose();flat.computeVertexNormals();return put(g,flat,mat)}
+  // Bright bevels and steel ridge are two surfaces, grouped into two draw calls.
+  const raw=travelerSection(travelerBladeRows),batches=[[],[]];
+  for(let i=0;i<raw.indices.length;i+=6){const side=(i/6)%8,buf=batches[[0,3,4,7].includes(side)?1:0];for(let j=0;j<6;j++){const k=raw.indices[i+j]*3;buf.push(...raw.positions.slice(k,k+3));}}
+  for(let i=0;i<2;i++){const g=new T.BufferGeometry();g.setAttribute('position',new T.Float32BufferAttribute(batches[i],3));g.computeVertexNormals();put(sword,g,i?edge:steel);}
+  put(sword,new T.CylinderGeometry(.021,.020,.20,12),hide,0,-.003,0);
+  // Rounded guard follows the grip axis; no fantasy spikes obstruct the hand.
+  const guard=put(sword,new T.CapsuleGeometry(.012,.143,4,8),bronze,0,.111,0);guard.rotation.z=Math.PI/2;
+  const collar=put(sword,new T.BoxGeometry(.066,.026,.036),bronze,0,.122,0);
+  put(sword,new T.SphereGeometry(.026,10,8),bronze,0,-.118,0).scale.set(1,.68,.9);
+  const rings=new T.InstancedMesh(new T.TorusGeometry(.0208,.0017,5,12),bronze,5),matrix=new T.Matrix4(),rot=new T.Matrix4().makeRotationX(Math.PI/2);
+  for(let i=0;i<5;i++){matrix.copy(rot).setPosition(0,-.085+i*.041,0);rings.setMatrixAt(i,matrix);}rings.computeBoundingSphere();sword.add(rings);
+  // Open throat, tapered octagonal shell and separate metal chape.
+  const shell=[[.119,.052,.025],[.20,.052,.025],[.53,.048,.023],[.80,.038,.020],[.99,.022,.015],[1.025,.012,.010]];
+  section(sheath,shell,hide);
+  section(sheath,[[.119,.047,.020],[.24,.047,.020]],dark,true);
+  section(sheath,[[.118,.055,.028],[.157,.055,.028]],bronze);
+  section(sheath,[[.927,.030,.021],[.995,.024,.018],[1.034,0,0]],bronze);
+  section(sheath,[[.38,.051,.026],[.413,.051,.026]],bronze);
+  sword.userData.travelerVariant=true;sheath.userData.travelerVariant=true;
+  return {sword,sheath};
+ }
+ function syncTravelerSword(sword,sheath,variant,enabled){
+  if(!sword||!sheath||!variant)return;
+  for(const [group,child] of [[sword,variant.sword],[sheath,variant.sheath]]){
+   for(const o of group.children){if(o===child)o.visible=enabled;else if(enabled){if(o.userData.travelerVisible===undefined)o.userData.travelerVisible=o.visible;o.visible=false;}else if(o.userData.travelerVisible!==undefined){o.visible=o.userData.travelerVisible;delete o.userData.travelerVisible;}}
+  }
+ }
+ function travelerHairMesh(mesh){
+  const materials=Array.isArray(mesh.material)?mesh.material:[mesh.material];
+  return materials.length>0&&materials.every(m=>m&&materialRole342(m.name)==='hair');
+ }
+ function travelerHairPoint(x,y,z,headX,headY,out=[]){
+  const smooth=t=>{t=Math.max(0,Math.min(1,t));return t*t*(3-2*t)};
+  const h=y-headY,dx=x-headX,top=smooth((h-.085)/.13),outer=smooth((Math.abs(dx)-.075)/.065);
+  const temple=smooth((h-.015)/.055)*(1-smooth((h-.085)/.095))*outer;
+  out[0]=x+.022*top-.045*dx*temple;
+  out[1]=y+.009*top*(.55+.45*Math.tanh(dx/.07));
+  out[2]=z;return out;
+ }
+ function travelerHairSpring(id,role){
+  return id==='m1'&&role==='hair'?{gain:.19,side:.20,max:.13,flutter:.045}:null;
+ }
+ function captureTravelerRest(T,a){
+  if(a.kind!=='male'||a.original||a.experimentalShape3527)return;
+  const head=a.vrm.humanoid.getRawBoneNode('head');if(!head)return;
+  a.root.updateMatrixWorld(true);
+  const inv=a.root.matrixWorld.clone().invert(),scale=a.baseScale;
+  const h=a.root.worldToLocal(head.getWorldPosition(new T.Vector3())).multiplyScalar(scale);
+  if(!Number.isFinite(h.x)||!Number.isFinite(h.y)||h.y<1.15||h.y>1.7)return;
+  const records=[];let vertices=0;
+  a.vrm.scene.traverse(o=>{const g=o.geometry,p=g?.attributes?.position;if(!o.isMesh||!p||p.itemSize!==3)return;
+   vertices+=p.count*(1+(g.morphAttributes?.position?.length||0));
+   const matrix=inv.clone().multiply(o.matrixWorld);records.push({mesh:o,original:g,matrix,back:matrix.clone().invert(),hair:travelerHairMesh(o)});
+  });
+  if(vertices>2200000||!records.length)return;
+  a.travelerRest={headX:h.x,headY:h.y,records,scale};
+ }
+ function restoreTravelerSculpt(a){
+  for(const r of a.travelerRest?.records||[]){if(!r.sculpted)continue;r.mesh.geometry=r.original;r.sculpted.dispose();r.sculpted=null;}
+  a.travelerSculpt=null;
+ }
+ function applyTravelerSculpt(T,a,id){
+  if(id!=='m1'){restoreTravelerSculpt(a);return;}
+  const rest=a.travelerRest;if(!rest||a.travelerSculpt)return;
+  const {headX,headY,scale}=rest,v=new T.Vector3(),base=new T.Vector3(),warpedBase=new T.Vector3(),out=[],outBase=[];
+  const warp=(p,m,b,out,hair)=>{p.applyMatrix4(m).multiplyScalar(scale);travelerSculptPoint(p.x,p.y,p.z,headX,headY,out);if(hair)travelerHairPoint(out[0],out[1],out[2],headX,headY,out);return p.fromArray(out).multiplyScalar(1/scale).applyMatrix4(b)};
+  try{
+   for(const r of rest.records){
+    const source=r.original,src=source.attributes.position;
+    // Skip geometry entirely below the waist deformation band, including shoes and most leg meshes.
+    if(!source.boundingBox)source.computeBoundingBox();const bounds=source.boundingBox?.clone().applyMatrix4(r.matrix);
+    if(bounds&&bounds.max.y*scale<headY-.72)continue;
+    const g=source.clone(),dst=g.attributes.position;
+    r.sculpted=g;
+    // Transform absolute targets and relative morph deltas coherently.
+    for(let i=0;i<src.count;i++){
+     base.fromBufferAttribute(src,i);v.copy(base);warp(v,r.matrix,r.back,outBase,r.hair);dst.setXYZ(i,v.x,v.y,v.z);warpedBase.copy(v);
+     for(let j=0;j<(source.morphAttributes.position?.length||0);j++){
+      const old=source.morphAttributes.position[j],next=g.morphAttributes.position[j];
+      v.fromBufferAttribute(old,i);if(source.morphTargetsRelative)v.add(base);warp(v,r.matrix,r.back,out,r.hair);
+      if(source.morphTargetsRelative)v.sub(warpedBase);
+      next.setXYZ(i,v.x,v.y,v.z);
+     }
+    }
+    dst.needsUpdate=true;for(const m of g.morphAttributes.position||[])m.needsUpdate=true;
+    // Retain authored normals/tangents and skin attributes; small sculpt avoids hard seam regeneration.
+    g.computeBoundingBox();g.computeBoundingSphere();r.mesh.geometry=g;
+   }
+   a.travelerSculpt={id,meshes:rest.records.filter(r=>r.sculpted).length,hairMeshes:rest.records.filter(r=>r.hair&&r.sculpted).length,mode:'reversible-rest-sculpt'};
+  }catch(e){restoreTravelerSculpt(a);console.warn('Traveler sculpt fallback',e);}
+ }
  function applyPreset(T,a,p){
   if(a.applied===p.id)return;
-  a.root.scale.setScalar(a.baseScale*heightFactor(p));if(a.experimentalShape3527)applyShape3523(T,a,p.id);
-  const roles342={};for(const record of a.colors){finishMaterial342(T,record,p);roles342[record.role]=(roles342[record.role]||0)+1;}a.appearance342={preset:p.id,roles:roles342,base:a.kind,geometry:a.original?'original-skinned-mesh':a.experimentalShape3527?'rest-mesh-silhouette':'authored-vrm-mesh',shape:a.shape3523||null,finish:'authored-shader'};
+  a.root.scale.setScalar(a.baseScale*heightFactor(p));if(a.experimentalShape3527)applyShape3523(T,a,p.id);else applyTravelerSculpt(T,a,p.id);
+  const roles342={};for(const record of a.colors){finishMaterial342(T,record,p);roles342[record.role]=(roles342[record.role]||0)+1;}a.appearance342={preset:p.id,roles:roles342,base:a.kind,geometry:a.original?'original-skinned-mesh':a.experimentalShape3527?'rest-mesh-silhouette':'authored-vrm-mesh',shape:a.shape3523||null,travelerSculpt:a.travelerSculpt||null,finish:'authored-shader'};
   if(a.vrm&&!a.original&&typeof WWIdentity!=='undefined'){try{a.vrm.humanoid.resetNormalizedPose?.();a.vrm.humanoid.update();WWIdentity.apply(T,a,p)}catch(e){WWIdentity.clear(a);console.warn('Optional wearable fallback',e)}}
   a.applied=p.id;a.motionProfile=p.id;a.lastDiagnostic140=undefined;a.rawDiagnostics140=null;a.action132={};a.secondary132={};a.combatFilter308=null;a.flowTransition3526=null;a.support3525=null;a.stanceVectors3525=null;a.kinetic341=null;a.idleCombat341=null;if(a.spring316?.active)springMotion316(a,{},false);if(a.fingers163)for(const side of ['left','right'])for(const f of a.fingers163[side]){f.node.quaternion.copy(f.rest);f.curl=0;f.spread=0}a.idleGroundWeight=0;a.idleAnchor1170=null;a.contacts={};a.contactFrame=null;if(typeof WWMotion!=='undefined')a.motion=WWMotion.newState();
  }
@@ -147,7 +284,7 @@
   for(const side of ['left','right']){const foot=vrm.humanoid.getRawBoneNode(side+'Foot'),toe=vrm.humanoid.getRawBoneNode(side+'Toes');if(foot&&toe){const d=root.worldToLocal(toe.getWorldPosition(new T.Vector3())).sub(root.worldToLocal(foot.getWorldPosition(new T.Vector3())));d.y=0;if(d.length()>.015){modelForward=d.normalize();break}}}
   const soleHeight=Object.fromEntries(['left','right'].map(side=>{let n=vrm.humanoid.getRawBoneNode(side+'Foot');return [side,n?Math.max(.015,Math.min(.24,n.getWorldPosition(new T.Vector3()).y)):.06]}));
   const a={root,vrm,kind,phase:0,weight:0,elapsed:0,baseScale:root.scale.x,colors,armDown,legSign,modelForward,motionProfile:kind.startsWith('female')?'f1':'m1',motion:WWMotion.newState(),hipsRest:vrm.humanoid.getNormalizedBoneNode('hips')?.position.clone(),springReady:false,T,dispose:()=>VRMUtils.deepDispose(vrm.scene),soleHeight};
-  a.experimentalShape3527=experimentalShape;if(experimentalShape)captureShape3523(T,a);try{WWFootIK.calibrateSoles(T,a)}catch(e){console.warn('Sole calibration fallback',e);a.soleSamples=null}return a;
+  a.experimentalShape3527=experimentalShape;if(experimentalShape)captureShape3523(T,a);else {try{captureTravelerRest(T,a)}catch(e){console.warn('Traveler rest capture fallback',e)}}try{WWFootIK.calibrateSoles(T,a)}catch(e){console.warn('Sole calibration fallback',e);a.soleSamples=null}return a;
  }
  // V16.3: normalized VRM finger joints, independent per hand with eased transitions.
  const digits163=['Index','Middle','Ring','Little'];
@@ -211,8 +348,8 @@
   for(const {s,gravity,power,role} of cache.records){
    if(!enabled){s.gravityDir.copy(gravity);s.gravityPower=power;continue;}
    const hair=role==='hair',cloth=role==='cloth',pitch=hair?secondary.hairPitch:secondary.clothPitch,roll=hair?secondary.hairRoll:secondary.clothRoll;
-   const gain=hair?.23:cloth?.27:.085,side=hair?.18:cloth?.22:.065,max=hair?.15:cloth?.19:.065;
-   cache.dir.copy(cache.forward).multiplyScalar(-(Number.isFinite(pitch)?pitch:0)*gain).addScaledVector(cache.right,(Number.isFinite(roll)?roll:0)*side);cache.dir.y=-(Number.isFinite(secondary.flutter)?secondary.flutter:0)*(cloth?.07:.035);const len=cache.dir.length();if(len>max)cache.dir.multiplyScalar(max/len);
+   const custom=travelerHairSpring(a.motionProfile,role),gain=custom?.gain??(hair?.23:cloth?.27:.085),side=custom?.side??(hair?.18:cloth?.22:.065),max=custom?.max??(hair?.15:cloth?.19:.065);
+   cache.dir.copy(cache.forward).multiplyScalar(-(Number.isFinite(pitch)?pitch:0)*gain).addScaledVector(cache.right,(Number.isFinite(roll)?roll:0)*side);cache.dir.y=-(Number.isFinite(secondary.flutter)?secondary.flutter:0)*(custom?.flutter??(cloth?.07:.035));const len=cache.dir.length();if(len>max)cache.dir.multiplyScalar(max/len);
    s.gravityDir.copy(gravity).multiplyScalar(power).add(cache.dir);const magnitude=s.gravityDir.length();if(magnitude>1e-6){s.gravityDir.divideScalar(magnitude);s.gravityPower=Math.min(Math.max(0,power)+max,magnitude);}else{s.gravityDir.copy(gravity);s.gravityPower=power;}
   }
   cache.active=!!enabled;return cache.records.length;
@@ -268,6 +405,45 @@
   if(['hurt','stagger','down'].includes(kind))tau=.030;
   return 1-Math.exp(-seconds/tau);
  }
+ // Traveler V6: five separately authored arm tracks, in the existing normalized VRM convention.
+ // right pitch/yaw/drop/elbow/wrist; left pitch/yaw/drop/elbow/wrist.
+ const travelerReady=[.30,-.12,1.15,.56,-.08,.22,.13,1.27,.40,.08];
+ const travelerTracks=[
+ [travelerReady,[.66,-.49,.94,.78,-.25,.30,.23,1.10,.48,.10],[1.04,-.81,.62,1.08,-.42,.53,.36,.87,.65,.20],[1.22,.63,.54,.37,.36,.34,-.30,1.03,.56,-.10],[.80,.87,.78,.60,.43,.43,-.38,1.05,.52,-.12],travelerReady],
+ [travelerReady,[.65,.56,.90,.77,.24,.42,-.32,1.05,.55,-.12],[1.00,.90,.67,1.04,.40,.56,-.45,.82,.69,-.20],[1.13,-.72,.57,.40,-.42,.39,.27,1.05,.56,.12],[.78,-.86,.76,.62,-.48,.31,.37,1.12,.46,.16],travelerReady],
+ [travelerReady,[.51,-.24,1.03,.82,-.12,.39,.33,1.03,.54,.16],[.83,-.33,.74,1.10,-.17,.55,.46,.83,.71,.20],[1.43,.10,.53,.20,.10,.48,-.27,.95,.56,-.12],[.95,.14,.78,.52,.12,.35,-.21,1.07,.47,-.08],travelerReady],
+ [travelerReady,[.95,-.25,.72,.83,-.12,.65,.26,.91,.65,.10],[1.73,-.35,.43,1.13,-.25,.92,.32,.68,.87,.17],[1.34,.21,.53,.35,.25,.46,-.35,.95,.57,-.12],[.69,.44,.84,.59,.34,.34,-.19,1.10,.46,-.08],travelerReady],
+ [travelerReady,[.71,-.68,.83,.77,-.35,.42,.41,.95,.63,.12],[1.10,-1.04,.52,1.03,-.60,.66,.51,.74,.81,.21],[1.40,.95,.42,.30,.57,.77,-.57,.72,.65,-.24],[.89,1.01,.64,.56,.62,.49,-.43,.94,.54,-.16],travelerReady]
+ ];
+ function travelerArmPose(form,progress,impact,out=[]){
+  const p=Math.max(0,Math.min(1,Number.isFinite(progress)?progress:0)),h=Math.max(.18,Math.min(.82,Number.isFinite(impact)?impact:.45)),t=p<=h?p/h:1+(p-h)/(1-h),clip=travelerTracks[Math.max(0,Math.min(4,form|0))];
+  let k=0;while(k<4&&t>times321[k+1])k++;
+  const u=Math.max(0,Math.min(1,(t-times321[k])/(times321[k+1]-times321[k])));
+  for(let n=0;n<10;n++)out[n]=u===0?clip[k][n]:u===1?clip[k+1][n]:smoothKey339(clip,k,n,u);
+  return out;
+ }
+ function travelerBodyPose(id,combat,weapon,ready,b){
+  if(id!=='m1'||weapon!=='sword'||(combat&&!['strike','spin','guard'].includes(combat.kind)))return b;
+  const hold=Math.max(0,Math.min(1,ready||0)),p=Math.max(0,Math.min(1,Number.isFinite(combat?.progress)?combat.progress:0)),hit=Math.max(.18,Math.min(.82,Number.isFinite(combat?.impact)?combat.impact:.45)),env=combat?ease3526(p/.10)*ease3526((1-p)/.18):0;
+  const form=combat?.kind==='spin'?4:Math.max(0,Math.min(4,combat?.combo|0)),dir=form%2?-1:1,load=p<hit?Math.sin(Math.PI*ease3526(p/hit))*env:0,release=p>=hit?Math.sin(Math.PI*ease3526((p-hit)/(1-hit)))*env:0,cut=(p<hit?ease3526((p-hit*.55)/(hit*.45)):1-ease3526((p-hit)/(1-hit)))*env;
+  const w=Math.max(env,hold*.78),guard=combat?.kind==='guard',grounded=!combat?.airborne&&!combat?.air323;
+  if(w<=0)return b;
+  b.width=Math.min(.39,Math.max(b.width,.20+.075*w+(guard?.04:0)));
+  if(grounded){
+   const lead=guard?.13:[.18,.20,.30,.15,.22][form],transfer=dir*(cut*.85+release*.35-load*.40);
+   b.leftHip=Math.max(-.63,Math.min(.40,b.leftHip+dir*lead*(cut-load*.40)*.34));
+   b.rightHip=Math.max(-.63,Math.min(.40,b.rightHip-dir*lead*(cut-load*.40)*.34));
+   b.leftKnee=Math.max(.16,Math.min(1.12,b.leftKnee+.08*w+.10*transfer));
+   b.rightKnee=Math.max(.16,Math.min(1.12,b.rightKnee+.08*w-.10*transfer));
+   b.leftFoot=-b.leftKnee*.54;b.rightFoot=-b.rightKnee*.54;
+   b.drop=Math.max(-.13,b.drop-.016*w-.021*load);
+   b.shift=Math.max(-.10,Math.min(.10,b.shift+dir*(.018*cut-.013*load)));
+  }
+  if(!guard){b.hipYaw+=dir*(-.065*load+.095*cut);b.chestYaw+=dir*(.06*cut+.08*release);b.spineYaw-=dir*.035*load;b.headYaw-=dir*.035*cut;}
+  else{b.leftHip+=.07*w;b.rightHip-=.07*w;b.hipPitch+=.035*w;}
+  return b;
+ }
+ function travelerStanceMin(id,weapon,weight){return id==='m1'&&weapon==='sword'?.115*Math.min(1,weight*2):.08*Math.min(1,weight*2);}
  function weaponKeyframe321(weapon,form,progress,impact,out=[]){
   const clamp=(v,a,b)=>Math.max(a,Math.min(b,v)),p=clamp(Number.isFinite(progress)?progress:0,0,1),h=clamp(Number.isFinite(impact)?impact:.45,.18,.82),t=p<=h?p/h:1+(p-h)/(1-h),clip=(clips321[weapon]||clips321.sword)[clamp(form|0,0,4)];
   let k=0;while(k<4&&t>times321[k+1])k++;const u=clamp((t-times321[k])/(times321[k+1]-times321[k]),0,1),a=u*u*(3-2*u);
@@ -356,7 +532,7 @@
   const exit=queued? .32+.68*ease((1-p)/recovery):ease((1-p)/recovery);
   return entry*exit;
  }
- // V35.2.8: phase-driven secondary motion and bounded transitions between actual displayed poses.
+ // V35.3.0: phase-driven secondary motion and bounded transitions between actual displayed poses.
  function ease3526(x){x=Math.max(0,Math.min(1,Number.isFinite(x)?x:0));return x*x*(3-2*x);}
  function flow3526(weapon,form,p,impact,id='m1',out={}){
   p=Math.max(0,Math.min(1,Number.isFinite(p)?p:0));const hit=Math.max(.18,Math.min(.82,Number.isFinite(impact)?impact:.45)),style=expression341[id]||expression341.m1,melee=['sword','great','dual'].includes(weapon),i=Math.max(0,Math.min(4,form|0)),dir=i%2?-1:1,heavy=weapon==='great',dual=weapon==='dual';
@@ -459,7 +635,7 @@
   if(combat&&!socialBlocked256){
    const p=Math.max(0,Math.min(1,combat.progress)),smooth=u=>{u=Math.max(0,Math.min(1,u));return u*u*(3-2*u)},impact=Math.max(.18,Math.min(.82,combat.impact??.45)),w=smooth(p/.13)*smooth((1-p)/.24),sweep=p<impact?smooth((p-impact*.40)/(impact*.60)):1-smooth((p-impact)/(1-impact)),wind=Math.sin(Math.PI*Math.min(1,p/impact)),cast=combat.kind==='fire'||combat.kind==='ice'||combat.kind==='storm';
    if(['hurt','stagger','down','recover'].includes(combat.kind)){const side=combat.side329||1,fall=combat.kind==='down'?smooth(p):combat.kind==='recover'?1-smooth(p):0,flinch=['hurt','stagger'].includes(combat.kind)?Math.sin(Math.PI*p)*(combat.kind==='stagger'?1:.55):0,amount=Math.max(fall,flinch);overlay('rightUpperArm',-sign*(.16+amount*.64),side*.20*flinch,right*(1.35-amount*.50),amount);overlay('leftUpperArm',-sign*(.22+amount*.72),side*.20*flinch,left*(1.35-amount*.55),amount);overlay('rightLowerArm',-sign*(.28+amount*.62),0,0,amount);overlay('leftLowerArm',-sign*(.28+amount*.84),0,0,amount);overlay('head',sign*.20*amount,-side*.12*amount,side*.12*amount,amount);}else if(combat.kind==='strike'||combat.kind==='spin'){
-    const form=combat.kind==='spin'?4:combat.combo|0,weapon=combat.weapon||'sword',k=weaponKeyframe321(weapon,form,p,impact,a.keyPose321??=[]),weight=comboEnvelope353(weapon,p,combat.chain334,combat.queued334);
+    const form=combat.kind==='spin'?4:combat.combo|0,weapon=combat.weapon||'sword',k=travelerSwordEnabled(a.motionProfile,weapon)?travelerArmPose(form,p,impact,a.keyPose321??=[]):weaponKeyframe321(weapon,form,p,impact,a.keyPose321??=[]),weight=comboEnvelope353(weapon,p,combat.chain334,combat.queued334);
     overlay('rightUpperArm',-sign*k[0],k[1],right*k[2],weight);overlay('rightLowerArm',-sign*k[3],0,0,weight);overlay('rightHand',0,0,k[4],weight);
     overlay('leftUpperArm',-sign*k[5],k[6],left*k[7],weight);overlay('leftLowerArm',-sign*k[8],0,0,weight);overlay('leftHand',0,0,k[9],weight);
     const turn=(form%2?-1:1)*(.16*wind+.28*sweep);overlay('spine',sign*(.07*wind+.10*sweep),turn,turn*.15,weight*.65);overlay('chest',sign*.08*sweep,turn*.60,0,weight*.65);
@@ -495,7 +671,7 @@
    }
   }
   // V31.9: full-body choreography with asymmetric stance and continuous follow-through.
-  const ready320=readyWeight359(!socialBlocked256&&armed308,a.weight,j.ready320),body320=combatBody320(!socialBlocked256?combat:null,ready320,a.body320??={}),bw320=body320.weight;
+  const ready320=readyWeight359(!socialBlocked256&&armed308,a.weight,j.ready320),body320=combatBody320(!socialBlocked256?combat:null,ready320,a.body320??={}),bw320=body320.weight; if(!socialBlocked256)travelerBodyPose(a.motionProfile,combat,combat?.weapon||j.weapon307,ready320,body320);
   if(bw320>.001){
    const b=body320,w=bw320,dir=(combat?.combo|0)%2?-1:1,step=actionFootwork320(combat,combat?.progress,a.motionProfile,a.dance320??={});
    if(hips){hips.position.y+=b.drop*w;hips.position.x+=b.shift*w;}
@@ -536,7 +712,7 @@
   const transition=transition3526(a.flowTransition3526??={},combat,dt,socialBlocked256);
   if(engaged308||filter308.weight>.001){filter308.weight=engaged308?1:filter308.weight*(1-blend308);for(const item of filter308.bones){if(!item.node)continue;if(transition.capture&&!item.leg)(item.from3526??=new a.T.Quaternion()).copy(item.q);if(transition.weight>0&&item.from3526&&!item.leg)item.node.quaternion.slerp(item.from3526,transition.weight);item.q.slerp(item.node.quaternion,blendRate339(dt,combat?.weapon,combat?.kind,combat?.progress,combat?.impact,item.leg));item.node.quaternion.copy(item.q)}}else for(const item of filter308.bones)if(item.node)item.q.copy(item.node.quaternion);
   if(socialBlocked256){filter308.weight=0;for(const item of filter308.bones)if(item.node)item.q.copy(item.node.quaternion)}
-  if(!socialBlocked256&&bw320>.08&&!combat?.airborne&&!combat?.air323&&!combat?.roll334&&!['down','recover','dodge'].includes(combat?.kind)&&legL3523&&legR3523){const minimum=.08*Math.min(1,bw320*2);for(const [node,dir] of [[legL3523,legDir3523],[legR3523,-legDir3523]]){node.rotation.z=dir*Math.max(minimum,Math.min(.48,node.rotation.z*dir));const item=filter308.bones.find(q=>q.node===node);if(item)item.q.copy(node.quaternion);}}
+  if(!socialBlocked256&&bw320>.08&&!combat?.airborne&&!combat?.air323&&!combat?.roll334&&!['down','recover','dodge'].includes(combat?.kind)&&legL3523&&legR3523){const minimum=travelerStanceMin(a.motionProfile,combat?.weapon||j.weapon307,bw320);for(const [node,dir] of [[legL3523,legDir3523],[legR3523,-legDir3523]]){node.rotation.z=dir*Math.max(minimum,Math.min(.48,node.rotation.z*dir));const item=filter308.bones.find(q=>q.node===node);if(item)item.q.copy(node.quaternion);}}
   let stance3525=null;
   if(detail===0&&ground&&!socialBlocked256&&bw320>.08&&!combat?.airborne&&!combat?.air323&&!combat?.roll334&&!(j.height>.006)&&!(j.hop320>.012)&&(!combat||support3525?.active)&&typeof WWFootIK.enforceStance3525==='function'){stance3525=WWFootIK.enforceStance3525(a.T,a,bw320);if(stance3525?.corrected)for(const item of filter308.bones)if(item.node===legL3523||item.node===legR3523)item.q.copy(item.node.quaternion);}
   const look=WWMotion.socialLook255(a.look255??={},mode==='ride'||WWMotion.phaseOf(j)?0:j.lookYaw,dt);
@@ -550,7 +726,7 @@
   let springCount316=0;if(!a.springFailed317){try{springCount316=springMotion316(a,secondary,!!j.physics316&&detail===0&&!j.reduce316&&a.physicsTier317<2);}catch(e){a.springFailed317=true;try{springMotion316(a,secondary,false)}catch{}console.warn('Optional spring bias disabled',e)}}
   if(detail===0){for(let remain=dt;remain>0;){let d=Math.min(.033,remain);vrm.update(d);remain-=d}}else{vrm.humanoid.update();vrm.expressionManager?.update();}
   if(detail<=1&&!['down','recover'].includes(combat?.kind)&&!combat?.roll334){const contact=bw320>.05&&!offGround&&ground&&typeof WWFootIK.groundCombat320==='function'?WWFootIK.groundCombat320(a.T,a,ground,bw320,combat):WWFootIK.groundIdle(a.T,a,ground,dt,gait,offGround,mode);if(contact)a.footIK=contact;}
-  a.motionState=a.motion.state;a.poseCheck={motionVersion:'35.2.8',flow3526:{transition:transition.weight,phase:a.flow3526||null},stance3525,support3525:support3525?{...support3525}:null,appearance342:a.appearance342||null,kinetic341:detail===0?{...a.kinetic341}:null,combatBody320:{...body320},face255:{...face},lookYaw255:look,brake250:a.motion.brake250||0,turnBody250:a.motion.turnBody250||0,drive250:a.motion.drive250||0,fingers163:fingers,actionWeights:{...weights},secondary:{...secondary},springCount316,wearables337:{tier:a.physicsTier317,springBias:!!a.spring316?.active,roles:a.spring316?.counts||null,clothPanels:a.identityMotion?.length||0},targetHeight:1.68*heightFactor(preset(a.motionProfile)),original:!!a.original,measuredSpeed:a.motion.speed,turn:a.motion.turn,identity:a.identityType||null,fallbackBase:a.fallbackBase||null,cycle:a.motion.cycle,walkWeight:a.motion.walk,runWeight:a.motion.run,profile:a.motionProfile,legSign:sign,hip:[v.hipL,v.hipR],knee:['left','right'].map(side=>(vrm.humanoid.getNormalizedBoneNode(side+'LowerLeg')?.rotation.x||0)*sign),ankle:[v.ankleL,v.ankleR],jumpWeight:a.motion.jump};
+  a.motionState=a.motion.state;a.poseCheck={motionVersion:'35.3.0',flow3526:{transition:transition.weight,phase:a.flow3526||null},stance3525,support3525:support3525?{...support3525}:null,appearance342:a.appearance342||null,kinetic341:detail===0?{...a.kinetic341}:null,combatBody320:{...body320},face255:{...face},lookYaw255:look,brake250:a.motion.brake250||0,turnBody250:a.motion.turnBody250||0,drive250:a.motion.drive250||0,fingers163:fingers,actionWeights:{...weights},secondary:{...secondary},springCount316,wearables337:{tier:a.physicsTier317,springBias:!!a.spring316?.active,roles:a.spring316?.counts||null,clothPanels:a.identityMotion?.length||0},targetHeight:1.68*heightFactor(preset(a.motionProfile)),original:!!a.original,measuredSpeed:a.motion.speed,turn:a.motion.turn,identity:a.identityType||null,fallbackBase:a.fallbackBase||null,cycle:a.motion.cycle,walkWeight:a.motion.walk,runWeight:a.motion.run,profile:a.motionProfile,legSign:sign,hip:[v.hipL,v.hipR],knee:['left','right'].map(side=>(vrm.humanoid.getNormalizedBoneNode(side+'LowerLeg')?.rotation.x||0)*sign),ankle:[v.ankleL,v.ankleR],jumpWeight:a.motion.jump};
   const measure140=!a.diagnosticInterval140||!Number.isFinite(a.lastDiagnostic140)||t-a.lastDiagnostic140>=a.diagnosticInterval140||a.lastMode140!==a.motion.state;const previousRaw140=a.rawDiagnostics140;if(previousRaw140){a.poseCheck.rawArm=previousRaw140.arm;a.poseCheck.rawLeg=previousRaw140.leg}
   if(detail===0&&measure140&&['idle','walk','run'].includes(mode)){a.lastDiagnostic140=t;a.lastMode140=a.motion.state;
    a.root.updateWorldMatrix(true,true);
@@ -563,6 +739,6 @@
   }
   if(measure140&&mode==='idle'&&a.weight<.05&&!WWMotion.phaseOf(j)){vrm.scene.updateMatrixWorld(true);const h=vrm.humanoid.getRawBoneNode('head'),l=vrm.humanoid.getRawBoneNode('leftHand'),r=vrm.humanoid.getRawBoneNode('rightHand'),ls=vrm.humanoid.getRawBoneNode('leftUpperArm'),rs=vrm.humanoid.getRawBoneNode('rightUpperArm');if(h&&l&&r&&ls&&rs){const hy=h.matrixWorld.elements[13];a.handsBelowHead=l.matrixWorld.elements[13]<hy&&r.matrixWorld.elements[13]<hy;a.handsDown=l.matrixWorld.elements[13]<ls.matrixWorld.elements[13]&&r.matrixWorld.elements[13]<rs.matrixWorld.elements[13]}}
  }
- function release(a){if(!a||a.released335)return;a.released335=true;try{if(a.spring316?.active)springMotion316(a,{},false)}catch{}try{if(typeof WWIdentity!=='undefined')WWIdentity.clear(a)}finally{a.root.removeFromParent();try{a.dispose?.()}finally{a.contacts={};a.combatFilter308=null;a.dispose=null;}}}
- const api={fallbackSources3527,flow3526,transition3526,sheathPath3526,modelKey3524,bodyShapes3523,shapePoint3523,stanceSpread3523,carry3523,readyWeight359,comboEnvelope353,idleStance352,appearance342,materialRole342,materialPolicy342,snapshotMaterial342,finishMaterial342,expression341,kineticFrame341,idleCombat341,smoothKey339,blendRate339,ultimate338,ultimateFrame338,ultimatePath338,createLoadQueue335,loadQueueStats335:()=>({...loadQueue335.stats(),player:playerQueue3527.stats()}),dodgePose334,weaponKeyframe321,clips321,actionFootwork320,boundedFootwork320,danceProfiles320,combatBody320,combatGrip312,fingerTargets163,fingerResponse251,setupFingers163,animateFingers163,load,animate,sources,roster,preset,applyPreset,release,heightFactor,createBufferCache140,bufferStats140:()=>buffers.stats()};if(typeof module!=='undefined')module.exports=api;else window.WWVRM=api;
+ function release(a){if(!a||a.released335)return;a.released335=true;restoreTravelerSculpt(a);try{if(a.spring316?.active)springMotion316(a,{},false)}catch{}try{if(typeof WWIdentity!=='undefined')WWIdentity.clear(a)}finally{a.root.removeFromParent();try{a.dispose?.()}finally{a.contacts={};a.combatFilter308=null;a.dispose=null;}}}
+ const api={travelerArmPose,travelerBodyPose,travelerStanceMin,travelerBladeRows,travelerSwordEnabled,travelerSection,buildTravelerSword,syncTravelerSword,travelerHairPoint,travelerHairMesh,travelerHairSpring,travelerSculptPoint,applyTravelerSculpt,restoreTravelerSculpt,captureTravelerRest,travelerFinish,fallbackSources3527,flow3526,transition3526,sheathPath3526,modelKey3524,bodyShapes3523,shapePoint3523,stanceSpread3523,carry3523,readyWeight359,comboEnvelope353,idleStance352,appearance342,materialRole342,materialPolicy342,snapshotMaterial342,finishMaterial342,expression341,kineticFrame341,idleCombat341,smoothKey339,blendRate339,ultimate338,ultimateFrame338,ultimatePath338,createLoadQueue335,loadQueueStats335:()=>({...loadQueue335.stats(),player:playerQueue3527.stats()}),dodgePose334,weaponKeyframe321,clips321,actionFootwork320,boundedFootwork320,danceProfiles320,combatBody320,combatGrip312,fingerTargets163,fingerResponse251,setupFingers163,animateFingers163,load,animate,sources,roster,preset,applyPreset,release,heightFactor,createBufferCache140,bufferStats140:()=>buffers.stats()};if(typeof module!=='undefined')module.exports=api;else window.WWVRM=api;
 })();
