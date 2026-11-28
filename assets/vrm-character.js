@@ -313,7 +313,7 @@
    const b=body320,w=bw320,dir=(combat?.combo|0)%2?-1:1,step=actionFootwork320(combat,combat?.progress,a.motionProfile,a.dance320??={});
    if(hips){hips.position.y+=b.drop*w;hips.position.x+=b.shift*w;}
    overlay('hips',sign*b.hipPitch,b.hipYaw,b.hipRoll,w);
-   const airborneSlash=combat?.kind==='strike'&&(combat.airborne||step.hop>.025);const tuck=airborneSlash?Math.min(.38,(step.hop+(j.height||0))*.58):0;overlay('leftUpperLeg',sign*(b.leftHip-tuck),.10*w,b.width,w);
+   const airborneSlash=combat?.kind==='strike'&&(combat.airborne||step.hop>.025);const airStage=combat?.air323||0,airArc=Math.sin(Math.PI*Math.max(0,Math.min(1,combat?.progress||0)));const tuck=airborneSlash?Math.min(.62,(step.hop+(j.height||0))*.58+(airStage===2?.24:airStage===1?.15:0)*airArc):0;overlay('leftUpperLeg',sign*(b.leftHip-tuck),.10*w,b.width,w);
    overlay('rightUpperLeg',sign*(b.rightHip-tuck*.45),-.10*w,-b.width,w);
    overlay('leftLowerLeg',sign*Math.min(1.25,b.leftKnee+tuck*.65),0,0,w);overlay('rightLowerLeg',sign*Math.min(1.25,b.rightKnee+tuck*.8),0,0,w);
    overlay('leftFoot',sign*b.leftFoot,-.08,b.width*-.65,w);overlay('rightFoot',sign*b.rightFoot,.08,b.width*.65,w);
@@ -323,7 +323,7 @@
    additive('neck',-sign*b.hipPitch*.28,b.headYaw,0);additive('head',0,b.headYaw*.35,0);
    if(combat){const sword=['sword','dual','great'].includes(combat.weapon),contact=combat.contact?b.cut*.10:0;additive('rightHand',-b.load*.12+b.cut*.17,0,sword?b.wrist*.46:0);additive('leftHand',b.follow*.10,0,-b.wrist*.20);
     if(combat.kind==='strike'&&combat.weapon==='sword'){additive('leftUpperArm',-sign*(.16*b.load+.28*b.follow),b.offhand,left*-.16*b.cut);additive('leftLowerArm',-sign*.24*b.follow,0,0);}if(step.melee&&(combat.kind==='strike'||combat.kind==='spin')){additive('rightUpperArm',-sign*.07*step.gesture,dir*.08*step.gesture,0);additive('rightLowerArm',-sign*.05*b.load,0,0);additive('rightHand',sign*.06*step.gesture,0,dir*.07*b.follow);}if(combat.kind==='dodge'){overlay('leftUpperArm',-sign*.72,.22,left*.85,w);overlay('leftLowerArm',-sign*.92,0,0,w);overlay('rightUpperArm',-sign*.65,-.18,right*.80,w);overlay('rightLowerArm',-sign*.85,0,0,w);}
-    if(contact){additive('rightLowerArm',-sign*contact,0,0);additive('rightShoulder',sign*contact*.45,0,0);}
+    if(airStage){additive('spine',sign*(airStage===3?.32:-.12)*airArc,dir*.18*airArc,0);additive('chest',sign*(airStage===3?.18:-.08)*airArc,dir*.24*airArc,0);additive('rightUpperArm',-sign*(airStage===3?.36:.12)*airArc,0,0);additive('leftUpperArm',-sign*.16*airArc,0,left*.13*airArc);}if(contact){additive('rightLowerArm',-sign*contact,0,0);additive('rightShoulder',sign*contact*.45,0,0);}
    }
   }
   // Damp bone rotations on entry, release and recovery, rather than snapping to each procedural pose.
