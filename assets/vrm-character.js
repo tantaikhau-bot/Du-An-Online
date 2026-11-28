@@ -112,23 +112,21 @@
  }
  function fingerResponse251(f,curl,spread,dt,mode){
   const seconds=Math.max(0,Math.min(.35,Number.isFinite(dt)?dt:0)),closing=curl>f.curl;
-  const rate=(mode==='combatGrip'?22:mode==='ride'?8:6)*(closing?1:.82)*(f.name.endsWith('Distal')?.80:f.name.endsWith('Intermediate')?.91:1);
+  const rate=(mode==='combatGrip'?30:mode==='ride'?8:6)*(closing?1:.82)*(f.name.endsWith('Distal')?.80:f.name.endsWith('Intermediate')?.91:1);
   f.curl+=(curl-f.curl)*(1-Math.exp(-seconds*rate));f.spread+=(spread-f.spread)*(1-Math.exp(-seconds*5.5));return f;
  }
  // V31.2: grip targets by handle and role, including bow release and support hand.
- function combatGrip312(weapon,side,combat){
+ function combatGrip312(weapon,side,combat,out={}){
   if(!weapon)return null;
   const p=Math.max(0,Math.min(1,Number(combat?.progress)||0)),impact=Math.max(.1,Math.min(.9,combat?.impact??.45)),draw=weapon==='bow'&&side==='right'&&['strike','ultimate'].includes(combat?.kind)&&p<impact;
-  if(weapon==='bow'&&side==='right'&&!draw)return null;
-  if(side==='left'&&!['bow','dual','great'].includes(weapon))return null;
+  const release=weapon==='bow'&&side==='right'&&['strike','ultimate'].includes(combat?.kind)&&p>=impact&&p<impact+.24;if(weapon==='bow'&&side==='right'&&!draw&&!release)return null;
+  if(side==='left'&&(!['bow','dual','great'].includes(weapon)||weapon==='great'&&combat&&!['strike','spin','ultimate','guard'].includes(combat.kind)))return null;
   const roles={sword:[.82,1.13,.68,.44],dual:[.88,1.17,.73,.46],great:[.72,1.02,.64,.39],staff:[.70,.98,.60,.40],bow:[.71,1.01,.62,.36]};
-  const a=draw?[.68,.94,.51,.24]:weapon==='great'&&side==='left'?[.79,1.08,.67,.42]:roles[weapon];if(!a)return null;
-  const result={};for(let i=0;i<4;i++){const digit=digits163[i],f=draw&&i===3?.35:draw?1:.96+i*.025;result[digit+'Proximal']=[a[0]*f,.006*(i-1.5)];result[digit+'Intermediate']=[a[1]*f,0];result[digit+'Distal']=[a[2]*f,0]}
-  result.ThumbMetacarpal=[a[3],.19];result.ThumbProximal=[a[3]*1.35,0];result.ThumbDistal=[a[3]*.93,0];return result;
+  const a=draw||release?[.68,.94,.51,.24]:weapon==='great'&&side==='left'?[.79,1.08,.67,.42]:roles[weapon];if(!a)return null;const clamp=v=>Math.max(0,Math.min(1,v)),squeeze=['strike','spin','ultimate','guard'].includes(combat?.kind)?Math.max(0,1-Math.abs(p-impact)/.24):0,releaseBlend=release?Math.max(.12,1-clamp((p-impact)/.12)) :1,force=(draw? .72+.28*clamp(p/Math.max(.08,impact)):1+.10*squeeze)*releaseBlend;const result=out,set=(k,c,s)=>{const row=result[k]??=[0,0];row[0]=Math.min(1.35,Math.max(0,c));row[1]=s;};for(let i=0;i<4;i++){const digit=digits163[i],f=draw||release?(i===3?.30:1):[.92,.98,1.03,1.06][i];set(digit+'Proximal',a[0]*f*force,.006*(i-1.5));set(digit+'Intermediate',a[1]*f*force,0);set(digit+'Distal',a[2]*f*force,0);}set('ThumbMetacarpal',a[3]*force,.19*releaseBlend);set('ThumbProximal',a[3]*1.35*force,0);set('ThumbDistal',a[3]*.93*force,0);return result;
  }
  function animateFingers163(a,dt,mode,gait,jump,time,turn,weapon=null,combat=null){
   a.fingers163??=setupFingers163(a);const {T}=a;let count=0,grip=0;const rot=a.fingerQuat163??=new T.Quaternion();
-  for(const side of ['left','right']){const grasp=combatGrip312(weapon,side,combat),target=grasp||fingerTargets163(mode,gait,jump,time,side,turn);for(const f of a.fingers163[side]){const [curl,spread]=target[f.name];fingerResponse251(f,curl,spread,dt,grasp?'combatGrip':mode);f.node.quaternion.copy(f.rest).multiply(rot.setFromAxisAngle(f.spreadAxis,f.spread)).multiply(rot.setFromAxisAngle(f.axis,f.curl));count++;grip+=f.curl}}
+  a.gripTargets336??={left:{},right:{}};for(const side of ['left','right']){const grasp=combatGrip312(weapon,side,combat,a.gripTargets336[side]),target=grasp||fingerTargets163(mode,gait,jump,time,side,turn);for(const f of a.fingers163[side]){const [curl,spread]=target[f.name];fingerResponse251(f,curl,spread,dt,grasp?'combatGrip':mode);f.node.quaternion.copy(f.rest).multiply(rot.setFromAxisAngle(f.spreadAxis,f.spread)).multiply(rot.setFromAxisAngle(f.axis,f.curl));count++;grip+=f.curl}}
   return {joints:count,meanCurl:count?grip/count:0,mode}
  }
 
