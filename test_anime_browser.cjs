@@ -57,6 +57,10 @@ const fs=require('node:fs'),os=require('node:os'),path=require('node:path'),asse
   for(const q of housing.audit.houses){const spec=await page.evaluate(({x,z})=>HOUSING358.find(q=>q.x===x&&q.z===z),{x:q.x,z:q.z});assert(Math.abs(q.height-spec.h)<.01&&Math.abs(q.width-spec.w)<.01&&Math.abs(q.depth-spec.d)<.01&&Math.abs(q.base)<.01,JSON.stringify(q))}
   console.log('Public housing proportions and main road collision passed');
   fs.mkdirSync('test-output',{recursive:true});await page.screenshot({path:'test-output/housing-world.png',timeout:120000});
+  const forts=await page.evaluate(()=>({rows:window.wwGraphics59.fortress3510,arrivals:[ICE174,LIGHT176,HEAVEN190].every(q=>walkable4(q.arrivalX,q.arrivalZ)),centres:Object.values(FORTRESS3510).every(q=>!walkable4(q.x,q.z))}));
+  assert(forts.arrivals&&forts.centres,JSON.stringify(forts));assert.equal(Object.keys(forts.rows).length,3);
+  for(const [id,v] of Object.entries(forts.rows)){const q=await page.evaluate(k=>FORTRESS3510[k],id);assert(v.width<=q.w+.02&&v.depth<=q.d+.02&&v.height>=q.h-.35&&v.height<=q.h+.1&&v.towers===4&&v.openings>=40&&v.saved>20,JSON.stringify(v))}
+  console.log('Three fortress 3D envelopes, recessed facades, batch savings and arrival paths passed');
   const frontier=await page.evaluate(()=>({north:walkable4(-22,-82),south:walkable4(22,82),outside:walkable4(0,WW_WORLD137.halfZ+1),bridge:segment4({x:0,z:-11},{x:0,z:-3}),water:segment4({x:10,z:-11},{x:10,z:-3})}));assert.ok(frontier.north&&frontier.south&&!frontier.outside&&frontier.bridge&&!frontier.water,JSON.stringify(frontier));
   console.log('V13.7 expanded walkability and bridge regression passed');
   const desert=await page.evaluate(()=>({arrival:walkable4(DESERT179.arrivalX,DESERT179.arrivalZ),water:walkable4(DESERT179.oasisX,DESERT179.oasisZ),scene:window.wwGraphics59.desert179}));assert.ok(desert.arrival&&!desert.water&&desert.scene?.pyramid&&desert.scene?.oasis,JSON.stringify(desert));
