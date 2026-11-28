@@ -44,7 +44,7 @@ for(const [w,h] of [[360,640],[390,844],[844,390],[873,392],[1280,720],[1920,108
  const floor=Math.min(p.floor,dpr,Math.sqrt(p.budget/(w*h)),4096/Math.max(w,h));assert.ok(r>=floor-1e-9&&w*h*r*r<=p.budget+.01&&r<=dpr);
  assert.equal(r,P139.mobileResolution139(w,h,dpr,0,0,scale,preset==='sharp',4096,preset));
 }
-for(const [preset,p] of Object.entries(P139.MOBILE_CLARITY171)){let bad={tier:1,quality:1,scale:1,slow:0,good:0};bad=P139.mobileStep139(bad,9,120,30,1,1,1,false,preset);assert.equal(bad.tier,2);assert.equal(bad.quality,0);for(let i=0;i<30;i++)bad=P139.mobileStep139(bad,9,120,30,1,1,1,false,preset);assert.equal(bad.scale,p.scaleFloor);for(let i=0;i<12;i++)bad=P139.mobileStep139(bad,30,34,30,1,1,1,false,preset);assert.ok(bad.scale>p.scaleFloor);}
+for(const [preset,p] of Object.entries(P139.MOBILE_CLARITY171)){let bad={tier:1,quality:1,scale:1,slow:0,good:0};bad=P139.mobileStep139(bad,9,120,30,1,1,1,false,preset);assert.equal(bad.tier,2);assert.equal(bad.quality,0);for(let i=0;i<30;i++)bad=P139.mobileStep139(bad,9,120,30,1,1,1,false,preset);assert.equal(bad.scale,p.scaleFloor);for(let i=0;i<12;i++)bad=P139.mobileStep139(bad,30,34,30,1,1,1,false,preset);if(p.scaleFloor<.975)assert.ok(bad.scale>p.scaleFloor);else{assert.equal(bad.scale,p.scaleFloor);assert.equal(bad.tier,1);}}
 const budget=P139.actorBudget139(true,2,0);assert.equal(budget.load,1);assert.equal(budget.npcCount,1);assert.ok(budget.peerCount>=1&&budget.peerRig<budget.peerRange);
 console.log('V13.9 mobile render budgets, 60 FPS default with explicit 30/90 FPS options, fast degradation, slow recovery and visible actor policy passed');
 
