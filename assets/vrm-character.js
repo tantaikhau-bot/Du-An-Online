@@ -118,6 +118,23 @@
   out[0]=headX+dx*(1+.045*jaw-.065*crown+core*(.045*shoulders-.055*waist));
   out[1]=y;out[2]=z;return out;
  }
+ // Traveler V3: an asymmetric swept crown and narrower temples, anchored at the scalp.
+ // Only fully hair-material meshes are eligible; mixed face/hair geometry is left alone.
+ function travelerHairMesh(mesh){
+  const materials=Array.isArray(mesh.material)?mesh.material:[mesh.material];
+  return materials.length>0&&materials.every(m=>m&&materialRole342(m.name)==='hair');
+ }
+ function travelerHairPoint(x,y,z,headX,headY,out=[]){
+  const smooth=t=>{t=Math.max(0,Math.min(1,t));return t*t*(3-2*t)};
+  const h=y-headY,dx=x-headX,top=smooth((h-.085)/.13),outer=smooth((Math.abs(dx)-.075)/.065);
+  const temple=smooth((h-.015)/.055)*(1-smooth((h-.085)/.095))*outer;
+  out[0]=x+.022*top-.045*dx*temple;
+  out[1]=y+.009*top*(.55+.45*Math.tanh(dx/.07));
+  out[2]=z;return out;
+ }
+ function travelerHairSpring(id,role){
+  return id==='m1'&&role==='hair'?{gain:.19,side:.20,max:.13,flutter:.045}:null;
+ }
  function captureTravelerRest(T,a){
   if(a.kind!=='male'||a.original||a.experimentalShape3527)return;
   const head=a.vrm.humanoid.getRawBoneNode('head');if(!head)return;
@@ -128,7 +145,7 @@
   const records=[];let vertices=0;
   a.vrm.scene.traverse(o=>{const g=o.geometry,p=g?.attributes?.position;if(!o.isMesh||!p||p.itemSize!==3)return;
    vertices+=p.count*(1+(g.morphAttributes?.position?.length||0));
-   const matrix=inv.clone().multiply(o.matrixWorld);records.push({mesh:o,original:g,matrix,back:matrix.clone().invert()});
+   const matrix=inv.clone().multiply(o.matrixWorld);records.push({mesh:o,original:g,matrix,back:matrix.clone().invert(),hair:travelerHairMesh(o)});
   });
   if(vertices>2200000||!records.length)return;
   a.travelerRest={headX:h.x,headY:h.y,records,scale};
@@ -141,7 +158,7 @@
   if(id!=='m1'){restoreTravelerSculpt(a);return;}
   const rest=a.travelerRest;if(!rest||a.travelerSculpt)return;
   const {headX,headY,scale}=rest,v=new T.Vector3(),base=new T.Vector3(),warpedBase=new T.Vector3(),out=[],outBase=[];
-  const warp=(p,m,b,out)=>{p.applyMatrix4(m).multiplyScalar(scale);travelerSculptPoint(p.x,p.y,p.z,headX,headY,out);return p.fromArray(out).multiplyScalar(1/scale).applyMatrix4(b)};
+  const warp=(p,m,b,out,hair)=>{p.applyMatrix4(m).multiplyScalar(scale);travelerSculptPoint(p.x,p.y,p.z,headX,headY,out);if(hair)travelerHairPoint(out[0],out[1],out[2],headX,headY,out);return p.fromArray(out).multiplyScalar(1/scale).applyMatrix4(b)};
   try{
    for(const r of rest.records){
     const source=r.original,src=source.attributes.position;
@@ -152,10 +169,10 @@
     r.sculpted=g;
     // Transform absolute targets and relative morph deltas coherently.
     for(let i=0;i<src.count;i++){
-     base.fromBufferAttribute(src,i);v.copy(base);warp(v,r.matrix,r.back,outBase);dst.setXYZ(i,v.x,v.y,v.z);warpedBase.copy(v);
+     base.fromBufferAttribute(src,i);v.copy(base);warp(v,r.matrix,r.back,outBase,r.hair);dst.setXYZ(i,v.x,v.y,v.z);warpedBase.copy(v);
      for(let j=0;j<(source.morphAttributes.position?.length||0);j++){
       const old=source.morphAttributes.position[j],next=g.morphAttributes.position[j];
-      v.fromBufferAttribute(old,i);if(source.morphTargetsRelative)v.add(base);warp(v,r.matrix,r.back,out);
+      v.fromBufferAttribute(old,i);if(source.morphTargetsRelative)v.add(base);warp(v,r.matrix,r.back,out,r.hair);
       if(source.morphTargetsRelative)v.sub(warpedBase);
       next.setXYZ(i,v.x,v.y,v.z);
      }
@@ -164,7 +181,7 @@
     // Retain authored normals/tangents and skin attributes; small sculpt avoids hard seam regeneration.
     g.computeBoundingBox();g.computeBoundingSphere();r.mesh.geometry=g;
    }
-   a.travelerSculpt={id,meshes:rest.records.filter(r=>r.sculpted).length,mode:'reversible-rest-sculpt'};
+   a.travelerSculpt={id,meshes:rest.records.filter(r=>r.sculpted).length,hairMeshes:rest.records.filter(r=>r.hair&&r.sculpted).length,mode:'reversible-rest-sculpt'};
   }catch(e){restoreTravelerSculpt(a);console.warn('Traveler sculpt fallback',e);}
  }
  function applyPreset(T,a,p){
@@ -289,8 +306,8 @@
   for(const {s,gravity,power,role} of cache.records){
    if(!enabled){s.gravityDir.copy(gravity);s.gravityPower=power;continue;}
    const hair=role==='hair',cloth=role==='cloth',pitch=hair?secondary.hairPitch:secondary.clothPitch,roll=hair?secondary.hairRoll:secondary.clothRoll;
-   const gain=hair?.23:cloth?.27:.085,side=hair?.18:cloth?.22:.065,max=hair?.15:cloth?.19:.065;
-   cache.dir.copy(cache.forward).multiplyScalar(-(Number.isFinite(pitch)?pitch:0)*gain).addScaledVector(cache.right,(Number.isFinite(roll)?roll:0)*side);cache.dir.y=-(Number.isFinite(secondary.flutter)?secondary.flutter:0)*(cloth?.07:.035);const len=cache.dir.length();if(len>max)cache.dir.multiplyScalar(max/len);
+   const custom=travelerHairSpring(a.motionProfile,role),gain=custom?.gain??(hair?.23:cloth?.27:.085),side=custom?.side??(hair?.18:cloth?.22:.065),max=custom?.max??(hair?.15:cloth?.19:.065);
+   cache.dir.copy(cache.forward).multiplyScalar(-(Number.isFinite(pitch)?pitch:0)*gain).addScaledVector(cache.right,(Number.isFinite(roll)?roll:0)*side);cache.dir.y=-(Number.isFinite(secondary.flutter)?secondary.flutter:0)*(custom?.flutter??(cloth?.07:.035));const len=cache.dir.length();if(len>max)cache.dir.multiplyScalar(max/len);
    s.gravityDir.copy(gravity).multiplyScalar(power).add(cache.dir);const magnitude=s.gravityDir.length();if(magnitude>1e-6){s.gravityDir.divideScalar(magnitude);s.gravityPower=Math.min(Math.max(0,power)+max,magnitude);}else{s.gravityDir.copy(gravity);s.gravityPower=power;}
   }
   cache.active=!!enabled;return cache.records.length;
@@ -642,5 +659,5 @@
   if(measure140&&mode==='idle'&&a.weight<.05&&!WWMotion.phaseOf(j)){vrm.scene.updateMatrixWorld(true);const h=vrm.humanoid.getRawBoneNode('head'),l=vrm.humanoid.getRawBoneNode('leftHand'),r=vrm.humanoid.getRawBoneNode('rightHand'),ls=vrm.humanoid.getRawBoneNode('leftUpperArm'),rs=vrm.humanoid.getRawBoneNode('rightUpperArm');if(h&&l&&r&&ls&&rs){const hy=h.matrixWorld.elements[13];a.handsBelowHead=l.matrixWorld.elements[13]<hy&&r.matrixWorld.elements[13]<hy;a.handsDown=l.matrixWorld.elements[13]<ls.matrixWorld.elements[13]&&r.matrixWorld.elements[13]<rs.matrixWorld.elements[13]}}
  }
  function release(a){if(!a||a.released335)return;a.released335=true;restoreTravelerSculpt(a);try{if(a.spring316?.active)springMotion316(a,{},false)}catch{}try{if(typeof WWIdentity!=='undefined')WWIdentity.clear(a)}finally{a.root.removeFromParent();try{a.dispose?.()}finally{a.contacts={};a.combatFilter308=null;a.dispose=null;}}}
- const api={travelerSculptPoint,applyTravelerSculpt,restoreTravelerSculpt,captureTravelerRest,travelerFinish,fallbackSources3527,flow3526,transition3526,sheathPath3526,modelKey3524,bodyShapes3523,shapePoint3523,stanceSpread3523,carry3523,readyWeight359,comboEnvelope353,idleStance352,appearance342,materialRole342,materialPolicy342,snapshotMaterial342,finishMaterial342,expression341,kineticFrame341,idleCombat341,smoothKey339,blendRate339,ultimate338,ultimateFrame338,ultimatePath338,createLoadQueue335,loadQueueStats335:()=>({...loadQueue335.stats(),player:playerQueue3527.stats()}),dodgePose334,weaponKeyframe321,clips321,actionFootwork320,boundedFootwork320,danceProfiles320,combatBody320,combatGrip312,fingerTargets163,fingerResponse251,setupFingers163,animateFingers163,load,animate,sources,roster,preset,applyPreset,release,heightFactor,createBufferCache140,bufferStats140:()=>buffers.stats()};if(typeof module!=='undefined')module.exports=api;else window.WWVRM=api;
+ const api={travelerHairPoint,travelerHairMesh,travelerHairSpring,travelerSculptPoint,applyTravelerSculpt,restoreTravelerSculpt,captureTravelerRest,travelerFinish,fallbackSources3527,flow3526,transition3526,sheathPath3526,modelKey3524,bodyShapes3523,shapePoint3523,stanceSpread3523,carry3523,readyWeight359,comboEnvelope353,idleStance352,appearance342,materialRole342,materialPolicy342,snapshotMaterial342,finishMaterial342,expression341,kineticFrame341,idleCombat341,smoothKey339,blendRate339,ultimate338,ultimateFrame338,ultimatePath338,createLoadQueue335,loadQueueStats335:()=>({...loadQueue335.stats(),player:playerQueue3527.stats()}),dodgePose334,weaponKeyframe321,clips321,actionFootwork320,boundedFootwork320,danceProfiles320,combatBody320,combatGrip312,fingerTargets163,fingerResponse251,setupFingers163,animateFingers163,load,animate,sources,roster,preset,applyPreset,release,heightFactor,createBufferCache140,bufferStats140:()=>buffers.stats()};if(typeof module!=='undefined')module.exports=api;else window.WWVRM=api;
 })();
