@@ -1,0 +1,6 @@
+const assert=require('node:assert/strict'),p=require('./assets/game-policy.js');
+for(const [w,h] of [[1720,725],[1920,1080],[1366,768],[2560,1440]])for(const preset of ['high','sharp','balanced','low'])for(const q of [0,1,2])for(const scale of [.4,.6,.85,1,1.2]){const v=p.desktopClarity3522(w,h,1,q,scale,preset,8192);assert(v.ratio>=(preset==='balanced'?.9:preset==='low'?.8:1)-1e-9);assert(v.ratio*v.ratio*w*h<=8000000+.01);}
+let s={quality:2,tier:0,scale:1.2,slow:0,good:0,last:0};for(let i=1;i<40;i++)s=p.desktopDetail3522(s,12,120,60,2051,'sharp',i*1000);assert.equal(s.quality,1);assert.equal(s.tier,2);assert(s.scale>=.85);for(let i=40;i<120;i++)s=p.desktopDetail3522(s,55,20,60,250,'sharp',i*1000);assert.equal(s.quality,2);assert.equal(s.tier,0);assert.equal(s.scale,1.2);assert(!p.desktopDetail3522(s,2,500,60,2500,'sharp',120000,false).changed);
+assert(p.desktopClarity3522(1720,725,1,1,.85,'sharp',8192).ratio>=1);
+assert(p.desktopClarity3522(10000,5000,1,2,1,'sharp',4096).ratio<=4096/10000);
+console.log('Desktop clarity floor, hardware limits, gradual detail degradation and recovery passed');
