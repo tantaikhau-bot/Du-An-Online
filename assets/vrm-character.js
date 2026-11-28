@@ -192,7 +192,7 @@
   const dir=ranged?(weapon==='bow'?-1:1):form%2?-1:1,travel=dodge?.32:cast?.15:spin?.33:r[1]*(ranged?.53:heavy?.80:1);
   const turn=(dodge?.1:cast?.25:spin?.70:Math.abs(r[2]))*(ranged?.55:1),twist=dir*(-turn*.65*load+turn*cut+.14*follow);
   const width=(.16+(active?(dodge?.15:cast?.11:r[0])*.53:0))*(heavy?1.14:1),lead=travel*(.30*load+.86*cut+.32*follow),bend=.15+(active?(dodge?.36:cast?.24:r[4])*(.62*load+.82*cut+.28*follow):0);
-  const stride=dir*lead,shift=dir*(-.035*load+.075*cut+.025*follow);
+  const stride=kind==='guard'?.18:dir*lead,shift=dir*(-.035*load+.075*cut+.025*follow);
   out.weight=stance;out.width=width;out.leftHip=-.12+stride;out.rightHip=-.12-stride;out.leftKnee=bend+Math.max(0,-stride)*.54;out.rightKnee=bend+Math.max(0,stride)*.54;
   out.leftFoot=-out.leftKnee*.57;out.rightFoot=-out.rightKnee*.57;out.hipYaw=twist;out.hipRoll=dir*(.09*cut-.06*load);out.hipPitch=.045+(dodge?.24:r[3])*(load*.5+cut*.62);
   out.drop=-.020-(bend-.15)*.12;out.shift=shift;out.spineYaw=-twist*.36;out.chestYaw=twist*.48;out.shoulderYaw=twist*.26;out.headYaw=-twist*.32;
@@ -295,6 +295,7 @@
     overlay('rightUpperArm',-sign*(.85+sweep*.48),-right*.12,right*.72,w);overlay('rightLowerArm',-sign*(.45+wind*.65),0,0,w);
     overlay('leftUpperArm',-sign*.72,0,left*.85,w);overlay('leftLowerArm',-sign*.55,0,0,w);
     overlay('spine',sign*(-.08+sweep*.17),.16*sweep,0,w);
+   }else if(combat.kind==='guard'){const g322=smooth(p/.10)*smooth((1-p)/.12);overlay('rightUpperArm',-sign*.85,.30,right*.82,g322);overlay('rightLowerArm',-sign*1.20,0,-.16,g322);overlay('leftUpperArm',-sign*.65,-.22,left*.88,g322);overlay('leftLowerArm',-sign*1.02,0,.12,g322);overlay('rightHand',.10,0,.36,g322);overlay('spine',sign*.15,.10,0,g322);
    }else if(combat.kind==='dodge'){
     overlay('spine',-sign*.24*sweep,0,0,w);overlay('rightUpperArm',sign*.30,0,right*1.15,w);overlay('leftUpperArm',-sign*.35,0,left*1.1,w);
    }else{
@@ -340,7 +341,7 @@
   let springCount316=0;if(!a.springFailed317){try{springCount316=springMotion316(a,secondary,!!j.physics316&&detail===0&&!j.reduce316);}catch(e){a.springFailed317=true;try{springMotion316(a,secondary,false)}catch{}console.warn('Optional spring bias disabled',e)}}
   if(detail===0){for(let remain=dt;remain>0;){let d=Math.min(.033,remain);vrm.update(d);remain-=d}}else{vrm.humanoid.update();vrm.expressionManager?.update();}
   if(detail<=1){const contact=bw320>.05&&!offGround&&ground&&typeof WWFootIK.groundCombat320==='function'?WWFootIK.groundCombat320(a.T,a,ground,bw320):WWFootIK.groundIdle(a.T,a,ground,dt,gait,offGround,mode);if(contact)a.footIK=contact;}
-  a.motionState=a.motion.state;a.poseCheck={motionVersion:'32.1',combatBody320:{...body320},face255:{...face},lookYaw255:look,brake250:a.motion.brake250||0,turnBody250:a.motion.turnBody250||0,drive250:a.motion.drive250||0,fingers163:fingers,actionWeights:{...weights},secondary:{...secondary},springCount316,targetHeight:1.68*heightFactor(preset(a.motionProfile)),original:!!a.original,measuredSpeed:a.motion.speed,turn:a.motion.turn,identity:a.identityType||null,fallbackBase:a.fallbackBase||null,cycle:a.motion.cycle,walkWeight:a.motion.walk,runWeight:a.motion.run,profile:a.motionProfile,legSign:sign,hip:[v.hipL,v.hipR],knee:['left','right'].map(side=>(vrm.humanoid.getNormalizedBoneNode(side+'LowerLeg')?.rotation.x||0)*sign),ankle:[v.ankleL,v.ankleR],jumpWeight:a.motion.jump};
+  a.motionState=a.motion.state;a.poseCheck={motionVersion:'32.2',combatBody320:{...body320},face255:{...face},lookYaw255:look,brake250:a.motion.brake250||0,turnBody250:a.motion.turnBody250||0,drive250:a.motion.drive250||0,fingers163:fingers,actionWeights:{...weights},secondary:{...secondary},springCount316,targetHeight:1.68*heightFactor(preset(a.motionProfile)),original:!!a.original,measuredSpeed:a.motion.speed,turn:a.motion.turn,identity:a.identityType||null,fallbackBase:a.fallbackBase||null,cycle:a.motion.cycle,walkWeight:a.motion.walk,runWeight:a.motion.run,profile:a.motionProfile,legSign:sign,hip:[v.hipL,v.hipR],knee:['left','right'].map(side=>(vrm.humanoid.getNormalizedBoneNode(side+'LowerLeg')?.rotation.x||0)*sign),ankle:[v.ankleL,v.ankleR],jumpWeight:a.motion.jump};
   const measure140=!a.diagnosticInterval140||!Number.isFinite(a.lastDiagnostic140)||t-a.lastDiagnostic140>=a.diagnosticInterval140||a.lastMode140!==a.motion.state;const previousRaw140=a.rawDiagnostics140;if(previousRaw140){a.poseCheck.rawArm=previousRaw140.arm;a.poseCheck.rawLeg=previousRaw140.leg}
   if(detail===0&&measure140&&['idle','walk','run'].includes(mode)){a.lastDiagnostic140=t;a.lastMode140=a.motion.state;
    a.root.updateWorldMatrix(true,true);
