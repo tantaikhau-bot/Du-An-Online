@@ -35,8 +35,8 @@
    // A small subdivided textile surface, fixed at the shoulders, deformable at the hem.
    const geo=new T.PlaneGeometry(1,1,8,12),pos=geo.attributes.position;for(let row=0;row<=12;row++)for(let col=0;col<=8;col++){const v=row/12,u=col/8*2-1;pos.setXYZ(row*9+col,u*w*(1-.37*v),-h*v*(1-.14*(1-Math.abs(u))*v),-.018*v);}
    pos.needsUpdate=true;geo.computeVertexNormals();const textile=mesh(g,geo,fabric);textile.frustumCulled=false;
-   const border=mesh(g,new T.BufferGeometry(),trim);const bp=new Float32Array(13*2*3);border.geometry.setAttribute('position',new T.BufferAttribute(bp,3));const ix=[];for(let row=0;row<12;row++){const n=row*2;ix.push(n,n+1,n+2,n+1,n+3,n+2)}border.geometry.setIndex(ix);border.frustumCulled=false;
-   a.identityMotion.push({g,rest:g.quaternion.clone(),amplitude:type==='cape'?.12:.07,cloth:pos,geo,base:new Float32Array(pos.array),border:border.geometry,last:-Infinity});
+   const border=mesh(g,new T.BufferGeometry(),trim);const bp=new Float32Array(13*4*3);border.geometry.setAttribute('position',new T.BufferAttribute(bp,3));const ix=[];for(let row=0;row<12;row++){for(let side=0;side<2;side++){const n=row*4+side*2;ix.push(n,n+1,n+4,n+1,n+5,n+4)}}border.geometry.setIndex(ix);border.frustumCulled=false;
+   a.identityMotion.push({g,rest:g.quaternion.clone(),amplitude:type==='cape'?.12:.07,cloth:pos,geo,base:new Float32Array(pos.array),border:border.geometry,last:-Infinity,phase:variant*.71});
    if(type==='scarf'){let g2=groupAt(chest,0,.13,.12);line(g2,[[-.12,.015,0],[-.06,-.01,.04],[.06,-.01,.04],[.12,.015,0]],.025,fabric)}
   }else if(type==='blade'){
    let g=groupAt(chest,0,.16,-.17);g.rotation.z+=(p.id==='m6'?-.34:.34);
@@ -59,6 +59,24 @@
   // Each group can reference shared materials; dispose unused ones on next preset.
   a.identityType=type;
  }
- function animate(a,t,gait,secondary={}){const pitch=secondary.pitch||0,roll=secondary.roll||0,wind=secondary.wind??1,flutter=secondary.flutter||0;for(const item of a.identityMotion||[]){const {g,rest,amplitude,cloth,geo,base,border}=item;g.quaternion.copy(rest);g.rotateX(Math.max(0,amplitude*(pitch*.65+.12)));g.rotateZ(amplitude*roll*.55);if(!cloth||t-item.last<(a.physicsTier317===2?.12:a.diagnosticInterval140?.065:.033))continue;item.last=t;for(let i=0;i<cloth.count;i++){const row=Math.floor(i/9),v=row/12,u=(i%9)/4-1,x=base[i*3],y=base[i*3+1],z=base[i*3+2];const bend=Math.max(.006*v,.02*v+Math.max(0,pitch)*.20*v*v+flutter*.08*v*v*Math.sin(t*7+u*3-v*4));cloth.setXYZ(i,x+roll*.11*v*v,y+Math.abs(pitch)*.045*v*v,z-bend);}cloth.needsUpdate=true;geo.computeVertexNormals();const b=border.attributes.position;for(let row=0;row<=12;row++){const k=row*9;for(let j=0;j<2;j++)b.setXYZ(row*2+j,cloth.getX(k)+j*.009,cloth.getY(k),cloth.getZ(k)-.002);}b.needsUpdate=true;border.computeVertexNormals();}}
- const api={designs,apply,clear,animate};if(typeof module!=='undefined')module.exports=api;else root.WWIdentity=api;
+ // V33.7: shoulder-pinned fabric, smooth inertia, bounded hem curl and two moving trim edges.
+ function fabricPoint337(x,y,z,u,v,t,pitch,roll,flutter,phase=0,out=[]){
+  const w=v*v,fold=Math.sin(u*8+phase-v*3)*.009*w, wave=Math.sin(t*6+u*4-v*5+phase)*flutter*.095*w;
+  const back=Math.max(.004*v,.025*v+Math.max(0,pitch)*.22*w+wave+fold);
+  out[0]=x+roll*.13*w;out[1]=y+Math.min(.08,Math.abs(pitch)*.065+Math.abs(roll)*.025)*w;out[2]=z-back;return out;
+ }
+ function animate(a,t,gait,secondary={}){
+  if(!Number.isFinite(t))return;const f=(x,d=0)=>Number.isFinite(x)?x:d,c=(x,l,h)=>Math.min(h,Math.max(l,x));
+  const pitch=c(f(secondary.clothPitch,f(secondary.pitch)),-.75,.75),roll=c(f(secondary.clothRoll,f(secondary.roll)),-.52,.52),flutter=c(f(secondary.flutter),0,.4),tier=c(f(a.physicsTier317),0,2);
+  for(const item of a.identityMotion||[]){
+   const {g,rest,amplitude,cloth,geo,base,border}=item;g.quaternion.copy(rest);g.rotateX(amplitude*c(pitch*.60+.10,-.15,.60));g.rotateZ(amplitude*roll*.50);
+   const interval=tier===2?.133:tier===1||a.diagnosticInterval140?.067:.033;
+   if(!cloth||t>=item.last&&t-item.last<interval)continue;item.last=t;const out=item.point337??=[0,0,0];
+   for(let i=0;i<cloth.count;i++){const v=Math.floor(i/9)/12,u=(i%9)/4-1;fabricPoint337(base[i*3],base[i*3+1],base[i*3+2],u,v,t,pitch,roll,flutter,item.phase,out);cloth.setXYZ(i,...out);}
+   cloth.needsUpdate=true;geo.computeVertexNormals();
+   const b=border.attributes.position;for(let row=0;row<=12;row++)for(let side=0;side<2;side++){const k=row*9+(side?8:0);for(let j=0;j<2;j++)b.setXYZ(row*4+side*2+j,cloth.getX(k)+(side?-1:1)*j*.009,cloth.getY(k),cloth.getZ(k)-.002);}
+   b.needsUpdate=true;border.computeVertexNormals();
+  }
+ }
+ const api={designs,apply,clear,animate,fabricPoint337};if(typeof module!=='undefined')module.exports=api;else root.WWIdentity=api;
 })(typeof globalThis!=='undefined'?globalThis:this);
