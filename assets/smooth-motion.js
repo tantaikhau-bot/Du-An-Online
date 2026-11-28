@@ -47,6 +47,14 @@
  const RUN=[[0,-.57,.25,.06],[.13,-.29,.45,-.09],[.32,.34,.27,-.20],[.47,.49,.78,-.27],[.65,.01,1.10,-.17],[.83,-.54,.70,.03],[1,-.57,.25,.06]];
  // V25.2: early landing compression followed by a longer, smooth recovery.
  function landingEnvelope252(remaining){const p=clamp(1-(Number(remaining)||0)/.34),peak=.24;return p<peak?smooth(p/peak):1-smooth((p-peak)/(1-peak))}
+ // V34.1: a continuous start/stop envelope, with bounded acceleration and torso response.
+ function locomotion341(st,dt,speed,turn,grounded){
+  const c=(v,l,h)=>Math.max(l,Math.min(h,v)),f=(v,d=0)=>Number.isFinite(v)?v:d,h=c(f(dt),0,.1),target=grounded?c(f(speed),0,5.5):0,prev=f(st.speed,target);
+  st.speed=prev+(target-prev)*(1-Math.exp(-h/.12));const acceleration=h>0?c((st.speed-prev)/h,-6,6):0;
+  st.accel=f(st.accel)+(acceleration-f(st.accel))*(1-Math.exp(-h/.095));
+  const steer=grounded?c(f(turn),-3,3)*c(st.speed/.65,0,1):0;st.turn=f(st.turn)+(steer-f(st.turn))*(1-Math.exp(-h/.11));
+  st.pitch=c(st.accel*.012,-.055,.055);st.roll=c(st.turn*.023,-.065,.065);st.weight=c(st.speed/.65,0,1);return st;
+ }
  function step(st,dt,gait=0,j={},mode='idle',id='m1'){
   dt=Number.isFinite(dt)?clamp(dt,0,.35):0;gait=Number.isFinite(gait)?clamp(gait):0;st.time+=dt;let cfg=profile(id),phase=phaseOf(j);
   // V25.0: locomotion follows actual movement when available. Preview and remote fallback retain gait input.
@@ -58,7 +66,7 @@
   st.walk=mix(st.walk,phase?0:wt,blend);st.run=mix(st.run,phase?0:rt,blend);st.jump=mix(st.jump,phase?1:0,1-Math.exp(-dt/.065));
   const move=clamp(st.walk+st.run),run=st.run/Math.max(.001,move),male=id.startsWith('m');
   const measured=Number.isFinite(j.speed)?clamp(j.speed,0,5.5):mix(1.65,3.8,run)*move,oldSpeed=st.speed||0;
-  st.speed=mix(oldSpeed,measured,1-Math.exp(-dt/.11));st.accel=mix(st.accel||0,clamp((st.speed-oldSpeed)/Math.max(dt,.001),-6,6),1-Math.exp(-dt/.12));st.turn=mix(st.turn||0,clamp(j.turn||0,-3,3),1-Math.exp(-dt/.12));
+  st.speed=mix(oldSpeed,measured,1-Math.exp(-dt/.11));st.accel=mix(st.accel||0,clamp((st.speed-oldSpeed)/Math.max(dt,.001),-6,6),1-Math.exp(-dt/.12));st.turn=mix(st.turn||0,clamp(Number.isFinite(j.turn)?j.turn:0,-3,3),1-Math.exp(-dt/.12));
   const brake=grounded?clamp(-st.accel/5)*clamp((oldSpeed+st.speed)/1.1):0;
   st.brake250=mix(st.brake250||0,brake,1-Math.exp(-dt/(brake>(st.brake250||0)?.075:.16)));
   st.turnBody250=mix(st.turnBody250||0,grounded?clamp(st.turn/3,-1,1)*smooth(st.speed/.45):0,1-Math.exp(-dt/.10));
@@ -73,6 +81,7 @@
    spineX:mix(.045,.21,run)*move*cfg.lean+breath*.035*rest+accelLean-.045*st.brake250,spineYaw:-swing*.125*move-.045*idleLean+.045*st.turnBody250,spineRoll:(-counter*.045*move-.040*idleLean)*cfg.sway+turnLean,
    headX:-.045*run+breath*.020*rest+.035*Math.sin(t*.47)*rest,headY:(.13*Math.sin(t*.61)+.04*Math.sin(t*1.37))*rest-swing*.024*move+.085*st.turnBody250,headZ:-idleLean*.041+counter*.015*move-.018*st.turnBody250,shoulderY:swing*.060*move+.025*idleLean+.025*st.turnBody250,
    armL:l.arm+.065*idleLean+.032*breath*rest-relax*rest,armR:r.arm-.055*idleLean-.028*breath*rest+relax*rest,elbowL:l.elbow+.09*rest*(1+shift),elbowR:r.elbow+.075*rest*(1-shift),hipL:l.hip-(.078+.010*shift)*rest,hipR:r.hip-(.078-.010*shift)*rest,kneeL:l.knee+(.156+.020*shift)*rest,kneeR:r.knee+(.156-.020*shift)*rest,ankleL:l.ankle-(.078+.010*shift)*rest,ankleR:r.ankle-(.078-.010*shift)*rest,spread:(.09+.10*run)*cfg.spread};
+  const momentum=locomotion341(st.momentum341??={},dt,measured,j.turn,grounded);if(grounded){v.spineX+=momentum.pitch*.55;v.hipX+=momentum.pitch*.25;v.spineRoll+=momentum.roll*.60;v.headZ-=momentum.roll*.35;v.hipRoll+=momentum.roll*.22;}
   if(phase){
    let amount=phase==='jump_start'?smooth(1-(j.prep||0)/.20):phase==='jump_land'?landingEnvelope252(j.land):0;
    let air=phase==='jump_air',launch=phase==='jump_takeoff',crouch=amount,ascend=clamp((j.velocity||0)/4),descend=clamp(-(j.velocity||0)/4),flight=air||launch,airFlex=flight?mix(.08,.39,smooth(1-Math.abs(j.velocity||0)/3.9)):0;
@@ -139,5 +148,5 @@
  for(let i=0;i<keys.length;i++){const k=keys[i],vk=k+'Velocity';let x=c(f(st[k]),-bounds[i],bounds[i]),v=c(f(st[vk]),-5,5),remaining=seconds;if(f(dt)>.18)v=0;while(remaining>1e-7){const h=Math.min(remaining,1/120);v+=(rates[i]*(targets[i]-x)-damping[i]*v)*h;x+=v*h;remaining-=h;}const bounded=c(x,i===2?0:-bounds[i],bounds[i]);st[k]=bounded;st[vk]=bounded===x?c(v,-5,5):0;}
  st.pitch=st.clothPitch;st.roll=st.clothRoll;st.wind=wind;return st;
 }
- const api={secondary337,secondary316,newState,step,phaseOf,landingEnvelope252,npcLOD,profile,profiles,animalState,actionBlend132,expression132,socialLook255,secondary132};if(typeof module!=='undefined')module.exports=api;else root.WWMotion=api;
+ const api={locomotion341,secondary337,secondary316,newState,step,phaseOf,landingEnvelope252,npcLOD,profile,profiles,animalState,actionBlend132,expression132,socialLook255,secondary132};if(typeof module!=='undefined')module.exports=api;else root.WWMotion=api;
 })(typeof globalThis!=='undefined'?globalThis:this);
