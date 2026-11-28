@@ -36,6 +36,19 @@ const fs=require('node:fs'),os=require('node:os'),path=require('node:path'),asse
   await target.route(origin+'/assets/three-vrm.module.js',route=>route.fulfill({path:path.resolve('node_modules/@pixiv/three-vrm/lib/three-vrm.module.js'),contentType:'application/javascript'}));}await installRoutes(page);
   await page.goto(origin+'/play?perf=1');
   await page.waitForFunction(()=>window.wwGraphics59?.stage==='running'||window.wwGraphics59?.engine==='classic',{},{timeout:90000});
+  // Real onboarding flow: do not bypass the initial dialog by editing localStorage.
+  await page.locator('#welcome[open]').waitFor({timeout:30000});
+  await page.locator('#heroName').fill('QA Explorer');
+  await page.locator('#welcomeForm button[type=submit]').click({timeout:30000});
+  await page.locator('#modal[open] #confirm').click({timeout:30000});
+  await page.waitForFunction(()=>s.intro&&!onboardingPending351&&!document.querySelector('dialog[open]'));
+  const startPos=await page.evaluate(()=>({x:player.x,y:player.y}));
+  await page.keyboard.down('w');
+  try{await page.waitForFunction(p=>Math.hypot(player.x-p.x,player.y-p.y)>.3,startPos,{timeout:15000});}
+  finally{await page.keyboard.up('w')}
+  await page.locator('.ww291-strike').click({timeout:30000});
+  await page.waitForFunction(()=>window.wwGraphics59?.footwork320?.kind==='strike',null,{timeout:15000});
+  console.log('V35.0.1 onboarding, actual keyboard movement and basic attack passed');
   const info=await page.evaluate(()=>window.wwGraphics59);
   assert.equal(info.engine,'three',JSON.stringify(info));assert.equal(info.vegetation192?.trunkMeshes,3);assert.ok(info.realism191?.terrainBlend&&info.realism191?.rockPBR&&info.realism191?.leafCutout&&info.realism191?.architectureRelief,JSON.stringify(info.realism191));
   assert.equal(info.world137.depth,272);assert.equal(info.world137.width,240);assert.equal(info.world137.tiles,64);assert.ok(info.world137.newSites>=10&&info.world137.newSites<=12);
