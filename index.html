@@ -3119,7 +3119,7 @@ let walkPhase62=0;const blend62=new WeakMap();
    qs[0].setFromUnitVectors(v[4].normalize(),v[5].normalize());const angle=2*Math.acos(Math.min(1,Math.abs(qs[0].w)));if(angle<.001)continue;
    const before=v[1].distanceTo(v[0]),saved=c.supportSave336??=new T.Quaternion();saved.copy(bone.quaternion);qs[1].identity().slerp(qs[0],Math.min(1,(bone===upper?.18:.30)/angle)*weight);bone.getWorldQuaternion(qs[2]);qs[0].copy(qs[2]).invert().multiply(qs[1]).multiply(qs[2]);bone.quaternion.multiply(qs[0]).normalize();bone.updateWorldMatrix(true,true);hand.getWorldPosition(v[1]);middle.getWorldPosition(v[2]);v[1].lerp(v[2],.70);if(v[1].distanceTo(v[0])>before+.001){bone.quaternion.copy(saved);bone.updateWorldMatrix(true,true);}
   }
-  hand.getWorldPosition(v[1]);middle.getWorldPosition(v[2]);v[1].lerp(v[2],.70);c.supportError312=v[1].distanceTo(v[0]);
+  hand.getWorldPosition(v[1]);middle.getWorldPosition(v[2]);v[1].lerp(v[2],.70);c.supportError312=v[1].distanceTo(v[0]);g.localToWorld(v[9].copy(local));c.supportActualError336=v[1].distanceTo(v[9]);
  }
  // V33.6: conservative torso clearance. Rotate the actual arm, then rebuild the grip.
  function clearWeapon309(g,hum,side,id){
@@ -3165,7 +3165,7 @@ let walkPhase62=0;const blend62=new WeakMap();
  function palmBasis336(across,along,reference,out){const len=Math.hypot(...across);if(!Number.isFinite(len)||len<1e-5)return false;const y=out.y,x=out.x,z=out.z;for(let i=0;i<3;i++)y[i]=across[i]/len;const dot=y[0]*along[0]+y[1]*along[1]+y[2]*along[2];for(let i=0;i<3;i++)x[i]=along[i]-y[i]*dot;const n=Math.hypot(...x);if(!Number.isFinite(n)||n<1e-5)return false;for(let i=0;i<3;i++)x[i]/=n;z[0]=x[1]*y[2]-x[2]*y[1];z[1]=x[2]*y[0]-x[0]*y[2];z[2]=x[0]*y[1]-x[1]*y[0];if(reference&&z[0]*reference[0]+z[1]*reference[1]+z[2]*reference[2]<0)for(let i=0;i<3;i++){x[i]=-x[i];z[i]=-z[i];}return true;}
  function gripOffset336(radius,palmLength,scale){return Math.min(Math.max(0,radius*scale*.78),Math.max(0,palmLength*.36));}
  function weaponTick291(now){
-  const c=combat290;if(!c.weapons303)return;c.supportError312=null;const valid=c.enabled&&c.hp>0&&c.allowed317,id=c.move?.weapon||equipped303;for(const [key,g] of Object.entries(c.weapons303))g.visible=valid&&key===id;c.leftWeapon303.visible=valid&&id==='dual';if(!valid)return;
+  const c=combat290;if(!c.weapons303)return;c.supportError312=c.supportActualError336=null;const valid=c.enabled&&c.hp>0&&c.allowed317,id=c.move?.weapon||equipped303;for(const [key,g] of Object.entries(c.weapons303))g.visible=valid&&key===id;c.leftWeapon303.visible=valid&&id==='dual';if(!valid){report59.weaponGrip336=null;return;}
   const profile=arsenalLook310(),baseScale=id==='great'||id==='staff'?1:.92;
   const m=c.move,p=m?Math.max(0,Math.min(1,(now-m.start)/(m.end-m.start))):0,yaw=heading+(m&&['strike','spin'].includes(m.kind)?(p-.45)*2.4:0);
   function attach(g,side,pass=0){
@@ -3182,16 +3182,17 @@ let walkPhase62=0;const blend62=new WeakMap();
       const frames=vrm104.gripFrames336??={},stored=frames[side],hq=c.handQuat336??=new T.Quaternion(),o=c.palmBasis336??={x:[0,0,0],y:[0,0,0],z:[0,0,0]},inputs=c.palmInputs336??=[[],[],[]];hand.getWorldQuaternion(hq);v[8].subVectors(v[4],v[3]);if(stored)v[8].copy(stored).applyQuaternion(hq);v[5].toArray(inputs[0]);v[6].toArray(inputs[1]);v[8].toArray(inputs[2]);
       if(palmBasis336(inputs[0],inputs[1],inputs[2],o)){v[6].fromArray(o.x);v[5].fromArray(o.y);v[7].fromArray(o.z);if(!stored)frames[side]=v[7].clone().applyQuaternion(hq.invert());const handleRadius=id==='great'?.027:id==='staff'?.036:id==='bow'?.031:.021;
        g.scale.set(baseScale*profile[0],baseScale*profile[1],baseScale);g.position.copy(v[0]).lerp(v[3],.77).addScaledVector(v[7],gripOffset336(handleRadius,palmLength,Math.max(g.scale.x,g.scale.z)));
-       basis.makeBasis(v[6],v[5],v[7]);g.quaternion.setFromRotationMatrix(basis).normalize();if(pass<(mobile71?1:2)&&clearWeapon309(g,hum,side,id))attach(g,side,pass+1);return;}
+       basis.makeBasis(v[6],v[5],v[7]);g.quaternion.setFromRotationMatrix(basis).normalize();g.userData.gripMode336='palm';if(pass<(mobile71?1:2)&&clearWeapon309(g,hum,side,id))attach(g,side,pass+1);return;}
       
      }
     }
    }
-   hand.updateWorldMatrix(true,false);if(hum)hand.getWorldPosition(weaponVec291);else hand.localToWorld(weaponVec291.set(0,-.29,0));
+   g.userData.gripMode336='fallback';hand.updateWorldMatrix(true,false);if(hum)hand.getWorldPosition(weaponVec291);else hand.localToWorld(weaponVec291.set(0,-.29,0));
    const sg=side==='right'?1:-1;weaponDir291.set(-Math.sin(yaw)*.7+sg*.24*Math.cos(yaw),id==='staff'||id==='bow'?.85:m?.kind==='strike'?.25+Math.sin(p*Math.PI)*.6:-.5,-Math.cos(yaw)*.7-sg*.24*Math.sin(yaw)).normalize();g.position.copy(weaponVec291);g.quaternion.setFromUnitVectors(weaponUp291,weaponDir291);g.scale.set(baseScale*profile[0],baseScale*profile[1],baseScale);
   }
   if(c.weaponRune306&&c.weaponTint306!==kit304[4]){c.weaponTint306=kit304[4];c.weaponRune306.color.setHex(kit304[4]);c.weaponRune306.emissive.setHex(kit304[4]);}attach(c.weapons303[id]||c.weapon,id==='bow'?'left':'right');if(id==='dual')attach(c.leftWeapon303,'left');if(id==='great'&&(!m||['strike','spin','ultimate'].includes(m.kind))){const weight=m?.kind==='strike'?.72+.26*Math.sin(Math.PI*p):m?.kind==='ultimate'?.82:.76;supportGrip308(c.weapons303.great,'left',(c.supportLocal308??=new T.Vector3()).set(0,-.16,0),weight);}
   if(id==='bow'){const bow=c.weapons303.bow,string=bow.userData.string308,arr=string?.geometry.attributes.position;if(arr){const impact=m?(m.impact-m.start)/(m.end-m.start):.5,draw=m&&['strike','ultimate'].includes(m.kind)&&p<impact?Math.sin(Math.PI*.5*Math.min(1,p/Math.max(.08,impact))):0;const bx=-.04-.27*draw;arr.setXYZ(1,bx,0,0);arr.needsUpdate=true;if(draw>0)supportGrip308(bow,'right',(c.supportLocal308??=new T.Vector3()).set(bx,0,0),Math.min(1,p*8)*.95);}}
+  report59.weaponGrip336={weapon:id,primary:c.weapons303[id]?.userData.gripMode336||null,secondary:id==='dual'?c.leftWeapon303.userData.gripMode336:null,supportError:Number.isFinite(c.supportActualError336)?Number(c.supportActualError336.toFixed(3)):null};
  }
  combatWorld290={enter:enterCombat290,enterBoss:enterBoss295,leave:leaveCombat290};document.addEventListener('keydown',e=>{if(e.repeat||e.ctrlKey||e.altKey||e.metaKey||/INPUT|TEXTAREA|SELECT/.test(e.target?.tagName||'')||e.target?.isContentEditable)return;if(e.key.toLowerCase()==='j'&&combat290.enabled&&combatAvailable292()){e.preventDefault();guard322();return}if(e.key==='6'&&combat290.enabled&&combatAvailable292()){e.preventDefault();lockTarget294();return}const id=Object.keys(abilities291).find(k=>abilities291[k].key.toLowerCase()===e.key.toLowerCase());if(id&&combat290.enabled&&combatAvailable292()){e.preventDefault();attackCombat290(id)}});
  const peerFX298={pool:null,seen:new Map()};
