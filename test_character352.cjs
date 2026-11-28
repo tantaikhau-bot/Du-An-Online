@@ -8,3 +8,12 @@ for(const extra of [{kind:'dodge'},{airborne:true},{air323:1},{counter322:true},
 c=cast();assert.equal(P.firstStrikeFrame352(c,2000),0);assert.equal(P.combatTiming340(c.move,2000).cancel,true);
 for(const gender of ['m','f'])for(let n=1;n<=10;n++)for(const t of [0,1,2,10,NaN]){const id=gender+n;const z=V.idleStance352(0,id,t);assert(z.spread===0&&z.toe===0&&Math.abs(z.lead)===0);const v=V.idleStance352(1,id,t);assert(v.spread>0&&v.spread<=.055&&Math.abs(v.lead)<=.018&&v.toe<=.035)}
 console.log('V35.0.2 bounded first-frame timing and all 20 idle stance profiles passed');
+
+for(const weapon of ['sword','great','dual','bow','staff']){
+ const f=(p,c=false,q=false)=>V.comboEnvelope353(weapon,p,c,q);
+ assert.equal(f(0),0);assert.equal(f(1),0);assert.equal(f(.5),1);
+ assert.equal(f(1,false,true),f(0,true,false));
+ for(let i=0;i<=100;i++){const p=i/100;for(const chain of [false,true])for(const queue of [false,true]){const v=f(p,chain,queue);assert(Number.isFinite(v)&&v>=0&&v<=1);if(i)assert(Math.abs(v-f(p-.01,chain,queue))<.25)}}
+}
+assert(V.comboEnvelope353('great',.05)<V.comboEnvelope353('dual',.05));
+console.log('V35.0.3 five weapon envelopes and queued combo continuity passed');
