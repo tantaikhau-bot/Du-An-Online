@@ -238,4 +238,25 @@ function createFrameGuard343(report={},limit=16){
 function safeComboIndex343(index,length){const n=Number.isSafeInteger(length)&&length>0?length:1;return Number.isSafeInteger(index)?((index%n)+n)%n:0;}
 function frameInterval343(now,last){if(!Number.isFinite(now))return 0;if(!Number.isFinite(last)||last<=0)return 16;return Math.max(0,Math.min(2000,now-last));}
 function frameSample343(st,ms){if(!Number.isFinite(ms)||ms<0||ms>2000)return st;st.count=(st.count||0)+1;st.mean=Number.isFinite(st.mean)?st.mean*.9+ms*.1:ms;st.max=Math.max(st.max||0,ms);return st;}
-if(typeof module!=='undefined')module.exports={createFrameGuard343,safeComboIndex343,frameInterval343,frameSample343,combatTiming340,combatReset340,TREE192,treeProfile192,trunkData192,HEAVEN190,heavenZone190,heavenSegment190,heavenFloor190,heavenBlocked190,heavenHeight190,SEA180,seaWeight180,seaLand180,seaTerrain180,seaBlocked180,seaReserved180,DESERT179,desertWeight179,desertTerrain179,desertBlocked179,desertReserved179,VOLCANO178,volcanoWeight178,volcanoLava178,volcanoTerrain178,volcanoBlocked178,volcanoReserved178,MAGIC177,magicWeight177,magicTerrain177,magicBlocked177,magicReserved177,LIGHT176,lightWeight176,lightTerrain176,lightBlocked176,lightReserved176,DREAM175,dreamWeight175,dreamTerrain175,dreamReserved175,ICE174,iceWeight174,icePeak174,iceTerrain174,iceReserved174,BLOSSOM173,blossomWeight173,blossomPond173,blossomTrail173,blossomTerrain173,blossomWaterBlocked173,MOBILE_CLARITY171,WW_ATLAS170,atlasDestination170,atlasMap170,smooth162,frontierHeight162,trailDistance162,terrainTiles162,tileAt162,tileVisible162,physicsDelta141,physicsSteps141,angle141,orbit141,jumpStep141,trimModels140,expiredModel140,mobileCap139,mobileResolution139,mobileStep139,actorBudget139,WW_WORLD137,WW_EXPANSION137,insideWorld137,expansionRegion137,clarityStep100,resolution77,WW_PERF118,perfPreset118,perfWarning118,WW_LANDMARK124,landmarkSite124,cellVisible124,landmarkVisits124,WW_LOOK131,look131,blendLook131,cameraSafe131,stepSound131};
+// V34.4: deterministic browser compatibility policies; no DOM dependency.
+function rendererOptions344(antialias,lowPower){
+ const first={antialias:!!antialias,powerPreference:lowPower?'low-power':'high-performance'};
+ const options=[first,{antialias:false,powerPreference:'default'},{antialias:false,powerPreference:'low-power'}];
+ return options.filter((o,i)=>options.findIndex(v=>v.antialias===o.antialias&&v.powerPreference===o.powerPreference)===i);
+}
+function createRenderer344(factory,options){
+ const failures=[];for(const [index,opt] of options.entries()){try{const renderer=factory(opt);if(!renderer)throw Error('No renderer');return {renderer,index,options:opt,failures};}catch(e){failures.push(String(e?.message||e).slice(0,160));}}
+ throw Error('Không khởi tạo được WebGL: '+failures.join(' / ').slice(0,300));
+}
+function viewport344(w,h,ratio,maxDimension=4096,maxPixels=8000000){
+ if(![w,h,ratio,maxDimension,maxPixels].every(Number.isFinite)||w<2||h<2||ratio<=0||maxDimension<2||maxPixels<4)return null;
+ return {width:Math.floor(w),height:Math.floor(h),ratio:Math.min(ratio,maxDimension/w,maxDimension/h,Math.sqrt(maxPixels/(w*h)))};
+}
+function capture344(node,id){try{if(typeof node?.setPointerCapture==='function'){node.setPointerCapture(id);return true;}}catch{}return false;}
+function release344(node,id){try{if(id!=null&&node?.hasPointerCapture?.(id))node.releasePointerCapture(id);}catch{}}
+function gpuState344(st,event,hidden=false){
+ if(event==='lost'){if(st.lost)return 'ignore';st.lost=true;st.losses=(st.losses||0)+1;return 'pause';}
+ if(event==='restored'){if(!st.lost)return 'ignore';st.lost=false;return st.losses===1?(hidden?'defer':'resume'):'reload';}
+ return 'ignore';
+}
+if(typeof module!=='undefined')module.exports={rendererOptions344,createRenderer344,viewport344,capture344,release344,gpuState344,createFrameGuard343,safeComboIndex343,frameInterval343,frameSample343,combatTiming340,combatReset340,TREE192,treeProfile192,trunkData192,HEAVEN190,heavenZone190,heavenSegment190,heavenFloor190,heavenBlocked190,heavenHeight190,SEA180,seaWeight180,seaLand180,seaTerrain180,seaBlocked180,seaReserved180,DESERT179,desertWeight179,desertTerrain179,desertBlocked179,desertReserved179,VOLCANO178,volcanoWeight178,volcanoLava178,volcanoTerrain178,volcanoBlocked178,volcanoReserved178,MAGIC177,magicWeight177,magicTerrain177,magicBlocked177,magicReserved177,LIGHT176,lightWeight176,lightTerrain176,lightBlocked176,lightReserved176,DREAM175,dreamWeight175,dreamTerrain175,dreamReserved175,ICE174,iceWeight174,icePeak174,iceTerrain174,iceReserved174,BLOSSOM173,blossomWeight173,blossomPond173,blossomTrail173,blossomTerrain173,blossomWaterBlocked173,MOBILE_CLARITY171,WW_ATLAS170,atlasDestination170,atlasMap170,smooth162,frontierHeight162,trailDistance162,terrainTiles162,tileAt162,tileVisible162,physicsDelta141,physicsSteps141,angle141,orbit141,jumpStep141,trimModels140,expiredModel140,mobileCap139,mobileResolution139,mobileStep139,actorBudget139,WW_WORLD137,WW_EXPANSION137,insideWorld137,expansionRegion137,clarityStep100,resolution77,WW_PERF118,perfPreset118,perfWarning118,WW_LANDMARK124,landmarkSite124,cellVisible124,landmarkVisits124,WW_LOOK131,look131,blendLook131,cameraSafe131,stepSound131};
