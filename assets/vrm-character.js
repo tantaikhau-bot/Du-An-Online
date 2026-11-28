@@ -314,6 +314,14 @@
   out.env=env;out.pelvis=turn;out.chest=turn*.62+dir*.07*shoulder;out.neck=-turn*.48;out.load=load;out.release=release;out.follow=follow;out.shift=dir*d[3]*(.016*release-.014*load);
   out.knee=clamp(d[3]*(.10*load+.075*release),0,.22);out.heel=clamp(d[4]*.12*follow,0,.16);out.shoulder=clamp(d[1]*(.10*load+.14*shoulder),0,.25);out.wrist=dir*d[2]*factor*.15*follow;out.offhand=d[2]*factor*.19*follow;out.dir=dir;out.ranged=ranged;return out;
  }
+ // Keep a chained attack's recovery connected to the next wind-up, without changing hit timing.
+ function comboEnvelope353(weapon,progress,chained=false,queued=false){
+  const clamp=v=>Math.max(0,Math.min(1,Number.isFinite(v)?v:0)),ease=v=>{v=clamp(v);return v*v*(3-2*v)};
+  const p=clamp(progress),wind=weapon==='great'?.115:weapon==='dual'?.065:.09,recovery=weapon==='great'?.20:weapon==='dual'?.12:.16;
+  const entry=chained?.32+.68*ease(p/wind):ease(p/wind);
+  const exit=queued? .32+.68*ease((1-p)/recovery):ease((1-p)/recovery);
+  return entry*exit;
+ }
  function idleStance352(weight,id,t){const w=Math.max(0,Math.min(1,Number.isFinite(weight)?weight:0)),d=expression341[id]||expression341.m1,phase=Number.isFinite(t)?t:0;return {spread:.055*w,toe:.035*w,lead:.018*w*Math.sin(phase*.72+d[3])};}
  function idleCombat341(id,weapon,t,weight,out={}){
   const d=expression341[id]||expression341.m1,t0=Number.isFinite(t)?t:0,w=Math.max(0,Math.min(1,Number.isFinite(weight)?weight:0)),seed=id?.charCodeAt?.(0)||109,phase=t0*.9+seed*.19+(parseInt(id?.slice(1),10)||1)*.71;
@@ -399,7 +407,7 @@
   if(combat&&!socialBlocked256){
    const p=Math.max(0,Math.min(1,combat.progress)),smooth=u=>{u=Math.max(0,Math.min(1,u));return u*u*(3-2*u)},impact=Math.max(.18,Math.min(.82,combat.impact??.45)),w=smooth(p/.13)*smooth((1-p)/.24),sweep=p<impact?smooth((p-impact*.40)/(impact*.60)):1-smooth((p-impact)/(1-impact)),wind=Math.sin(Math.PI*Math.min(1,p/impact)),cast=combat.kind==='fire'||combat.kind==='ice'||combat.kind==='storm';
    if(['hurt','stagger','down','recover'].includes(combat.kind)){const side=combat.side329||1,fall=combat.kind==='down'?smooth(p):combat.kind==='recover'?1-smooth(p):0,flinch=['hurt','stagger'].includes(combat.kind)?Math.sin(Math.PI*p)*(combat.kind==='stagger'?1:.55):0,amount=Math.max(fall,flinch);overlay('rightUpperArm',-sign*(.16+amount*.64),side*.20*flinch,right*(1.35-amount*.50),amount);overlay('leftUpperArm',-sign*(.22+amount*.72),side*.20*flinch,left*(1.35-amount*.55),amount);overlay('rightLowerArm',-sign*(.28+amount*.62),0,0,amount);overlay('leftLowerArm',-sign*(.28+amount*.84),0,0,amount);overlay('head',sign*.20*amount,-side*.12*amount,side*.12*amount,amount);}else if(combat.kind==='strike'||combat.kind==='spin'){
-    const form=combat.kind==='spin'?4:combat.combo|0,weapon=combat.weapon||'sword',k=weaponKeyframe321(weapon,form,p,impact,a.keyPose321??=[]),weight=(combat.chain334?.36+.64*smooth(p/.085):smooth(p/.085))*smooth((1-p)/(combat.queued334?.07:.15));
+    const form=combat.kind==='spin'?4:combat.combo|0,weapon=combat.weapon||'sword',k=weaponKeyframe321(weapon,form,p,impact,a.keyPose321??=[]),weight=comboEnvelope353(weapon,p,combat.chain334,combat.queued334);
     overlay('rightUpperArm',-sign*k[0],k[1],right*k[2],weight);overlay('rightLowerArm',-sign*k[3],0,0,weight);overlay('rightHand',0,0,k[4],weight);
     overlay('leftUpperArm',-sign*k[5],k[6],left*k[7],weight);overlay('leftLowerArm',-sign*k[8],0,0,weight);overlay('leftHand',0,0,k[9],weight);
     const turn=(form%2?-1:1)*(.16*wind+.28*sweep);overlay('spine',sign*(.07*wind+.10*sweep),turn,turn*.15,weight*.65);overlay('chest',sign*.08*sweep,turn*.60,0,weight*.65);
@@ -496,5 +504,5 @@
   if(measure140&&mode==='idle'&&a.weight<.05&&!WWMotion.phaseOf(j)){vrm.scene.updateMatrixWorld(true);const h=vrm.humanoid.getRawBoneNode('head'),l=vrm.humanoid.getRawBoneNode('leftHand'),r=vrm.humanoid.getRawBoneNode('rightHand'),ls=vrm.humanoid.getRawBoneNode('leftUpperArm'),rs=vrm.humanoid.getRawBoneNode('rightUpperArm');if(h&&l&&r&&ls&&rs){const hy=h.matrixWorld.elements[13];a.handsBelowHead=l.matrixWorld.elements[13]<hy&&r.matrixWorld.elements[13]<hy;a.handsDown=l.matrixWorld.elements[13]<ls.matrixWorld.elements[13]&&r.matrixWorld.elements[13]<rs.matrixWorld.elements[13]}}
  }
  function release(a){if(!a||a.released335)return;a.released335=true;try{if(a.spring316?.active)springMotion316(a,{},false)}catch{}try{if(typeof WWIdentity!=='undefined')WWIdentity.clear(a)}finally{a.root.removeFromParent();try{a.dispose?.()}finally{a.contacts={};a.combatFilter308=null;a.dispose=null;}}}
- const api={idleStance352,appearance342,materialRole342,materialPolicy342,snapshotMaterial342,finishMaterial342,expression341,kineticFrame341,idleCombat341,smoothKey339,blendRate339,ultimate338,ultimateFrame338,ultimatePath338,createLoadQueue335,loadQueueStats335:()=>loadQueue335.stats(),dodgePose334,weaponKeyframe321,clips321,actionFootwork320,boundedFootwork320,danceProfiles320,combatBody320,combatGrip312,fingerTargets163,fingerResponse251,setupFingers163,animateFingers163,load,animate,sources,roster,preset,applyPreset,release,heightFactor,createBufferCache140,bufferStats140:()=>buffers.stats()};if(typeof module!=='undefined')module.exports=api;else window.WWVRM=api;
+ const api={comboEnvelope353,idleStance352,appearance342,materialRole342,materialPolicy342,snapshotMaterial342,finishMaterial342,expression341,kineticFrame341,idleCombat341,smoothKey339,blendRate339,ultimate338,ultimateFrame338,ultimatePath338,createLoadQueue335,loadQueueStats335:()=>loadQueue335.stats(),dodgePose334,weaponKeyframe321,clips321,actionFootwork320,boundedFootwork320,danceProfiles320,combatBody320,combatGrip312,fingerTargets163,fingerResponse251,setupFingers163,animateFingers163,load,animate,sources,roster,preset,applyPreset,release,heightFactor,createBufferCache140,bufferStats140:()=>buffers.stats()};if(typeof module!=='undefined')module.exports=api;else window.WWVRM=api;
 })();
