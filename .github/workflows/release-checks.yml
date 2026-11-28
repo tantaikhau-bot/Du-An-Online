@@ -32,6 +32,7 @@ jobs:
       - run: npm install --no-save --no-package-lock three@0.164.1
       - run: node test_original3524.cjs
       - run: node test_skeletal3525.cjs
+      - run: node test_fluid3526.cjs
       - run: node test_lighting3513.cjs
       - run: node test_startup3521.cjs
       - run: node test_clarity3522.cjs
