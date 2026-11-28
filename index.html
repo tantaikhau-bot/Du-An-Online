@@ -1622,7 +1622,7 @@ let walkPhase62=0;const blend62=new WeakMap();
     if(!q.p.visible||!detailed139.has(q)||d>budget139.npcRig+2||q.avatar108||npcLoading108||Date.now()<(npcRetry108.get(id)||0))continue;
     npcLoading108=true;
     let p=WWVRM.preset(npcPresets108[id]||'m1');
-    WWVRM.load(T,p.source,{priority:0,valid:()=>active&&q.p.visible&&dist(q)<=actorBudget332().npcRig+2}).then(a=>{if(!active||!q.p.visible||dist(q)>actorBudget332().npcRig+2){WWVRM.release(a);return;}WWVRM.applyPreset(T,a,p);q.p.add(a.root);a.root.position.set(0,0,0);q.avatar108=a;a.diagnosticInterval140=mobile71?.5:0;q.lodTime108=0;WWVRM.animate(a,.033,0,'idle');try{if(!mobile71){q.sprite108=makeNPCImpostor108(a);q.sprite108.visible=false;q.p.add(q.sprite108)}}catch(e){console.warn('NPC impostor unavailable',e)}npcRetry108.delete(id)}).catch(e=>{npcRetry108.set(id,Date.now()+15000);console.warn('NPC model retry',id,e)}).finally(()=>npcLoading108=false);break;
+    const stillNeeded335=()=>{if(!active||!q.p.visible)return false;const here=saveToWorld(player);return Math.hypot(q.p.position.x-here.x,q.p.position.z-here.z)<=actorBudget332().npcRig+2;};WWVRM.load(T,p.source,{priority:0,valid:stillNeeded335}).then(a=>{if(!stillNeeded335()){WWVRM.release(a);return;}try{WWVRM.applyPreset(T,a,p);q.p.add(a.root);a.root.position.set(0,0,0);a.diagnosticInterval140=mobile71?.5:0;q.lodTime108=0;WWVRM.animate(a,.033,0,'idle');q.avatar108=a;}catch(e){WWVRM.release(a);throw e;}try{if(!mobile71){q.sprite108=makeNPCImpostor108(a);q.sprite108.visible=false;q.p.add(q.sprite108)}}catch(e){console.warn('NPC impostor unavailable',e)}npcRetry108.delete(id)}).catch(e=>{npcRetry108.set(id,Date.now()+(/Avatar request|queue full/.test(String(e?.message||e))?1000:15000));console.warn('NPC model retry',id,e)}).finally(()=>npcLoading108=false);break;
    }
   }
   let counts=[0,0,0],visible=0;
@@ -1912,7 +1912,7 @@ let walkPhase62=0;const blend62=new WeakMap();
     if(!active||v.removed109||!v.p.visible||latest.source!==source){WWVRM.release(a);return}
     try{a.requestedSource117=source;a.diagnosticInterval140=mobile71?.5:0;v.p.add(a.root);WWVRM.applyPreset(T,a,latest);WWVRM.animate(a,.033,0,'idle');a.root.visible=false;v.avatar109=a}
     catch(e){WWVRM.release(a);throw e}
-   }).catch(e=>{v.retry109=Date.now()+10000;console.warn('peer avatar fallback',e)}).finally(()=>{v.loading109=false;peerLoads109--});
+   }).catch(e=>{v.retry109=Date.now()+(/Avatar request|queue full/.test(String(e?.message||e))?1000:10000);console.warn('peer avatar fallback',e)}).finally(()=>{v.loading109=false;peerLoads109--});
   }
   const a=v.avatar109;if(!a)return;
   try{
