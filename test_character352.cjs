@@ -17,3 +17,11 @@ for(const weapon of ['sword','great','dual','bow','staff']){
 }
 assert(V.comboEnvelope353('great',.05)<V.comboEnvelope353('dual',.05));
 console.log('V35.0.3 five weapon envelopes and queued combo continuity passed');
+
+for(const kind of ['stone','roof','path']){
+ const args=[.5,.6,.4,.7],out={};let prev=P.masonryRelief354(kind,0,...args,out).height;
+ for(let i=1;i<=500;i++){const x=P.masonryRelief354(kind,i/1000,...args,out);assert.equal(x,out);assert(x.height>=prev-1e-9&&x.height<=1&&x.light>=.65&&x.light<=1.1);assert(x.height-prev<.05);prev=x.height;}
+ assert(prev>.55);
+ const invalid=P.masonryRelief354(kind,NaN,NaN,NaN,NaN,NaN);assert(Number.isFinite(invalid.height)&&Number.isFinite(invalid.light));
+}
+console.log('V35.0.4 bounded continuous masonry relief for stone, roof and path passed');
