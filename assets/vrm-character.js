@@ -405,6 +405,45 @@
   if(['hurt','stagger','down'].includes(kind))tau=.030;
   return 1-Math.exp(-seconds/tau);
  }
+ // Traveler V6: five separately authored arm tracks, in the existing normalized VRM convention.
+ // right pitch/yaw/drop/elbow/wrist; left pitch/yaw/drop/elbow/wrist.
+ const travelerReady=[.30,-.12,1.15,.56,-.08,.22,.13,1.27,.40,.08];
+ const travelerTracks=[
+ [travelerReady,[.66,-.49,.94,.78,-.25,.30,.23,1.10,.48,.10],[1.04,-.81,.62,1.08,-.42,.53,.36,.87,.65,.20],[1.22,.63,.54,.37,.36,.34,-.30,1.03,.56,-.10],[.80,.87,.78,.60,.43,.43,-.38,1.05,.52,-.12],travelerReady],
+ [travelerReady,[.65,.56,.90,.77,.24,.42,-.32,1.05,.55,-.12],[1.00,.90,.67,1.04,.40,.56,-.45,.82,.69,-.20],[1.13,-.72,.57,.40,-.42,.39,.27,1.05,.56,.12],[.78,-.86,.76,.62,-.48,.31,.37,1.12,.46,.16],travelerReady],
+ [travelerReady,[.51,-.24,1.03,.82,-.12,.39,.33,1.03,.54,.16],[.83,-.33,.74,1.10,-.17,.55,.46,.83,.71,.20],[1.43,.10,.53,.20,.10,.48,-.27,.95,.56,-.12],[.95,.14,.78,.52,.12,.35,-.21,1.07,.47,-.08],travelerReady],
+ [travelerReady,[.95,-.25,.72,.83,-.12,.65,.26,.91,.65,.10],[1.73,-.35,.43,1.13,-.25,.92,.32,.68,.87,.17],[1.34,.21,.53,.35,.25,.46,-.35,.95,.57,-.12],[.69,.44,.84,.59,.34,.34,-.19,1.10,.46,-.08],travelerReady],
+ [travelerReady,[.71,-.68,.83,.77,-.35,.42,.41,.95,.63,.12],[1.10,-1.04,.52,1.03,-.60,.66,.51,.74,.81,.21],[1.40,.95,.42,.30,.57,.77,-.57,.72,.65,-.24],[.89,1.01,.64,.56,.62,.49,-.43,.94,.54,-.16],travelerReady]
+ ];
+ function travelerArmPose(form,progress,impact,out=[]){
+  const p=Math.max(0,Math.min(1,Number.isFinite(progress)?progress:0)),h=Math.max(.18,Math.min(.82,Number.isFinite(impact)?impact:.45)),t=p<=h?p/h:1+(p-h)/(1-h),clip=travelerTracks[Math.max(0,Math.min(4,form|0))];
+  let k=0;while(k<4&&t>times321[k+1])k++;
+  const u=Math.max(0,Math.min(1,(t-times321[k])/(times321[k+1]-times321[k])));
+  for(let n=0;n<10;n++)out[n]=u===0?clip[k][n]:u===1?clip[k+1][n]:smoothKey339(clip,k,n,u);
+  return out;
+ }
+ function travelerBodyPose(id,combat,weapon,ready,b){
+  if(id!=='m1'||weapon!=='sword'||(combat&&!['strike','spin','guard'].includes(combat.kind)))return b;
+  const hold=Math.max(0,Math.min(1,ready||0)),p=Math.max(0,Math.min(1,Number.isFinite(combat?.progress)?combat.progress:0)),hit=Math.max(.18,Math.min(.82,Number.isFinite(combat?.impact)?combat.impact:.45)),env=combat?ease3526(p/.10)*ease3526((1-p)/.18):0;
+  const form=combat?.kind==='spin'?4:Math.max(0,Math.min(4,combat?.combo|0)),dir=form%2?-1:1,load=p<hit?Math.sin(Math.PI*ease3526(p/hit))*env:0,release=p>=hit?Math.sin(Math.PI*ease3526((p-hit)/(1-hit)))*env:0,cut=(p<hit?ease3526((p-hit*.55)/(hit*.45)):1-ease3526((p-hit)/(1-hit)))*env;
+  const w=Math.max(env,hold*.78),guard=combat?.kind==='guard',grounded=!combat?.airborne&&!combat?.air323;
+  if(w<=0)return b;
+  b.width=Math.min(.39,Math.max(b.width,.20+.075*w+(guard?.04:0)));
+  if(grounded){
+   const lead=guard?.13:[.18,.20,.30,.15,.22][form],transfer=dir*(cut*.85+release*.35-load*.40);
+   b.leftHip=Math.max(-.63,Math.min(.40,b.leftHip+dir*lead*(cut-load*.40)*.34));
+   b.rightHip=Math.max(-.63,Math.min(.40,b.rightHip-dir*lead*(cut-load*.40)*.34));
+   b.leftKnee=Math.max(.16,Math.min(1.12,b.leftKnee+.08*w+.10*transfer));
+   b.rightKnee=Math.max(.16,Math.min(1.12,b.rightKnee+.08*w-.10*transfer));
+   b.leftFoot=-b.leftKnee*.54;b.rightFoot=-b.rightKnee*.54;
+   b.drop=Math.max(-.13,b.drop-.016*w-.021*load);
+   b.shift=Math.max(-.10,Math.min(.10,b.shift+dir*(.018*cut-.013*load)));
+  }
+  if(!guard){b.hipYaw+=dir*(-.065*load+.095*cut);b.chestYaw+=dir*(.06*cut+.08*release);b.spineYaw-=dir*.035*load;b.headYaw-=dir*.035*cut;}
+  else{b.leftHip+=.07*w;b.rightHip-=.07*w;b.hipPitch+=.035*w;}
+  return b;
+ }
+ function travelerStanceMin(id,weapon,weight){return id==='m1'&&weapon==='sword'?.115*Math.min(1,weight*2):.08*Math.min(1,weight*2);}
  function weaponKeyframe321(weapon,form,progress,impact,out=[]){
   const clamp=(v,a,b)=>Math.max(a,Math.min(b,v)),p=clamp(Number.isFinite(progress)?progress:0,0,1),h=clamp(Number.isFinite(impact)?impact:.45,.18,.82),t=p<=h?p/h:1+(p-h)/(1-h),clip=(clips321[weapon]||clips321.sword)[clamp(form|0,0,4)];
   let k=0;while(k<4&&t>times321[k+1])k++;const u=clamp((t-times321[k])/(times321[k+1]-times321[k]),0,1),a=u*u*(3-2*u);
@@ -596,7 +635,7 @@
   if(combat&&!socialBlocked256){
    const p=Math.max(0,Math.min(1,combat.progress)),smooth=u=>{u=Math.max(0,Math.min(1,u));return u*u*(3-2*u)},impact=Math.max(.18,Math.min(.82,combat.impact??.45)),w=smooth(p/.13)*smooth((1-p)/.24),sweep=p<impact?smooth((p-impact*.40)/(impact*.60)):1-smooth((p-impact)/(1-impact)),wind=Math.sin(Math.PI*Math.min(1,p/impact)),cast=combat.kind==='fire'||combat.kind==='ice'||combat.kind==='storm';
    if(['hurt','stagger','down','recover'].includes(combat.kind)){const side=combat.side329||1,fall=combat.kind==='down'?smooth(p):combat.kind==='recover'?1-smooth(p):0,flinch=['hurt','stagger'].includes(combat.kind)?Math.sin(Math.PI*p)*(combat.kind==='stagger'?1:.55):0,amount=Math.max(fall,flinch);overlay('rightUpperArm',-sign*(.16+amount*.64),side*.20*flinch,right*(1.35-amount*.50),amount);overlay('leftUpperArm',-sign*(.22+amount*.72),side*.20*flinch,left*(1.35-amount*.55),amount);overlay('rightLowerArm',-sign*(.28+amount*.62),0,0,amount);overlay('leftLowerArm',-sign*(.28+amount*.84),0,0,amount);overlay('head',sign*.20*amount,-side*.12*amount,side*.12*amount,amount);}else if(combat.kind==='strike'||combat.kind==='spin'){
-    const form=combat.kind==='spin'?4:combat.combo|0,weapon=combat.weapon||'sword',k=weaponKeyframe321(weapon,form,p,impact,a.keyPose321??=[]),weight=comboEnvelope353(weapon,p,combat.chain334,combat.queued334);
+    const form=combat.kind==='spin'?4:combat.combo|0,weapon=combat.weapon||'sword',k=travelerSwordEnabled(a.motionProfile,weapon)?travelerArmPose(form,p,impact,a.keyPose321??=[]):weaponKeyframe321(weapon,form,p,impact,a.keyPose321??=[]),weight=comboEnvelope353(weapon,p,combat.chain334,combat.queued334);
     overlay('rightUpperArm',-sign*k[0],k[1],right*k[2],weight);overlay('rightLowerArm',-sign*k[3],0,0,weight);overlay('rightHand',0,0,k[4],weight);
     overlay('leftUpperArm',-sign*k[5],k[6],left*k[7],weight);overlay('leftLowerArm',-sign*k[8],0,0,weight);overlay('leftHand',0,0,k[9],weight);
     const turn=(form%2?-1:1)*(.16*wind+.28*sweep);overlay('spine',sign*(.07*wind+.10*sweep),turn,turn*.15,weight*.65);overlay('chest',sign*.08*sweep,turn*.60,0,weight*.65);
@@ -632,7 +671,7 @@
    }
   }
   // V31.9: full-body choreography with asymmetric stance and continuous follow-through.
-  const ready320=readyWeight359(!socialBlocked256&&armed308,a.weight,j.ready320),body320=combatBody320(!socialBlocked256?combat:null,ready320,a.body320??={}),bw320=body320.weight;
+  const ready320=readyWeight359(!socialBlocked256&&armed308,a.weight,j.ready320),body320=combatBody320(!socialBlocked256?combat:null,ready320,a.body320??={}),bw320=body320.weight; if(!socialBlocked256)travelerBodyPose(a.motionProfile,combat,combat?.weapon||j.weapon307,ready320,body320);
   if(bw320>.001){
    const b=body320,w=bw320,dir=(combat?.combo|0)%2?-1:1,step=actionFootwork320(combat,combat?.progress,a.motionProfile,a.dance320??={});
    if(hips){hips.position.y+=b.drop*w;hips.position.x+=b.shift*w;}
@@ -673,7 +712,7 @@
   const transition=transition3526(a.flowTransition3526??={},combat,dt,socialBlocked256);
   if(engaged308||filter308.weight>.001){filter308.weight=engaged308?1:filter308.weight*(1-blend308);for(const item of filter308.bones){if(!item.node)continue;if(transition.capture&&!item.leg)(item.from3526??=new a.T.Quaternion()).copy(item.q);if(transition.weight>0&&item.from3526&&!item.leg)item.node.quaternion.slerp(item.from3526,transition.weight);item.q.slerp(item.node.quaternion,blendRate339(dt,combat?.weapon,combat?.kind,combat?.progress,combat?.impact,item.leg));item.node.quaternion.copy(item.q)}}else for(const item of filter308.bones)if(item.node)item.q.copy(item.node.quaternion);
   if(socialBlocked256){filter308.weight=0;for(const item of filter308.bones)if(item.node)item.q.copy(item.node.quaternion)}
-  if(!socialBlocked256&&bw320>.08&&!combat?.airborne&&!combat?.air323&&!combat?.roll334&&!['down','recover','dodge'].includes(combat?.kind)&&legL3523&&legR3523){const minimum=.08*Math.min(1,bw320*2);for(const [node,dir] of [[legL3523,legDir3523],[legR3523,-legDir3523]]){node.rotation.z=dir*Math.max(minimum,Math.min(.48,node.rotation.z*dir));const item=filter308.bones.find(q=>q.node===node);if(item)item.q.copy(node.quaternion);}}
+  if(!socialBlocked256&&bw320>.08&&!combat?.airborne&&!combat?.air323&&!combat?.roll334&&!['down','recover','dodge'].includes(combat?.kind)&&legL3523&&legR3523){const minimum=travelerStanceMin(a.motionProfile,combat?.weapon||j.weapon307,bw320);for(const [node,dir] of [[legL3523,legDir3523],[legR3523,-legDir3523]]){node.rotation.z=dir*Math.max(minimum,Math.min(.48,node.rotation.z*dir));const item=filter308.bones.find(q=>q.node===node);if(item)item.q.copy(node.quaternion);}}
   let stance3525=null;
   if(detail===0&&ground&&!socialBlocked256&&bw320>.08&&!combat?.airborne&&!combat?.air323&&!combat?.roll334&&!(j.height>.006)&&!(j.hop320>.012)&&(!combat||support3525?.active)&&typeof WWFootIK.enforceStance3525==='function'){stance3525=WWFootIK.enforceStance3525(a.T,a,bw320);if(stance3525?.corrected)for(const item of filter308.bones)if(item.node===legL3523||item.node===legR3523)item.q.copy(item.node.quaternion);}
   const look=WWMotion.socialLook255(a.look255??={},mode==='ride'||WWMotion.phaseOf(j)?0:j.lookYaw,dt);
@@ -701,5 +740,5 @@
   if(measure140&&mode==='idle'&&a.weight<.05&&!WWMotion.phaseOf(j)){vrm.scene.updateMatrixWorld(true);const h=vrm.humanoid.getRawBoneNode('head'),l=vrm.humanoid.getRawBoneNode('leftHand'),r=vrm.humanoid.getRawBoneNode('rightHand'),ls=vrm.humanoid.getRawBoneNode('leftUpperArm'),rs=vrm.humanoid.getRawBoneNode('rightUpperArm');if(h&&l&&r&&ls&&rs){const hy=h.matrixWorld.elements[13];a.handsBelowHead=l.matrixWorld.elements[13]<hy&&r.matrixWorld.elements[13]<hy;a.handsDown=l.matrixWorld.elements[13]<ls.matrixWorld.elements[13]&&r.matrixWorld.elements[13]<rs.matrixWorld.elements[13]}}
  }
  function release(a){if(!a||a.released335)return;a.released335=true;restoreTravelerSculpt(a);try{if(a.spring316?.active)springMotion316(a,{},false)}catch{}try{if(typeof WWIdentity!=='undefined')WWIdentity.clear(a)}finally{a.root.removeFromParent();try{a.dispose?.()}finally{a.contacts={};a.combatFilter308=null;a.dispose=null;}}}
- const api={travelerBladeRows,travelerSwordEnabled,travelerSection,buildTravelerSword,syncTravelerSword,travelerHairPoint,travelerHairMesh,travelerHairSpring,travelerSculptPoint,applyTravelerSculpt,restoreTravelerSculpt,captureTravelerRest,travelerFinish,fallbackSources3527,flow3526,transition3526,sheathPath3526,modelKey3524,bodyShapes3523,shapePoint3523,stanceSpread3523,carry3523,readyWeight359,comboEnvelope353,idleStance352,appearance342,materialRole342,materialPolicy342,snapshotMaterial342,finishMaterial342,expression341,kineticFrame341,idleCombat341,smoothKey339,blendRate339,ultimate338,ultimateFrame338,ultimatePath338,createLoadQueue335,loadQueueStats335:()=>({...loadQueue335.stats(),player:playerQueue3527.stats()}),dodgePose334,weaponKeyframe321,clips321,actionFootwork320,boundedFootwork320,danceProfiles320,combatBody320,combatGrip312,fingerTargets163,fingerResponse251,setupFingers163,animateFingers163,load,animate,sources,roster,preset,applyPreset,release,heightFactor,createBufferCache140,bufferStats140:()=>buffers.stats()};if(typeof module!=='undefined')module.exports=api;else window.WWVRM=api;
+ const api={travelerArmPose,travelerBodyPose,travelerStanceMin,travelerBladeRows,travelerSwordEnabled,travelerSection,buildTravelerSword,syncTravelerSword,travelerHairPoint,travelerHairMesh,travelerHairSpring,travelerSculptPoint,applyTravelerSculpt,restoreTravelerSculpt,captureTravelerRest,travelerFinish,fallbackSources3527,flow3526,transition3526,sheathPath3526,modelKey3524,bodyShapes3523,shapePoint3523,stanceSpread3523,carry3523,readyWeight359,comboEnvelope353,idleStance352,appearance342,materialRole342,materialPolicy342,snapshotMaterial342,finishMaterial342,expression341,kineticFrame341,idleCombat341,smoothKey339,blendRate339,ultimate338,ultimateFrame338,ultimatePath338,createLoadQueue335,loadQueueStats335:()=>({...loadQueue335.stats(),player:playerQueue3527.stats()}),dodgePose334,weaponKeyframe321,clips321,actionFootwork320,boundedFootwork320,danceProfiles320,combatBody320,combatGrip312,fingerTargets163,fingerResponse251,setupFingers163,animateFingers163,load,animate,sources,roster,preset,applyPreset,release,heightFactor,createBufferCache140,bufferStats140:()=>buffers.stats()};if(typeof module!=='undefined')module.exports=api;else window.WWVRM=api;
 })();
