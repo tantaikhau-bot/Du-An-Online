@@ -210,6 +210,17 @@ function jumpStep141(j,ms,canLaunch){
  return {prep,height,velocity,land,landed}
 }
 // V34.0: a single timing gate for combat, including interrupted or stale casts.
+function firstStrikeFrame352(c,now){
+ const m=c.move;if(!m||m.firstFrame352)return 0;m.firstFrame352=true;
+ if(m.kind!=='strike'||m.airborne||m.air323||m.counter322||m.hit)return 0;
+ if(![m.start,m.impact,m.end,now].every(Number.isFinite)||m.start>m.impact||m.impact>=m.end)return 0;
+ const delay=now-m.start;if(delay<=80||delay>1200)return 0;
+ m.start+=delay;m.impact+=delay;m.end+=delay;
+ if(Number.isFinite(c.cd?.strike))c.cd.strike+=delay;
+ if(Number.isFinite(c.lastCombo))c.lastCombo+=delay;
+ if(c.buffer310>0)c.buffer310+=delay;
+ return delay;
+}
 function combatTiming340(move,now,paused=false,landingHeight=0,out={}){
  const valid=!!move&&[move.start,move.impact,move.end,now].every(Number.isFinite)&&move.start<=move.impact&&move.impact<move.end&&move.start<=now;
  out.valid=valid;out.cancel=!!move&&(!valid||paused||now>move.end+180);out.progress=valid?Math.max(0,Math.min(1,(now-move.start)/(move.end-move.start))):0;
@@ -259,4 +270,4 @@ function gpuState344(st,event,hidden=false){
  if(event==='restored'){if(!st.lost)return 'ignore';st.lost=false;return st.losses===1?(hidden?'defer':'resume'):'reload';}
  return 'ignore';
 }
-if(typeof module!=='undefined')module.exports={rendererOptions344,createRenderer344,viewport344,capture344,release344,gpuState344,createFrameGuard343,safeComboIndex343,frameInterval343,frameSample343,combatTiming340,combatReset340,TREE192,treeProfile192,trunkData192,HEAVEN190,heavenZone190,heavenSegment190,heavenFloor190,heavenBlocked190,heavenHeight190,SEA180,seaWeight180,seaLand180,seaTerrain180,seaBlocked180,seaReserved180,DESERT179,desertWeight179,desertTerrain179,desertBlocked179,desertReserved179,VOLCANO178,volcanoWeight178,volcanoLava178,volcanoTerrain178,volcanoBlocked178,volcanoReserved178,MAGIC177,magicWeight177,magicTerrain177,magicBlocked177,magicReserved177,LIGHT176,lightWeight176,lightTerrain176,lightBlocked176,lightReserved176,DREAM175,dreamWeight175,dreamTerrain175,dreamReserved175,ICE174,iceWeight174,icePeak174,iceTerrain174,iceReserved174,BLOSSOM173,blossomWeight173,blossomPond173,blossomTrail173,blossomTerrain173,blossomWaterBlocked173,MOBILE_CLARITY171,WW_ATLAS170,atlasDestination170,atlasMap170,smooth162,frontierHeight162,trailDistance162,terrainTiles162,tileAt162,tileVisible162,physicsDelta141,physicsSteps141,angle141,orbit141,jumpStep141,trimModels140,expiredModel140,mobileCap139,mobileResolution139,mobileStep139,actorBudget139,WW_WORLD137,WW_EXPANSION137,insideWorld137,expansionRegion137,clarityStep100,resolution77,WW_PERF118,perfPreset118,perfWarning118,WW_LANDMARK124,landmarkSite124,cellVisible124,landmarkVisits124,WW_LOOK131,look131,blendLook131,cameraSafe131,stepSound131};
+if(typeof module!=='undefined')module.exports={firstStrikeFrame352,rendererOptions344,createRenderer344,viewport344,capture344,release344,gpuState344,createFrameGuard343,safeComboIndex343,frameInterval343,frameSample343,combatTiming340,combatReset340,TREE192,treeProfile192,trunkData192,HEAVEN190,heavenZone190,heavenSegment190,heavenFloor190,heavenBlocked190,heavenHeight190,SEA180,seaWeight180,seaLand180,seaTerrain180,seaBlocked180,seaReserved180,DESERT179,desertWeight179,desertTerrain179,desertBlocked179,desertReserved179,VOLCANO178,volcanoWeight178,volcanoLava178,volcanoTerrain178,volcanoBlocked178,volcanoReserved178,MAGIC177,magicWeight177,magicTerrain177,magicBlocked177,magicReserved177,LIGHT176,lightWeight176,lightTerrain176,lightBlocked176,lightReserved176,DREAM175,dreamWeight175,dreamTerrain175,dreamReserved175,ICE174,iceWeight174,icePeak174,iceTerrain174,iceReserved174,BLOSSOM173,blossomWeight173,blossomPond173,blossomTrail173,blossomTerrain173,blossomWaterBlocked173,MOBILE_CLARITY171,WW_ATLAS170,atlasDestination170,atlasMap170,smooth162,frontierHeight162,trailDistance162,terrainTiles162,tileAt162,tileVisible162,physicsDelta141,physicsSteps141,angle141,orbit141,jumpStep141,trimModels140,expiredModel140,mobileCap139,mobileResolution139,mobileStep139,actorBudget139,WW_WORLD137,WW_EXPANSION137,insideWorld137,expansionRegion137,clarityStep100,resolution77,WW_PERF118,perfPreset118,perfWarning118,WW_LANDMARK124,landmarkSite124,cellVisible124,landmarkVisits124,WW_LOOK131,look131,blendLook131,cameraSafe131,stepSound131};
