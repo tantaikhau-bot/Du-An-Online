@@ -47,7 +47,7 @@ const fs=require('node:fs'),os=require('node:os'),path=require('node:path'),asse
   try{await page.waitForFunction(p=>Math.hypot(player.x-p.x,player.y-p.y)>.3,startPos,{timeout:15000});}
   finally{await page.keyboard.up('w')}
   await page.locator('.ww291-strike').click({timeout:30000});
-  await page.waitForFunction(()=>window.wwGraphics59?.footwork320?.kind==='strike',null,{timeout:15000});
+  try{await page.waitForFunction(()=>window.wwGraphics59?.footwork320?.kind==='strike',null,{timeout:15000});}catch(e){console.log('COMBAT_QA '+JSON.stringify(await page.evaluate(()=>{const g=window.wwGraphics59;return {input:g.combatInput353,outcome:g.combatOutcome353,delay:g.strikeDelay352,faults:g.frameFaults343,footwork:g.footwork320,stage:g.stage,fps:g.fps};})));throw e;}
   console.log('V35.0.1 onboarding, actual keyboard movement and basic attack passed');
   const info=await page.evaluate(()=>window.wwGraphics59);
   assert.equal(info.engine,'three',JSON.stringify(info));assert.equal(info.vegetation192?.trunkMeshes,3);assert.ok(info.realism191?.terrainBlend&&info.realism191?.rockPBR&&info.realism191?.leafCutout&&info.realism191?.architectureRelief,JSON.stringify(info.realism191));
