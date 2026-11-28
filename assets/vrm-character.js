@@ -56,7 +56,11 @@
  },(mobile140?24:80)*1024*1024,mobile140?3:6);
  function modelBuffer(kind){return buffers.get(kind)}
 
- async function load(T,kind){try{return await loadBase(T,kind)}catch(e){if(kind==='female3'||kind==='female4'){console.warn('Optional avatar base fallback',kind,e);const a=await loadBase(T,kind==='female3'?'female2':'female');a.fallbackBase=kind;return a}throw e}}
+ // V33.5: serialize expensive VRM decoding on mobile; local avatar jumps ahead of optional actors.
+ function createLoadQueue335(limit=1,maxPending=12){let active=0,peak=0,seq=0,skipped=0;const pending=[];function pump(){while(active<limit&&pending.length){pending.sort((a,b)=>b.priority-a.priority||a.seq-b.seq);const q=pending.shift();if(q.valid&&!q.valid()){skipped++;q.reject(Error('Avatar request obsolete'));continue;}active++;peak=Math.max(peak,active);Promise.resolve().then(q.run).then(q.resolve,q.reject).finally(()=>{active--;pump();});}}return {enqueue(run,priority=0,valid=null){return new Promise((resolve,reject)=>{if(pending.length>=maxPending){let index=-1;for(let i=0;i<pending.length;i++)if(pending[i].priority<priority&&(index<0||pending[i].priority<pending[index].priority))index=i;if(index<0){reject(Error('Avatar load queue full'));return;}pending.splice(index,1)[0].reject(Error('Avatar request superseded'));skipped++;}pending.push({run,priority,valid,resolve,reject,seq:seq++});pump();});},stats:()=>({active,pending:pending.length,peak,skipped,limit,maxPending})};}
+ const loadQueue335=createLoadQueue335(mobile140?1:2,mobile140?6:12);
+ function load(T,kind,options={}){return loadQueue335.enqueue(()=>loadWithFallback335(T,kind),options.priority||0,options.valid||null);}
+ async function loadWithFallback335(T,kind){try{return await loadBase(T,kind)}catch(e){if(kind==='female3'||kind==='female4'){console.warn('Optional avatar base fallback',kind,e);const a=await loadBase(T,kind==='female3'?'female2':'female');a.fallbackBase=kind;return a}throw e}}
  async function loadBase(T,kind){
   lib??=Promise.all([import('three/addons/loaders/GLTFLoader.js'),import('/assets/three-vrm.module.js').catch(()=>import('https://cdn.jsdelivr.net/npm/@pixiv/three-vrm@2.1.2/lib/three-vrm.module.js'))]);
   let modules;try{modules=await lib}catch(e){lib=null;throw e}const [{GLTFLoader},{VRMLoaderPlugin,VRMUtils}]=modules;
@@ -356,6 +360,6 @@
   }
   if(measure140&&mode==='idle'&&a.weight<.05&&!WWMotion.phaseOf(j)){vrm.scene.updateMatrixWorld(true);const h=vrm.humanoid.getRawBoneNode('head'),l=vrm.humanoid.getRawBoneNode('leftHand'),r=vrm.humanoid.getRawBoneNode('rightHand'),ls=vrm.humanoid.getRawBoneNode('leftUpperArm'),rs=vrm.humanoid.getRawBoneNode('rightUpperArm');if(h&&l&&r&&ls&&rs){const hy=h.matrixWorld.elements[13];a.handsBelowHead=l.matrixWorld.elements[13]<hy&&r.matrixWorld.elements[13]<hy;a.handsDown=l.matrixWorld.elements[13]<ls.matrixWorld.elements[13]&&r.matrixWorld.elements[13]<rs.matrixWorld.elements[13]}}
  }
- function release(a){if(typeof WWIdentity!=='undefined')WWIdentity.clear(a);a.root.removeFromParent();a.dispose?.();a.contacts={}}
- const api={dodgePose334,weaponKeyframe321,clips321,actionFootwork320,boundedFootwork320,danceProfiles320,combatBody320,combatGrip312,fingerTargets163,fingerResponse251,setupFingers163,animateFingers163,load,animate,sources,roster,preset,applyPreset,release,heightFactor,createBufferCache140,bufferStats140:()=>buffers.stats()};if(typeof module!=='undefined')module.exports=api;else window.WWVRM=api;
+ function release(a){if(!a||a.released335)return;a.released335=true;try{if(typeof WWIdentity!=='undefined')WWIdentity.clear(a)}finally{a.root.removeFromParent();try{a.dispose?.()}finally{a.contacts={};a.combatFilter308=null;a.dispose=null;}}}
+ const api={createLoadQueue335,loadQueueStats335:()=>loadQueue335.stats(),dodgePose334,weaponKeyframe321,clips321,actionFootwork320,boundedFootwork320,danceProfiles320,combatBody320,combatGrip312,fingerTargets163,fingerResponse251,setupFingers163,animateFingers163,load,animate,sources,roster,preset,applyPreset,release,heightFactor,createBufferCache140,bufferStats140:()=>buffers.stats()};if(typeof module!=='undefined')module.exports=api;else window.WWVRM=api;
 })();
