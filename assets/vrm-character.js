@@ -172,7 +172,7 @@
  function weaponKeyframe321(weapon,form,progress,impact,out=[]){
   const clamp=(v,a,b)=>Math.max(a,Math.min(b,v)),p=clamp(Number.isFinite(progress)?progress:0,0,1),h=clamp(Number.isFinite(impact)?impact:.45,.18,.82),t=p<=h?p/h:1+(p-h)/(1-h),clip=(clips321[weapon]||clips321.sword)[clamp(form|0,0,4)];
   let k=0;while(k<4&&t>times321[k+1])k++;const u=clamp((t-times321[k])/(times321[k+1]-times321[k]),0,1),a=u*u*(3-2*u);
-  for(let n=0;n<10;n++)out[n]=clip[k][n]+(clip[k+1][n]-clip[k][n])*a;
+  for(let n=0;n<10;n++)out[n]=u===0?clip[k][n]:u===1?clip[k+1][n]:clip[k][n]+(clip[k+1][n]-clip[k][n])*a;
   return out;
  }
  // Authored pose targets: stance width, lead stride, pelvis yaw, lean, knee loading, wrist arc.
