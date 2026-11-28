@@ -75,7 +75,7 @@
   travelerFinish(m,original,role,p.id);
   return m;
  }
- // V35.2.8: independent rest-mesh silhouettes, not root height or material tint.
+ // V35.3.0: independent rest-mesh silhouettes, not root height or material tint.
  const bodyShapes3523=Object.freeze({
  m1:[1,.98,1,1,1,1,1],m2:[1.24,.98,1.11,1.12,1.08,.94,1.10],m3:[.90,.86,.92,.88,.94,1.06,.92],m4:[1.13,1.08,1.15,1.08,1.05,1.04,1.12],m5:[1.15,.87,.94,1.02,1.08,.90,.96],
  m6:[1.07,.91,1.05,.97,.92,.94,1.06],m7:[1.02,1.12,1.18,1.14,1.12,1.08,1.03],m8:[1.20,.92,1.02,1.06,.96,1.02,1.14],m9:[.94,.94,.88,.95,1.02,.92,1.03],m10:[1.12,1.15,1.12,1.06,1.04,1.12,.94],
@@ -532,7 +532,7 @@
   const exit=queued? .32+.68*ease((1-p)/recovery):ease((1-p)/recovery);
   return entry*exit;
  }
- // V35.2.8: phase-driven secondary motion and bounded transitions between actual displayed poses.
+ // V35.3.0: phase-driven secondary motion and bounded transitions between actual displayed poses.
  function ease3526(x){x=Math.max(0,Math.min(1,Number.isFinite(x)?x:0));return x*x*(3-2*x);}
  function flow3526(weapon,form,p,impact,id='m1',out={}){
   p=Math.max(0,Math.min(1,Number.isFinite(p)?p:0));const hit=Math.max(.18,Math.min(.82,Number.isFinite(impact)?impact:.45)),style=expression341[id]||expression341.m1,melee=['sword','great','dual'].includes(weapon),i=Math.max(0,Math.min(4,form|0)),dir=i%2?-1:1,heavy=weapon==='great',dual=weapon==='dual';
@@ -726,7 +726,7 @@
   let springCount316=0;if(!a.springFailed317){try{springCount316=springMotion316(a,secondary,!!j.physics316&&detail===0&&!j.reduce316&&a.physicsTier317<2);}catch(e){a.springFailed317=true;try{springMotion316(a,secondary,false)}catch{}console.warn('Optional spring bias disabled',e)}}
   if(detail===0){for(let remain=dt;remain>0;){let d=Math.min(.033,remain);vrm.update(d);remain-=d}}else{vrm.humanoid.update();vrm.expressionManager?.update();}
   if(detail<=1&&!['down','recover'].includes(combat?.kind)&&!combat?.roll334){const contact=bw320>.05&&!offGround&&ground&&typeof WWFootIK.groundCombat320==='function'?WWFootIK.groundCombat320(a.T,a,ground,bw320,combat):WWFootIK.groundIdle(a.T,a,ground,dt,gait,offGround,mode);if(contact)a.footIK=contact;}
-  a.motionState=a.motion.state;a.poseCheck={motionVersion:'35.2.8',flow3526:{transition:transition.weight,phase:a.flow3526||null},stance3525,support3525:support3525?{...support3525}:null,appearance342:a.appearance342||null,kinetic341:detail===0?{...a.kinetic341}:null,combatBody320:{...body320},face255:{...face},lookYaw255:look,brake250:a.motion.brake250||0,turnBody250:a.motion.turnBody250||0,drive250:a.motion.drive250||0,fingers163:fingers,actionWeights:{...weights},secondary:{...secondary},springCount316,wearables337:{tier:a.physicsTier317,springBias:!!a.spring316?.active,roles:a.spring316?.counts||null,clothPanels:a.identityMotion?.length||0},targetHeight:1.68*heightFactor(preset(a.motionProfile)),original:!!a.original,measuredSpeed:a.motion.speed,turn:a.motion.turn,identity:a.identityType||null,fallbackBase:a.fallbackBase||null,cycle:a.motion.cycle,walkWeight:a.motion.walk,runWeight:a.motion.run,profile:a.motionProfile,legSign:sign,hip:[v.hipL,v.hipR],knee:['left','right'].map(side=>(vrm.humanoid.getNormalizedBoneNode(side+'LowerLeg')?.rotation.x||0)*sign),ankle:[v.ankleL,v.ankleR],jumpWeight:a.motion.jump};
+  a.motionState=a.motion.state;a.poseCheck={motionVersion:'35.3.0',flow3526:{transition:transition.weight,phase:a.flow3526||null},stance3525,support3525:support3525?{...support3525}:null,appearance342:a.appearance342||null,kinetic341:detail===0?{...a.kinetic341}:null,combatBody320:{...body320},face255:{...face},lookYaw255:look,brake250:a.motion.brake250||0,turnBody250:a.motion.turnBody250||0,drive250:a.motion.drive250||0,fingers163:fingers,actionWeights:{...weights},secondary:{...secondary},springCount316,wearables337:{tier:a.physicsTier317,springBias:!!a.spring316?.active,roles:a.spring316?.counts||null,clothPanels:a.identityMotion?.length||0},targetHeight:1.68*heightFactor(preset(a.motionProfile)),original:!!a.original,measuredSpeed:a.motion.speed,turn:a.motion.turn,identity:a.identityType||null,fallbackBase:a.fallbackBase||null,cycle:a.motion.cycle,walkWeight:a.motion.walk,runWeight:a.motion.run,profile:a.motionProfile,legSign:sign,hip:[v.hipL,v.hipR],knee:['left','right'].map(side=>(vrm.humanoid.getNormalizedBoneNode(side+'LowerLeg')?.rotation.x||0)*sign),ankle:[v.ankleL,v.ankleR],jumpWeight:a.motion.jump};
   const measure140=!a.diagnosticInterval140||!Number.isFinite(a.lastDiagnostic140)||t-a.lastDiagnostic140>=a.diagnosticInterval140||a.lastMode140!==a.motion.state;const previousRaw140=a.rawDiagnostics140;if(previousRaw140){a.poseCheck.rawArm=previousRaw140.arm;a.poseCheck.rawLeg=previousRaw140.leg}
   if(detail===0&&measure140&&['idle','walk','run'].includes(mode)){a.lastDiagnostic140=t;a.lastMode140=a.motion.state;
    a.root.updateWorldMatrix(true,true);
