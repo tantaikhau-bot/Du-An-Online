@@ -148,19 +148,20 @@ def serve_static(h,root,page):
   if p is None:return h.reply(503,{'error':'Tài nguyên 3D chưa sẵn sàng'})
  if not p.is_file():return h.reply(404,{'error':'Không tìm thấy'})
  stat=p.stat()
+ cache_policy='public, no-cache' if FILES[name].startswith('text/javascript') and name not in UPSTREAM else 'public, max-age=3600'
  if FILES[name].startswith(('text/javascript','text/css','application/json')) and stat.st_size<=MAX_TEXT_BYTES:
   rep=text_representation(str(p),stat.st_mtime_ns,stat.st_size)
   if rep is not None:
    raw,packed,tag=rep
    if etag_matches(h.headers.get('If-None-Match'),tag):
-    h.send_response(304);h.send_header('ETag',tag);h.send_header('Vary','Accept-Encoding');h.send_header('Cache-Control','public, max-age=3600');h.end_headers();return
+    h.send_response(304);h.send_header('ETag',tag);h.send_header('Vary','Accept-Encoding');h.send_header('Cache-Control',cache_policy);h.end_headers();return
    encoded=packed is not None and accepts_gzip(h.headers.get('Accept-Encoding'))
    body=packed if encoded else raw
-   h.send_response(200);h.send_header('Content-Type',FILES[name]);h.send_header('Content-Length',str(len(body)));h.send_header('ETag',tag);h.send_header('Vary','Accept-Encoding');h.send_header('Cache-Control','public, max-age=3600')
+   h.send_response(200);h.send_header('Content-Type',FILES[name]);h.send_header('Content-Length',str(len(body)));h.send_header('ETag',tag);h.send_header('Vary','Accept-Encoding');h.send_header('Cache-Control',cache_policy)
    if encoded:h.send_header('Content-Encoding','gzip')
    h.end_headers()
    if h.command!='HEAD':h.wfile.write(body)
    return
  with p.open('rb') as f:
-  h.send_response(200);h.send_header('Content-Type',FILES[name]);h.send_header('Content-Length',str(p.stat().st_size));h.send_header('Cache-Control','public, max-age=3600');h.end_headers()
+  h.send_response(200);h.send_header('Content-Type',FILES[name]);h.send_header('Content-Length',str(p.stat().st_size));h.send_header('Cache-Control',cache_policy);h.end_headers()
   if h.command!='HEAD':shutil.copyfileobj(f,h.wfile)

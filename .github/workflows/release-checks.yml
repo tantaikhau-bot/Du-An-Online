@@ -29,6 +29,7 @@ jobs:
       - run: node test_desktop_pressure3511.cjs
       - run: node test_animation3512.cjs
       - run: node test_lighting3513.cjs
+      - run: node test_startup3521.cjs
       - run: node test_performance3514.cjs
       - run: node test_world_quality3515.cjs
       - run: python test_foundation350.py
