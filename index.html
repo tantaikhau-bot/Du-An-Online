@@ -2096,6 +2096,7 @@ let walkPhase62=0;const blend62=new WeakMap();
 
  let auto49=true,slow49=0,fast49=0,frameStats49=0,frameCount49=0,lastQuality49=0;
  function applyQuality(v,scale=1){quality=v;renderScale71=scale;renderer.shadowMap.enabled=effectTier100===0&&(v===2||v===1&&!weak71);grassLOD55(saveToWorld(player).x,saveToWorld(player).z,false);let shadowSize=v===2?Math.min(mobile71?1024:2048,renderer.capabilities.maxTextureSize):mobile71?512:1024;let extent=v===2?17:20;Object.assign(sun.shadow.camera,{left:-extent,right:extent,top:extent,bottom:-extent});sun.shadow.camera.updateProjectionMatrix();if(sun.shadow.mapSize.x!==shadowSize){sun.shadow.mapSize.set(shadowSize,shadowSize);if(sun.shadow.map){sun.shadow.map.dispose();sun.shadow.map=null}}sun.shadow.needsUpdate=true;renderer.shadowMap.needsUpdate=true;resize()}
+ const fxBudget297={tier:0,slow:0,good:0,hold:0};
  function chooseQuality49(value){auto49=value==='auto';slow49=fast49=0;lastDown75=-Infinity;lastQuality49=performance.now();effectTier100=mobile71?mobileTierFloor139:perf118.tier;governor139={slow:0,good:0};report59.effectTier=effectTier100;drawTier305=0;drawSlow305=drawGood305=0;fxBudget297.tier=fxBudget297.slow=fxBudget297.good=0;report59.combatFX297={tier:effectTier100,adaptiveTier:0};applyQuality(auto49?(mobile71?Math.min(1,perf118.quality):perf118.quality):Math.min(perf118.quality,Number(value)),perf118.scale);try{localStorage.setItem('ww-next-quality-v215',value)}catch{}}
  let lastDown75=-Infinity;
  function qualityDecision77(rate,p95,fast,mobile,hd,cap=0){let low=fast?23:mobile?27:hd?32:38,high=fast?28:mobile?40:53;if(cap){low=Math.min(low,cap*.78);high=Math.min(high,cap*.9)}let severe=rate<Math.min(20,cap?cap*.68:20),slow=rate<low||(rate<high&&p95>Math.max(mobile?58:48,cap?1650/cap:0));return {severe,slow,fast:!slow&&rate>=high&&p95<=Math.max(fast?42:mobile?35:25,cap?1650/cap:0)}}
@@ -2844,7 +2845,7 @@ let walkPhase62=0;const blend62=new WeakMap();
  }
  // V33.2: pooled luminous skill effects, adaptive budget, no per-frame mesh allocation.
  // V33.2: independent combat FX governor; preserve the existing resolution profile.
- const fxBudget297={tier:0,slow:0,good:0,hold:0};
+
  const reducedFX297=matchMedia('(prefers-reduced-motion: reduce)');
  function budget317(state,rate,p95,now,target,active=true){
  target=Math.max(20,Number(target)||60);const slow=rate<target*.84||p95>Math.max(35,1600/target),good=rate>=target*.95&&p95<=Math.max(35,1600/target);
