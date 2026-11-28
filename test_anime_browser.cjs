@@ -54,7 +54,7 @@ const fs=require('node:fs'),os=require('node:os'),path=require('node:path'),asse
   assert.equal(info.world137.depth,272);assert.equal(info.world137.width,240);assert.equal(info.world137.tiles,64);assert.ok(info.world137.newSites>=10&&info.world137.newSites<=12);
   const housing=await page.evaluate(()=>({audit:window.wwGraphics59.housing358,road:[12,16,19,22,25,27].every(z=>walkable4(24,z)),centres:HOUSING358.every(q=>!walkable4(q.x,q.z))}));
   assert(housing.road&&housing.centres,JSON.stringify(housing));assert.equal(housing.audit.houses.length,4);
-  for(const q of housing.audit.houses){const spec=await page.evaluate(x=>HOUSING358.find(q=>q.x===x),q.x);assert(Math.abs(q.height-spec.h)<.01&&Math.abs(q.width-spec.w)<.01&&Math.abs(q.depth-spec.d)<.01&&Math.abs(q.base)<.01,JSON.stringify(q))}
+  for(const q of housing.audit.houses){const spec=await page.evaluate(({x,z})=>HOUSING358.find(q=>q.x===x&&q.z===z),{x:q.x,z:q.z});assert(Math.abs(q.height-spec.h)<.01&&Math.abs(q.width-spec.w)<.01&&Math.abs(q.depth-spec.d)<.01&&Math.abs(q.base)<.01,JSON.stringify(q))}
   console.log('Public housing proportions and main road collision passed');
   const frontier=await page.evaluate(()=>({north:walkable4(-22,-82),south:walkable4(22,82),outside:walkable4(0,WW_WORLD137.halfZ+1),bridge:segment4({x:0,z:-11},{x:0,z:-3}),water:segment4({x:10,z:-11},{x:10,z:-3})}));assert.ok(frontier.north&&frontier.south&&!frontier.outside&&frontier.bridge&&!frontier.water,JSON.stringify(frontier));
   console.log('V13.7 expanded walkability and bridge regression passed');
