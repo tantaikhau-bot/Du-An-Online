@@ -31,3 +31,23 @@ for(const relative of [true,false]){
  V.applyTravelerSculpt(T,a,'m1');V.restoreTravelerSculpt(a);assert.equal(mesh.geometry,original);
 }
 console.log('Traveler sculpt symmetry, bounded shape, relative/absolute morph and preset restore checks passed.');
+
+for(let i=0;i<1000;i++){
+ const x=(i%41-20)/100,y=1.25+(i%51)/100,z=.1,p=V.travelerHairPoint(x,y,z,0,1.42);
+ assert(p.every(Number.isFinite));assert(Math.abs(p[0]-x)<=.033);assert(Math.abs(p[1]-y)<=.010);assert.equal(p[2],z);
+ if(y<=1.435)assert.deepEqual(p,[x,y,z]);
+}
+assert(V.travelerHairPoint(.1,1.65,.1,0,1.42)[0]>.1);
+assert(V.travelerHairMesh({material:[{name:'Hair_01'},{name:'Hair_02'}]}));
+assert(!V.travelerHairMesh({material:[{name:'Hair_01'},{name:'Face'}]}));
+assert(!V.travelerHairMesh({material:null}));
+for(const p of V.roster)for(const role of ['skin','hair','cloth','other'])assert.equal(!!V.travelerHairSpring(p.id,role),p.id==='m1'&&role==='hair');
+const hairGeometry=new T.BufferGeometry();
+hairGeometry.setAttribute('position',new T.Float32BufferAttribute([.1,1.65,.1,-.1,1.65,.1,0,1.60,.1],3));
+const hairMesh=new T.Mesh(hairGeometry),hairRecord={mesh:hairMesh,original:hairGeometry,matrix:new T.Matrix4(),back:new T.Matrix4(),hair:true},hairAvatar={travelerRest:{headX:0,headY:1.42,scale:1,records:[hairRecord]}};
+V.applyTravelerSculpt(T,hairAvatar,'m1');
+const expectedHair=V.travelerHairPoint(...V.travelerSculptPoint(.1,1.65,.1,0,1.42),0,1.42);
+assert(Math.abs(hairMesh.geometry.attributes.position.getX(0)-expectedHair[0])<1e-6);
+assert.equal(hairAvatar.travelerSculpt.hairMeshes,1);
+V.restoreTravelerSculpt(hairAvatar);assert.equal(hairMesh.geometry,hairGeometry);
+console.log('Traveler V3 hair shape, isolation and spring checks passed');
