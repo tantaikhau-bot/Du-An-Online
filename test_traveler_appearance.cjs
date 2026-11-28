@@ -78,3 +78,16 @@ Identity.apply(T,outfitAvatar,V.preset('m3'));
 assert.equal(outfitAvatar.identityType,'scarf');assert(oldGroups.every(g=>g.parent===null));
 Identity.clear(outfitAvatar);assert.equal(outfitAvatar.identityMeshes.length,0);
 console.log('Traveler V4 garment surfaces, animation and cleanup checks passed');
+
+for(const p of V.roster)for(const w of ['sword','great','dual','bow','staff'])assert.equal(V.travelerSwordEnabled(p.id,w),p.id==='m1'&&w==='sword');
+const blade=V.travelerSection(V.travelerBladeRows);assert.equal(blade.positions.length,144);assert.equal(blade.indices.length,240);assert(blade.positions.every(Number.isFinite));assert(blade.indices.every(i=>i>=0&&i<48));
+const vec=i=>new T.Vector3().fromArray(blade.positions,i*3);
+for(let i=0;i<8;i++){const [a,b,c]=blade.indices.slice(i*6,i*6+3).map(vec);const n=b.clone().sub(a).cross(c.clone().sub(a));assert(n.dot(a.clone().setY(0))>0);}
+const variant=V.buildTravelerSword(T),swordGroup=new T.Group(),sheathGroup=new T.Group(),stock=new T.Group(),stockSheath=new T.Group(),hidden=new T.Group();
+hidden.visible=false;swordGroup.add(stock,hidden,variant.sword);sheathGroup.add(stockSheath,variant.sheath);
+V.syncTravelerSword(swordGroup,sheathGroup,variant,true);assert(variant.sword.visible&&variant.sheath.visible&&!stock.visible&&!stockSheath.visible);
+const lateGlb=new T.Group();swordGroup.add(lateGlb);V.syncTravelerSword(swordGroup,sheathGroup,variant,true);assert(!lateGlb.visible);
+V.syncTravelerSword(swordGroup,sheathGroup,variant,false);assert(!variant.sword.visible&&!variant.sheath.visible&&stock.visible&&stockSheath.visible&&lateGlb.visible&&!hidden.visible);
+assert(variant.sword.children.length<=8&&variant.sheath.children.length<=5);
+const html=require('node:fs').readFileSync('index.html','utf8');assert(html.includes('WWVRM.buildTravelerSword(T)'));assert(html.includes('!child.userData.travelerVariant'));assert(html.includes('WWVRM.syncTravelerSword(c.weapons303.sword'));
+console.log('Traveler V5 weapon mesh, visibility restoration and integration checks passed');
