@@ -7,7 +7,7 @@ permissions:
   contents: read
 jobs:
   regression:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
@@ -22,3 +22,7 @@ jobs:
       - run: python test_http_assets.py
       - run: python test_together.py
       - run: python test_guild.py
+
+      - run: npm install --no-save --no-package-lock playwright@1.51.1
+      - run: npx playwright install --with-deps chromium
+      - run: node test_mobile_hud348.cjs
