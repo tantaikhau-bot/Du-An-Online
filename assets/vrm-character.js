@@ -314,6 +314,7 @@
   out.env=env;out.pelvis=turn;out.chest=turn*.62+dir*.07*shoulder;out.neck=-turn*.48;out.load=load;out.release=release;out.follow=follow;out.shift=dir*d[3]*(.016*release-.014*load);
   out.knee=clamp(d[3]*(.10*load+.075*release),0,.22);out.heel=clamp(d[4]*.12*follow,0,.16);out.shoulder=clamp(d[1]*(.10*load+.14*shoulder),0,.25);out.wrist=dir*d[2]*factor*.15*follow;out.offhand=d[2]*factor*.19*follow;out.dir=dir;out.ranged=ranged;return out;
  }
+ function idleStance352(weight,id,t){const w=Math.max(0,Math.min(1,Number.isFinite(weight)?weight:0)),d=expression341[id]||expression341.m1,phase=Number.isFinite(t)?t:0;return {spread:.055*w,toe:.035*w,lead:.018*w*Math.sin(phase*.72+d[3])};}
  function idleCombat341(id,weapon,t,weight,out={}){
   const d=expression341[id]||expression341.m1,t0=Number.isFinite(t)?t:0,w=Math.max(0,Math.min(1,Number.isFinite(weight)?weight:0)),seed=id?.charCodeAt?.(0)||109,phase=t0*.9+seed*.19+(parseInt(id?.slice(1),10)||1)*.71;
   const breath=Math.sin(t0*2.15+phase*.17)*d[4]*w,shift=Math.sin(phase)*d[3]*w,heavy=weapon==='great',ranged=weapon==='bow'||weapon==='staff';
@@ -330,7 +331,9 @@
   bone('leftShoulder',0,v.shoulderY,0);bone('rightShoulder',0,-v.shoulderY,0);
   bone('leftUpperArm',sign*v.armL,0,left*(Math.PI/2-v.spread));bone('rightUpperArm',sign*v.armR,0,right*(Math.PI/2-v.spread));
   bone('leftLowerArm',-sign*v.elbowL,0,0);bone('rightLowerArm',-sign*v.elbowR,0,0);
-  bone('leftUpperLeg',sign*v.hipL);bone('rightUpperLeg',sign*v.hipR);
+  // Relax the standing silhouette slightly; locomotion and action overlays retain their authored targets.
+  const relaxed352=idleStance352(settle,a.motionProfile,t);
+  bone('leftUpperLeg',sign*(v.hipL+relaxed352.lead),relaxed352.toe,relaxed352.spread);bone('rightUpperLeg',sign*(v.hipR-relaxed352.lead),-relaxed352.toe,-relaxed352.spread);
   bone('leftLowerLeg',sign*v.kneeL);bone('rightLowerLeg',sign*v.kneeR);bone('leftFoot',sign*v.ankleL);bone('rightFoot',sign*v.ankleR);
   // Distribute head motion over neck and head; counter the chest without snapping.
   const neck=vrm.humanoid.getNormalizedBoneNode('neck');
@@ -493,5 +496,5 @@
   if(measure140&&mode==='idle'&&a.weight<.05&&!WWMotion.phaseOf(j)){vrm.scene.updateMatrixWorld(true);const h=vrm.humanoid.getRawBoneNode('head'),l=vrm.humanoid.getRawBoneNode('leftHand'),r=vrm.humanoid.getRawBoneNode('rightHand'),ls=vrm.humanoid.getRawBoneNode('leftUpperArm'),rs=vrm.humanoid.getRawBoneNode('rightUpperArm');if(h&&l&&r&&ls&&rs){const hy=h.matrixWorld.elements[13];a.handsBelowHead=l.matrixWorld.elements[13]<hy&&r.matrixWorld.elements[13]<hy;a.handsDown=l.matrixWorld.elements[13]<ls.matrixWorld.elements[13]&&r.matrixWorld.elements[13]<rs.matrixWorld.elements[13]}}
  }
  function release(a){if(!a||a.released335)return;a.released335=true;try{if(a.spring316?.active)springMotion316(a,{},false)}catch{}try{if(typeof WWIdentity!=='undefined')WWIdentity.clear(a)}finally{a.root.removeFromParent();try{a.dispose?.()}finally{a.contacts={};a.combatFilter308=null;a.dispose=null;}}}
- const api={appearance342,materialRole342,materialPolicy342,snapshotMaterial342,finishMaterial342,expression341,kineticFrame341,idleCombat341,smoothKey339,blendRate339,ultimate338,ultimateFrame338,ultimatePath338,createLoadQueue335,loadQueueStats335:()=>loadQueue335.stats(),dodgePose334,weaponKeyframe321,clips321,actionFootwork320,boundedFootwork320,danceProfiles320,combatBody320,combatGrip312,fingerTargets163,fingerResponse251,setupFingers163,animateFingers163,load,animate,sources,roster,preset,applyPreset,release,heightFactor,createBufferCache140,bufferStats140:()=>buffers.stats()};if(typeof module!=='undefined')module.exports=api;else window.WWVRM=api;
+ const api={idleStance352,appearance342,materialRole342,materialPolicy342,snapshotMaterial342,finishMaterial342,expression341,kineticFrame341,idleCombat341,smoothKey339,blendRate339,ultimate338,ultimateFrame338,ultimatePath338,createLoadQueue335,loadQueueStats335:()=>loadQueue335.stats(),dodgePose334,weaponKeyframe321,clips321,actionFootwork320,boundedFootwork320,danceProfiles320,combatBody320,combatGrip312,fingerTargets163,fingerResponse251,setupFingers163,animateFingers163,load,animate,sources,roster,preset,applyPreset,release,heightFactor,createBufferCache140,bufferStats140:()=>buffers.stats()};if(typeof module!=='undefined')module.exports=api;else window.WWVRM=api;
 })();
