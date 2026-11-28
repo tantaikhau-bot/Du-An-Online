@@ -118,7 +118,7 @@
  }
  // V16.3: normalized VRM finger joints, independent per hand with eased transitions.
  const digits163=['Index','Middle','Ring','Little'];
- function fingerTargets163(mode,gait,jump,time,side,turn=0){
+ function fingerTargets163(mode,gait,jump,time,side,turn=0,result={}){
   const clamp=(x,l=0,h=1)=>Math.max(l,Math.min(h,x)),g=clamp(Number(gait)||0),j=clamp(Number(jump)||0),t=Number(time)||0;
   let grip=.15+.16*g+.10*j+.018*Math.sin(t*1.6+(side==='left'?0:.8))*(1-g),spread=.030;
   if(mode==='ride'){grip=.80+.012*Math.sin(t*2+(side==='left'?.4:1.1))+.07*clamp(Math.abs(turn));spread=.009}
@@ -126,8 +126,8 @@
   else if(mode==='hand'||mode==='hug')grip=.40;
   else if(mode==='dance'||mode==='duet')grip=.17+.09*Math.sin(t*3);
   else if(mode==='sit')grip=.22;
-  const result={};for(let i=0;i<4;i++){const digit=digits163[i],k=clamp(grip+(i-1.5)*.045);const ride=mode==='ride';result[digit+'Proximal']=[k*(ride?.94:.83),spread*(i-1.5)];result[digit+'Intermediate']=[k*(ride?1.27:1.08),0];result[digit+'Distal']=[k*(ride?.76:.62),0]}
-  result.ThumbMetacarpal=[grip*(mode==='ride'?.53:.40),grip*(mode==='ride'?.29:.20)];result.ThumbProximal=[grip*.64,0];result.ThumbDistal=[grip*.47,0];return result
+  const set=(key,c,s)=>{const row=result[key]??=[0,0];row[0]=c;row[1]=s;};for(let i=0;i<4;i++){const digit=digits163[i],k=clamp(grip+(i-1.5)*.045);const ride=mode==='ride';set(digit+'Proximal',k*(ride?.94:.83),spread*(i-1.5));set(digit+'Intermediate',k*(ride?1.27:1.08),0);set(digit+'Distal',k*(ride?.76:.62),0)}
+  set('ThumbMetacarpal',grip*(mode==='ride'?.53:.40),grip*(mode==='ride'?.29:.20));set('ThumbProximal',grip*.64,0);set('ThumbDistal',grip*.47,0);return result
  }
  function setupFingers163(a){
   const {T,vrm}=a,h=vrm.humanoid,out={left:[],right:[]};
@@ -144,9 +144,10 @@
   }return out
  }
  function fingerResponse251(f,curl,spread,dt,mode){
-  const seconds=Math.max(0,Math.min(.35,Number.isFinite(dt)?dt:0)),closing=curl>f.curl;
-  const rate=(mode==='combatGrip'?30:mode==='ride'?8:6)*(closing?1:.82)*(f.name.endsWith('Distal')?.80:f.name.endsWith('Intermediate')?.91:1);
-  f.curl+=(curl-f.curl)*(1-Math.exp(-seconds*rate));f.spread+=(spread-f.spread)*(1-Math.exp(-seconds*5.5));return f;
+  const seconds=Math.max(0,Math.min(.35,Number.isFinite(dt)?dt:0));f.curl=Number.isFinite(f.curl)?f.curl:0;f.spread=Number.isFinite(f.spread)?f.spread:0;
+  curl=Number.isFinite(curl)?Math.max(0,Math.min(1.35,curl)):f.curl;spread=Number.isFinite(spread)?Math.max(-.25,Math.min(.25,spread)):f.spread;
+  const closing=curl>f.curl,distal=f.name.endsWith('Distal'),middle=f.name.endsWith('Intermediate'),rate=(mode==='combatGrip'?30:mode==='ride'?9:7)*(closing?1:.82)*(distal?.72:middle?.87:1);
+  f.curl+=(curl-f.curl)*(1-Math.exp(-seconds*rate));f.spread+=(spread-f.spread)*(1-Math.exp(-seconds*(mode==='combatGrip'?18:6)));return f;
  }
  // V31.2: grip targets by handle and role, including bow release and support hand.
  function combatGrip312(weapon,side,combat,out={}){
@@ -159,7 +160,7 @@
  }
  function animateFingers163(a,dt,mode,gait,jump,time,turn,weapon=null,combat=null){
   a.fingers163??=setupFingers163(a);const {T}=a;let count=0,grip=0;const rot=a.fingerQuat163??=new T.Quaternion();
-  a.gripTargets336??={left:{},right:{}};for(const side of ['left','right']){const grasp=combatGrip312(weapon,side,combat,a.gripTargets336[side]),target=grasp||fingerTargets163(mode,gait,jump,time,side,turn);for(const f of a.fingers163[side]){const [curl,spread]=target[f.name];fingerResponse251(f,curl,spread,dt,grasp?'combatGrip':mode);f.node.quaternion.copy(f.rest).multiply(rot.setFromAxisAngle(f.spreadAxis,f.spread)).multiply(rot.setFromAxisAngle(f.axis,f.curl));count++;grip+=f.curl}}
+  a.gripTargets336??={left:{},right:{}};a.relaxedTargets3512??={left:{},right:{}};for(const side of ['left','right']){const grasp=combatGrip312(weapon,side,combat,a.gripTargets336[side]),target=grasp||fingerTargets163(mode,gait,jump,time,side,turn,a.relaxedTargets3512[side]);for(const f of a.fingers163[side]){const [curl,spread]=target[f.name];fingerResponse251(f,curl,spread,dt,grasp?'combatGrip':mode);f.node.quaternion.copy(f.rest).multiply(rot.setFromAxisAngle(f.spreadAxis,f.spread)).multiply(rot.setFromAxisAngle(f.axis,f.curl));count++;grip+=f.curl}}
   return {joints:count,meanCurl:count?grip/count:0,mode}
  }
 

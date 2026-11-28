@@ -1,0 +1,6 @@
+const assert=require('node:assert/strict'),M=require('./assets/smooth-motion.js'),V=require('./assets/vrm-character.js');
+for(const rate of [15,30,60,120]){const s={};for(let i=0;i<rate;i++)M.turnFollow3512(s,1/rate,3,1,true);assert(s.headYaw>.08&&s.headYaw<=.085);assert(s.chestYaw>.04&&s.chestYaw<=.045);for(let i=0;i<rate*2;i++)M.turnFollow3512(s,1/rate,0,0,false);assert(Math.abs(s.headYaw)<.001&&Math.abs(s.shoulderYaw)<.001);}
+for(const id of Object.keys(M.profiles)){const s=M.newState();for(let i=0;i<120;i++){const a=M.step(s,1/60,i<60?.8:0,{speed:i<60?3:0,turn:i<40?3:i<80?-3:0},i<60?'run':'idle',id);assert(Object.values(a).every(Number.isFinite));}}
+const cached={},a=V.fingerTargets163('idle',0,0,0,'left',0,cached),row=a.IndexProximal;assert.equal(V.fingerTargets163('ride',0,0,1,'left',0,cached),cached);assert.equal(cached.IndexProximal,row);
+for(const mode of ['idle','ride','combatGrip']){const proximal={name:'IndexProximal',curl:0,spread:0},distal={name:'IndexDistal',curl:0,spread:0};V.fingerResponse251(proximal,1,.1,.016,mode);V.fingerResponse251(distal,1,.1,.016,mode);assert(proximal.curl>distal.curl);V.fingerResponse251(proximal,NaN,Infinity,.1,mode);assert(Number.isFinite(proximal.curl)&&Number.isFinite(proximal.spread));}
+console.log('Twenty motion profiles, turn settling, reusable hand targets and bounded finger transitions passed');
