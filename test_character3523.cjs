@@ -1,0 +1,4 @@
+const assert=require('node:assert/strict'),V=require('./assets/vrm-character.js');
+assert.equal(Object.keys(V.bodyShapes3523).length,20);assert.equal(new Set(Object.values(V.bodyShapes3523).map(x=>x.join(','))).size,20);
+for(const p of Object.values(V.bodyShapes3523))for(let y=0;y<=1.68;y+=.04){const a=V.shapePoint3523(.2,y,.1,p);assert(a.every(Number.isFinite));assert(a[0]>.15&&a[0]<.26);assert.equal(a[1],y);}
+assert(V.stanceSpread3523(.1,-.1,.2)>0);assert(V.stanceSpread3523(-.1,.1,.2)<0);for(const id of ['sword','great','dual']){let s={};assert.equal(V.carry3523(s,0,id,false,true).phase,'sheathed');for(let t=16;t<=160;t+=16)V.carry3523(s,t,id,true,true,160);assert.equal(V.carry3523(s,160,id,true,true,160).phase,'drawn');for(let t=176;t<=2600;t+=16)V.carry3523(s,t,id,false,true);assert.equal(s.amount,0);assert.equal(V.carry3523(s,3000,id,false,false).phase,'none');}console.log('20 body profiles, stance directions and weapon transitions passed');
