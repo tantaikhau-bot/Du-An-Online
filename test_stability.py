@@ -33,6 +33,12 @@ class Stability(unittest.TestCase):
       status,headers,empty=req('HEAD',path)
       self.assertEqual((a,status,empty),(200,200,b''))
       self.assertEqual(headers['Content-Length'],str(len(body)))
+     for mode in ('original','shape','legacy','unknown'):
+      for method in ('GET','HEAD'):
+       status,headers,body=req(method,'/play?avatar='+mode+'&gfx=sharp')
+       self.assertEqual((status,headers['Location'],body),(302,'/play?gfx=sharp&avatar=vrm',b''))
+       self.assertEqual(headers['Cache-Control'],'no-store')
+     self.assertEqual(req('GET','/play?avatar=vrm')[0],200)
      html=req('GET','/play')[2].decode('utf-8')
      match=re.search(r"BUILD62='([^']+)'",html)
      self.assertIsNotNone(match)
