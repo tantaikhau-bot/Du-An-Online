@@ -46,7 +46,23 @@
   const d=appearance342[id]||appearance342.m1;
   return role==='skin'?{rgb:[d[0],d[1]+.025,d[2]],roughness:.82,metalness:0,toon:.94,outline:.72}:role==='hair'?{rgb:[1,1,1],roughness:d[3],metalness:0,toon:.92,outline:.80}:role==='cloth'?{rgb:[1,1,1],roughness:.88,metalness:0,toon:.96,outline:.90}:role==='eye'?{rgb:[1,1,1],roughness:.35,metalness:0,toon:1,outline:1}:{rgb:[1,1,1],roughness:null,metalness:null,toon:1,outline:1};
  }
- function snapshotMaterial342(m){return {roughness:m.roughness,metalness:m.metalness,shadingToonyFactor:m.shadingToonyFactor,outlineWidthFactor:m.outlineWidthFactor};}
+ // Traveler prototype: preserve the original VRM maps, skinning, expressions and shader.
+ // This finish is intentionally limited to m1; source meshes are not modified.
+ function travelerFinish(m,original,role,id){
+  if(Number.isFinite(original.shadingShiftFactor)){
+   const delta=id==='m1'?({skin:.035,hair:.02,cloth:.015}[role]||0):0;
+   m.shadingShiftFactor=delta===0?original.shadingShiftFactor:Math.max(-1,Math.min(1,original.shadingShiftFactor+delta));
+  }
+  if(id!=='m1')return;
+  const soften={skin:.80,hair:.88,cloth:.94}[role];
+  if(soften!==undefined&&Number.isFinite(m.outlineWidthFactor))m.outlineWidthFactor*=soften;
+  if(soften!==undefined&&Number.isFinite(m.shadingToonyFactor))m.shadingToonyFactor*=({skin:.87,hair:.91,cloth:.96}[role]);
+  if(m.isMeshStandardMaterial&&Number.isFinite(m.roughness)){
+   const target={skin:.72,hair:.58,cloth:.85,eye:.27}[role];
+   if(target!==undefined)m.roughness=m.roughness*.55+target*.45;
+  }
+ }
+ function snapshotMaterial342(m){return {roughness:m.roughness,metalness:m.metalness,shadingToonyFactor:m.shadingToonyFactor,outlineWidthFactor:m.outlineWidthFactor,shadingShiftFactor:m.shadingShiftFactor};}
  function finishMaterial342(T,record,p){
   const {material:m,base,role}=record,original=record.original342??=snapshotMaterial342(m),q=materialPolicy342(role,p.id);
   m.color.copy(base);
@@ -56,6 +72,7 @@
   if(m.isMeshStandardMaterial&&q.metalness!==null&&Number.isFinite(original.metalness))m.metalness=Math.min(original.metalness,.08);
   if(Number.isFinite(original.shadingToonyFactor))m.shadingToonyFactor=Math.max(0,Math.min(1,original.shadingToonyFactor*q.toon));
   if(Number.isFinite(original.outlineWidthFactor))m.outlineWidthFactor=original.outlineWidthFactor*q.outline;
+  travelerFinish(m,original,role,p.id);
   return m;
  }
  // V35.2.8: independent rest-mesh silhouettes, not root height or material tint.
@@ -564,5 +581,5 @@
   if(measure140&&mode==='idle'&&a.weight<.05&&!WWMotion.phaseOf(j)){vrm.scene.updateMatrixWorld(true);const h=vrm.humanoid.getRawBoneNode('head'),l=vrm.humanoid.getRawBoneNode('leftHand'),r=vrm.humanoid.getRawBoneNode('rightHand'),ls=vrm.humanoid.getRawBoneNode('leftUpperArm'),rs=vrm.humanoid.getRawBoneNode('rightUpperArm');if(h&&l&&r&&ls&&rs){const hy=h.matrixWorld.elements[13];a.handsBelowHead=l.matrixWorld.elements[13]<hy&&r.matrixWorld.elements[13]<hy;a.handsDown=l.matrixWorld.elements[13]<ls.matrixWorld.elements[13]&&r.matrixWorld.elements[13]<rs.matrixWorld.elements[13]}}
  }
  function release(a){if(!a||a.released335)return;a.released335=true;try{if(a.spring316?.active)springMotion316(a,{},false)}catch{}try{if(typeof WWIdentity!=='undefined')WWIdentity.clear(a)}finally{a.root.removeFromParent();try{a.dispose?.()}finally{a.contacts={};a.combatFilter308=null;a.dispose=null;}}}
- const api={fallbackSources3527,flow3526,transition3526,sheathPath3526,modelKey3524,bodyShapes3523,shapePoint3523,stanceSpread3523,carry3523,readyWeight359,comboEnvelope353,idleStance352,appearance342,materialRole342,materialPolicy342,snapshotMaterial342,finishMaterial342,expression341,kineticFrame341,idleCombat341,smoothKey339,blendRate339,ultimate338,ultimateFrame338,ultimatePath338,createLoadQueue335,loadQueueStats335:()=>({...loadQueue335.stats(),player:playerQueue3527.stats()}),dodgePose334,weaponKeyframe321,clips321,actionFootwork320,boundedFootwork320,danceProfiles320,combatBody320,combatGrip312,fingerTargets163,fingerResponse251,setupFingers163,animateFingers163,load,animate,sources,roster,preset,applyPreset,release,heightFactor,createBufferCache140,bufferStats140:()=>buffers.stats()};if(typeof module!=='undefined')module.exports=api;else window.WWVRM=api;
+ const api={travelerFinish,fallbackSources3527,flow3526,transition3526,sheathPath3526,modelKey3524,bodyShapes3523,shapePoint3523,stanceSpread3523,carry3523,readyWeight359,comboEnvelope353,idleStance352,appearance342,materialRole342,materialPolicy342,snapshotMaterial342,finishMaterial342,expression341,kineticFrame341,idleCombat341,smoothKey339,blendRate339,ultimate338,ultimateFrame338,ultimatePath338,createLoadQueue335,loadQueueStats335:()=>({...loadQueue335.stats(),player:playerQueue3527.stats()}),dodgePose334,weaponKeyframe321,clips321,actionFootwork320,boundedFootwork320,danceProfiles320,combatBody320,combatGrip312,fingerTargets163,fingerResponse251,setupFingers163,animateFingers163,load,animate,sources,roster,preset,applyPreset,release,heightFactor,createBufferCache140,bufferStats140:()=>buffers.stats()};if(typeof module!=='undefined')module.exports=api;else window.WWVRM=api;
 })();
