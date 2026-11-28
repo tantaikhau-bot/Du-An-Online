@@ -25,10 +25,43 @@
  ];
  function preset(id,gender='male'){return roster.find(p=>p.id===id)||roster.find(p=>p.gender===gender)||roster[0]}
  function heightFactor(p){return p.height*(p.gender==='female'?.92:1)}
+ // V34.2: material-safe portrait finish. Preserve authored maps, alpha, shader and skinning.
+ const appearance342=Object.freeze({
+ m1:[1.00,.96,.98,.70],m2:[.98,.91,1.02,.63],m3:[1.02,.93,.96,.68],m4:[1.03,.98,.93,.72],m5:[.97,.89,1.01,.61],
+ m6:[1.00,.92,1.03,.64],m7:[1.02,.98,.95,.73],m8:[1.03,.96,.93,.67],m9:[.97,.90,.98,.60],m10:[1.01,.95,.98,.71],
+ f1:[1.02,.97,1.01,.66],f2:[.99,.96,1.04,.63],f3:[1.03,.99,.94,.71],f4:[1.00,.94,1.03,.65],f5:[1.02,.99,1.04,.62],
+ f6:[1.03,.95,.96,.69],f7:[1.01,.98,.94,.72],f8:[1.00,.97,1.04,.61],f9:[.98,.93,1.01,.64],f10:[1.03,.98,.96,.68]
+ });
+ function materialRole342(name){
+  const n=String(name||'').toLowerCase();
+  if(/eyelash|lash|eyebrow|brow|まつげ|眉/.test(n))return 'detail';
+  if(/eye|iris|瞳|白目|highlight/.test(n))return 'eye';
+  if(/mouth|teeth|tooth|tongue|lip|口|歯/.test(n))return 'detail';
+  if(/hair|bang|髪/.test(n))return 'hair';
+  if(/skin|face|body|肌|顔/.test(n)&&!/cloth|suit|armor|dress|shirt/.test(n))return 'skin';
+  if(/cloth|wear|dress|coat|shirt|skirt|pants|shoe|boot|uniform|jacket|armor|costume|fabric|衣装|服|靴/.test(n))return 'cloth';
+  return 'unknown';
+ }
+ function materialPolicy342(role,id){
+  const d=appearance342[id]||appearance342.m1;
+  return role==='skin'?{rgb:[d[0],d[1]+.025,d[2]],roughness:.82,metalness:0,toon:.94,outline:.72}:role==='hair'?{rgb:[1,1,1],roughness:d[3],metalness:0,toon:.92,outline:.80}:role==='cloth'?{rgb:[1,1,1],roughness:.88,metalness:0,toon:.96,outline:.90}:role==='eye'?{rgb:[1,1,1],roughness:.35,metalness:0,toon:1,outline:1}:{rgb:[1,1,1],roughness:null,metalness:null,toon:1,outline:1};
+ }
+ function snapshotMaterial342(m){return {roughness:m.roughness,metalness:m.metalness,shadingToonyFactor:m.shadingToonyFactor,outlineWidthFactor:m.outlineWidthFactor};}
+ function finishMaterial342(T,record,p){
+  const {material:m,base,role}=record,original=record.original342??=snapshotMaterial342(m),q=materialPolicy342(role,p.id);
+  m.color.copy(base);
+  if(role==='hair'||role==='cloth')m.color.multiply(new T.Color(role==='hair'?p.hair:p.cloth));
+  else if(role==='skin'){m.color.r*=q.rgb[0];m.color.g*=q.rgb[1];m.color.b*=q.rgb[2];}
+  if(m.isMeshStandardMaterial&&q.roughness!==null&&Number.isFinite(original.roughness))m.roughness=Math.max(.20,Math.min(1,original.roughness*.35+q.roughness*.65));
+  if(m.isMeshStandardMaterial&&q.metalness!==null&&Number.isFinite(original.metalness))m.metalness=Math.min(original.metalness,.08);
+  if(Number.isFinite(original.shadingToonyFactor))m.shadingToonyFactor=Math.max(0,Math.min(1,original.shadingToonyFactor*q.toon));
+  if(Number.isFinite(original.outlineWidthFactor))m.outlineWidthFactor=original.outlineWidthFactor*q.outline;
+  return m;
+ }
  function applyPreset(T,a,p){
   if(a.applied===p.id)return;
   a.root.scale.setScalar(a.baseScale*heightFactor(p));
-  for(const {material,base,role} of a.colors){material.color.copy(base);if(role==='hair')material.color.multiply(new T.Color(p.hair));else if(role==='cloth')material.color.multiply(new T.Color(p.cloth))}
+  const roles342={};for(const record of a.colors){finishMaterial342(T,record,p);roles342[record.role]=(roles342[record.role]||0)+1;}a.appearance342={preset:p.id,roles:roles342,base:a.kind,geometry:'preserved',finish:'authored-shader'};
   if(a.vrm&&!a.original&&typeof WWIdentity!=='undefined'){try{a.vrm.humanoid.resetNormalizedPose?.();a.vrm.humanoid.update();WWIdentity.apply(T,a,p)}catch(e){WWIdentity.clear(a);console.warn('Optional wearable fallback',e)}}
   a.applied=p.id;a.motionProfile=p.id;a.lastDiagnostic140=undefined;a.rawDiagnostics140=null;a.action132={};a.secondary132={};a.combatFilter308=null;a.kinetic341=null;a.idleCombat341=null;if(a.spring316?.active)springMotion316(a,{},false);if(a.fingers163)for(const side of ['left','right'])for(const f of a.fingers163[side]){f.node.quaternion.copy(f.rest);f.curl=0;f.spread=0}a.idleGroundWeight=0;a.idleAnchor1170=null;a.contacts={};a.contactFrame=null;if(typeof WWMotion!=='undefined')a.motion=WWMotion.newState();
  }
@@ -73,7 +106,7 @@
   const root=new T.Group();root.add(vrm.scene);root.rotation.y=Math.PI;root.scale.setScalar(1.68/size.y);vrm.scene.position.y-=box.min.y;
   vrm.scene.traverse(o=>{if(o.isMesh){o.frustumCulled=false;o.castShadow=false;o.receiveShadow=false}});
   const armDown={};for(const side of ['left','right']){const lower=vrm.humanoid.getNormalizedBoneNode(side+'LowerArm');armDown[side]=lower&&Math.abs(lower.position.x)>.01?-Math.sign(lower.position.x):(side==='left'?1:-1)}
-  const colors=[],seen=new Set();vrm.scene.traverse(o=>{if(!o.isMesh)return;for(const m of Array.isArray(o.material)?o.material:[o.material]){if(!m?.color||seen.has(m))continue;seen.add(m);const n=(m.name||'').toLowerCase();const role=/hair/.test(n)?'hair':/skin|face|body|eye|mouth|teeth|brow|lash/.test(n)?'skin':'cloth';colors.push({material:m,base:m.color.clone(),role})}});
+  const colors=[],seen=new Set();vrm.scene.traverse(o=>{if(!o.isMesh)return;for(const m of Array.isArray(o.material)?o.material:[o.material]){if(!m?.color||seen.has(m))continue;seen.add(m);const role=materialRole342(m.name);colors.push({material:m,base:m.color.clone(),role,original342:snapshotMaterial342(m)})}});
   vrm.humanoid.update();root.updateMatrixWorld(true);
   // VRM0 and VRM1 may have opposite normalized local forward axes. Read toe direction in rest pose.
   let legSign=1;for(const side of ['left','right']){let toe=vrm.humanoid.getNormalizedBoneNode(side+'Toes');if(toe&&Math.abs(toe.position.z)>.015){legSign=Math.sign(toe.position.z);break}}
@@ -446,7 +479,7 @@
   let springCount316=0;if(!a.springFailed317){try{springCount316=springMotion316(a,secondary,!!j.physics316&&detail===0&&!j.reduce316&&a.physicsTier317<2);}catch(e){a.springFailed317=true;try{springMotion316(a,secondary,false)}catch{}console.warn('Optional spring bias disabled',e)}}
   if(detail===0){for(let remain=dt;remain>0;){let d=Math.min(.033,remain);vrm.update(d);remain-=d}}else{vrm.humanoid.update();vrm.expressionManager?.update();}
   if(detail<=1&&!['down','recover'].includes(combat?.kind)&&!combat?.roll334){const contact=bw320>.05&&!offGround&&ground&&typeof WWFootIK.groundCombat320==='function'?WWFootIK.groundCombat320(a.T,a,ground,bw320,combat):WWFootIK.groundIdle(a.T,a,ground,dt,gait,offGround,mode);if(contact)a.footIK=contact;}
-  a.motionState=a.motion.state;a.poseCheck={motionVersion:'34.1',kinetic341:detail===0?{...a.kinetic341}:null,combatBody320:{...body320},face255:{...face},lookYaw255:look,brake250:a.motion.brake250||0,turnBody250:a.motion.turnBody250||0,drive250:a.motion.drive250||0,fingers163:fingers,actionWeights:{...weights},secondary:{...secondary},springCount316,wearables337:{tier:a.physicsTier317,springBias:!!a.spring316?.active,roles:a.spring316?.counts||null,clothPanels:a.identityMotion?.length||0},targetHeight:1.68*heightFactor(preset(a.motionProfile)),original:!!a.original,measuredSpeed:a.motion.speed,turn:a.motion.turn,identity:a.identityType||null,fallbackBase:a.fallbackBase||null,cycle:a.motion.cycle,walkWeight:a.motion.walk,runWeight:a.motion.run,profile:a.motionProfile,legSign:sign,hip:[v.hipL,v.hipR],knee:['left','right'].map(side=>(vrm.humanoid.getNormalizedBoneNode(side+'LowerLeg')?.rotation.x||0)*sign),ankle:[v.ankleL,v.ankleR],jumpWeight:a.motion.jump};
+  a.motionState=a.motion.state;a.poseCheck={motionVersion:'34.2',appearance342:a.appearance342||null,kinetic341:detail===0?{...a.kinetic341}:null,combatBody320:{...body320},face255:{...face},lookYaw255:look,brake250:a.motion.brake250||0,turnBody250:a.motion.turnBody250||0,drive250:a.motion.drive250||0,fingers163:fingers,actionWeights:{...weights},secondary:{...secondary},springCount316,wearables337:{tier:a.physicsTier317,springBias:!!a.spring316?.active,roles:a.spring316?.counts||null,clothPanels:a.identityMotion?.length||0},targetHeight:1.68*heightFactor(preset(a.motionProfile)),original:!!a.original,measuredSpeed:a.motion.speed,turn:a.motion.turn,identity:a.identityType||null,fallbackBase:a.fallbackBase||null,cycle:a.motion.cycle,walkWeight:a.motion.walk,runWeight:a.motion.run,profile:a.motionProfile,legSign:sign,hip:[v.hipL,v.hipR],knee:['left','right'].map(side=>(vrm.humanoid.getNormalizedBoneNode(side+'LowerLeg')?.rotation.x||0)*sign),ankle:[v.ankleL,v.ankleR],jumpWeight:a.motion.jump};
   const measure140=!a.diagnosticInterval140||!Number.isFinite(a.lastDiagnostic140)||t-a.lastDiagnostic140>=a.diagnosticInterval140||a.lastMode140!==a.motion.state;const previousRaw140=a.rawDiagnostics140;if(previousRaw140){a.poseCheck.rawArm=previousRaw140.arm;a.poseCheck.rawLeg=previousRaw140.leg}
   if(detail===0&&measure140&&['idle','walk','run'].includes(mode)){a.lastDiagnostic140=t;a.lastMode140=a.motion.state;
    a.root.updateWorldMatrix(true,true);
@@ -460,5 +493,5 @@
   if(measure140&&mode==='idle'&&a.weight<.05&&!WWMotion.phaseOf(j)){vrm.scene.updateMatrixWorld(true);const h=vrm.humanoid.getRawBoneNode('head'),l=vrm.humanoid.getRawBoneNode('leftHand'),r=vrm.humanoid.getRawBoneNode('rightHand'),ls=vrm.humanoid.getRawBoneNode('leftUpperArm'),rs=vrm.humanoid.getRawBoneNode('rightUpperArm');if(h&&l&&r&&ls&&rs){const hy=h.matrixWorld.elements[13];a.handsBelowHead=l.matrixWorld.elements[13]<hy&&r.matrixWorld.elements[13]<hy;a.handsDown=l.matrixWorld.elements[13]<ls.matrixWorld.elements[13]&&r.matrixWorld.elements[13]<rs.matrixWorld.elements[13]}}
  }
  function release(a){if(!a||a.released335)return;a.released335=true;try{if(a.spring316?.active)springMotion316(a,{},false)}catch{}try{if(typeof WWIdentity!=='undefined')WWIdentity.clear(a)}finally{a.root.removeFromParent();try{a.dispose?.()}finally{a.contacts={};a.combatFilter308=null;a.dispose=null;}}}
- const api={expression341,kineticFrame341,idleCombat341,smoothKey339,blendRate339,ultimate338,ultimateFrame338,ultimatePath338,createLoadQueue335,loadQueueStats335:()=>loadQueue335.stats(),dodgePose334,weaponKeyframe321,clips321,actionFootwork320,boundedFootwork320,danceProfiles320,combatBody320,combatGrip312,fingerTargets163,fingerResponse251,setupFingers163,animateFingers163,load,animate,sources,roster,preset,applyPreset,release,heightFactor,createBufferCache140,bufferStats140:()=>buffers.stats()};if(typeof module!=='undefined')module.exports=api;else window.WWVRM=api;
+ const api={appearance342,materialRole342,materialPolicy342,snapshotMaterial342,finishMaterial342,expression341,kineticFrame341,idleCombat341,smoothKey339,blendRate339,ultimate338,ultimateFrame338,ultimatePath338,createLoadQueue335,loadQueueStats335:()=>loadQueue335.stats(),dodgePose334,weaponKeyframe321,clips321,actionFootwork320,boundedFootwork320,danceProfiles320,combatBody320,combatGrip312,fingerTargets163,fingerResponse251,setupFingers163,animateFingers163,load,animate,sources,roster,preset,applyPreset,release,heightFactor,createBufferCache140,bufferStats140:()=>buffers.stats()};if(typeof module!=='undefined')module.exports=api;else window.WWVRM=api;
 })();
