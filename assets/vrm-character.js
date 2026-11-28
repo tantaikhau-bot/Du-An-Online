@@ -126,7 +126,7 @@
  function travelerSection(rows,inner=false){
   const positions=[],indices=[];
   for(const [y,w,d] of rows)positions.push(-w,y,0,-w*.66,y,d*.72,0,y,d,w*.66,y,d*.72,w,y,0,w*.66,y,-d*.72,0,y,-d,-w*.66,y,-d*.72);
-  for(let i=0;i<rows.length-1;i++)for(let j=0;j<8;j++){const a=i*8+j,b=i*8+(j+1)%8;indices.push(a,a+8,b,b,a+8,b+8);}
+  for(let i=0;i<rows.length-1;i++)for(let j=0;j<8;j++){const a=i*8+j,b=i*8+(j+1)%8;indices.push(a,b,a+8,b,b+8,a+8);}
   if(inner)for(let i=0;i<indices.length;i+=3){const v=indices[i+1];indices[i+1]=indices[i+2];indices[i+2]=v;}
   return {positions,indices};
  }
