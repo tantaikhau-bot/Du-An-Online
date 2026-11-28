@@ -10,7 +10,7 @@ const sole=f.getWorldPosition(new T.Vector3()).y;
 const a={root,baseScale:1,legSign:1,motion:{cycle:0,run:0},soleHeight:{left:sole},vrm:{humanoid:{getNormalizedBoneNode:n=>({leftUpperLeg:u,leftLowerLeg:k,leftFoot:f})[n]}}};
 const contact=IK.apply(T,a,()=>.025,.033,0,false,'idle');assert.equal(contact.planted,1);assert.ok(contact.maxCorrection<=.045);assert.equal(contact.mode,'vertical-only');
 assert.equal(k.rotation.y,0);assert.equal(k.rotation.z,0);assert.ok(k.rotation.x>=0&&k.rotation.x<.26);
-assert.equal(IK.apply(T,a,()=>0,.033,1,false,'idle'),null);assert.deepEqual(a.contacts,{});
+const running=IK.apply(T,a,()=>0,.033,1,false,'run');assert.equal(running.mode,'running-vertical-support');assert.ok(running.maxCorrection<=.012);assert.equal(running.stanceFeet,0);
 IK.apply(T,a,()=>0,.033,0,false,'idle');root.rotation.y=1;assert.equal(IK.apply(T,a,()=>0,.033,0,false,'idle'),null);
 assert.equal(IK.apply(T,a,()=>0,.033,0,true,'idle'),null);assert.deepEqual(a.contacts,{});
 assert.equal(IK.apply(T,a,()=>0,.033,0,false,'ride'),null);

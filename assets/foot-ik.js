@@ -130,7 +130,7 @@
     u.rotation.x-=sign*change*.5;k.rotation.x=sign*next;
     f.rotation.x=sign*clamp(f.rotation.x*sign-change*.5,-.30,.22);
    }
-   if(correction){hum.update();root.updateWorldMatrix(true,true)}
+   if(correction){hum.update?.();root.updateWorldMatrix(true,true)}
    const stance=support.running?null:stance119(T,a,side,u,k,f,raw,ground,phase,gait);a.contacts[side]={y:y+sole,...(stance?{anchor:stance.anchor}:{})};if(stance){stanceFeet++;stanceError=Math.max(stanceError,stance.error)}planted++;maxError=Math.max(maxError,Math.abs(y+sole-C.y));maxCorrection=Math.max(maxCorrection,Math.abs(correction));
   }
   return {planted,maxError:Math.round(maxError*1000)/1000,maxCorrection,weight:w,mode:support.running?'running-vertical-support':stanceFeet?'bounded-sagittal-stance':'vertical-only',stanceFeet,stanceError};
