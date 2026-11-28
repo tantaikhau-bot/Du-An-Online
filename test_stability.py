@@ -39,6 +39,14 @@ class Stability(unittest.TestCase):
      release=json.loads(req('GET','/api/version')[2])
      self.assertEqual(release['build'],match.group(1))
      self.assertEqual(release['version'],match.group(1).split('-')[0])
+     from html import unescape
+     for path in ('/','/play'):
+      page=unescape(req('GET',path)[2].decode('utf-8'))
+      self.assertIn('WISH WORLD V'+release['version'],page)
+      self.assertIn(release['name'],page)
+     admin=unescape((Path(server.__file__).parent/'admin.html').read_text(encoding='utf-8'))
+     self.assertIn('V'+release['version'],admin)
+     self.assertIn(release['name'],admin)
      a,headers,asset=req('GET','/assets/arsenal311.glb')
      self.assertEqual(a,200)
      self.assertEqual(headers['Content-Type'],'model/gltf-binary')
