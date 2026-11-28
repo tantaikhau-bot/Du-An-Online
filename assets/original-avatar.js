@@ -122,7 +122,7 @@
   if(garment%3===1||garment%3===2){let cape=panel(upperChest,cloth,[[-top,.04],[top,.04],[top*.86,-.32-.05*(coat%3)],[0,-.39],[-top*.75,-.31]],-.128*depth);cape.rotation.y=Math.PI;hairParts.push({g:cape,sg:1,small:true})}
   if(garment%4===2||female){let deco=mesh(head,new T.TorusGeometry(.025+.004*(garment%3),.006,6,12),trim,-.096*headW,.115,.07);deco.rotation.z=.3}
   let expression={blink:0,happy:0};
-  const expressionManager={getExpression:k=>k==='blink'||k==='happy'?{}:null,setValue:(k,v)=>expression[k]=v,update(){for(const e of eyeGroups)e.scale.y=clamp(1-(expression.blink||0)*.94,.06,1);mouth.scale.y=.005+(expression.happy||0)*.008;}};
+  const expressionManager={getExpression:k=>k==='blink'||k==='happy'?{}:null,setValue:(k,v)=>expression[k]=v,update(){for(const e of eyeGroups)e.scale.y=clamp(1-(expression.blink||0)*.94,.06,1);mouth.scale.y=1+(expression.happy||0)*1.6;}};
   const humanoid={getNormalizedBoneNode:n=>nodes[n]||null,getRawBoneNode:n=>nodes[n]||null,update(){root.updateMatrixWorld(true)},resetNormalizedPose(){for(const n of all)n.quaternion.identity();hips.position.set(0,.82,0)}};
   let clock=0;const vrm={scene:root,humanoid,expressionManager,update(dt){clock+=dt;for(const q of hairParts){q.g.rotation.x=Math.sin(clock*3.7+q.sg)* (q.small?.035:.065);if(!q.small)q.g.rotation.z=q.sg*Math.sin(clock*2.8)*.05}expressionManager.update();root.updateMatrixWorld(true)}};
   root.rotation.y=Math.PI;root.updateMatrixWorld(true);

@@ -135,6 +135,31 @@
   }
   return {planted,maxError:Math.round(maxError*1000)/1000,maxCorrection,weight:w,mode:support.running?'running-vertical-support':stanceFeet?'bounded-sagittal-stance':'vertical-only',stanceFeet,stanceError};
  }
+ // V35.2.5: staggered support and measured anti-crossing, using each rig's own hip axis.
+ function supportPhase3525(pose,ready=0,out={}){
+  const p=clamp(Number.isFinite(pose?.progress)?pose.progress:0,0,1),hit=clamp(Number.isFinite(pose?.impact)?pose.impact:.45,.18,.82),ease=x=>{x=clamp(x,0,1);return x*x*(3-2*x)},kind=pose?.kind;
+  const eligible=['strike','guard'].includes(kind)&&!pose?.airborne&&!pose?.air323&&!pose?.roll334&&!(kind==='strike'&&[3,4].includes(pose?.combo|0));
+  const dir=(pose?.combo|0)%2?-1:1,load=eligible?ease(p/(hit*.65))*(1-ease((p-hit*.65)/(hit*.35))):0,transfer=eligible?ease((p-hit*.25)/(hit*.75))*(1-ease((p-hit)/(1-hit))):0;
+  const envelope=eligible?ease(p/.12)*ease((1-p)/.20):0;
+  out.active=eligible;out.weight=Math.max(envelope,kind==='guard'?clamp(ready,0,1)*.5:0);out.bias=dir*(transfer*.85-load*.65)*envelope;out.load=load;out.transfer=transfer;out.lead=dir>0?'left':'right';return out;
+ }
+ function separation3525(hipWidth,kneeGap,footGap){
+  if(![hipWidth,kneeGap,footGap].every(Number.isFinite)||hipWidth<.025)return null;
+  const kneeMin=hipWidth*.58,footMin=hipWidth*.75;
+  return {kneeMin,footMin,error:Math.max(0,kneeMin-kneeGap)+Math.max(0,footMin-footGap)};
+ }
+ function enforceStance3525(T,a,weight){
+  const hum=a.vrm.humanoid,root=a.root,read=(side,name)=>hum.getRawBoneNode?.(side+name)||hum.getNormalizedBoneNode(side+name),u=['left','right'].map(s=>hum.getNormalizedBoneNode(s+'UpperLeg'));
+  const raw=['left','right'].map(s=>['UpperLeg','LowerLeg','Foot'].map(n=>read(s,n)));if(u.some(n=>!n)||raw.flat().some(n=>!n))return null;
+  const cache=a.stanceVectors3525??=Array.from({length:7},()=>new T.Vector3());
+  function measure(){hum.update();root.updateWorldMatrix(true,true);raw.forEach((leg,i)=>leg.forEach((n,j)=>n.getWorldPosition(cache[i*3+j])));const axis=cache[6].subVectors(cache[0],cache[3]);axis.y=0;const width=axis.length();if(width<.025)return null;axis.divideScalar(width);const knee=(cache[1].x-cache[4].x)*axis.x+(cache[1].z-cache[4].z)*axis.z,foot=(cache[2].x-cache[5].x)*axis.x+(cache[2].z-cache[5].z)*axis.z;const score=separation3525(width,knee,foot);return score?{...score,kneeGap:knee,footGap:foot,hipWidth:width}:null;}
+  const start=measure();if(!start)return null;if(start.error<.002)return {...start,corrected:false};
+  const saved=u.map(n=>n.rotation.z),sign=Math.sign(u[0].position.x-u[1].position.x)||1,amount=clamp(start.error/Math.max(.10,start.hipWidth)*.12,.025,.18)*clamp(weight*1.6,0,1);
+  let best=start,bestZ=saved;
+  // Both directions are tried because normalized local axes differ across rig implementations.
+  for(const direction of [sign,-sign]){u[0].rotation.z=clamp(saved[0]+amount*direction,-.60,.60);u[1].rotation.z=clamp(saved[1]-amount*direction,-.60,.60);const q=measure();if(q&&q.error<best.error-.001){best=q;bestZ=u.map(n=>n.rotation.z);}}
+  u.forEach((n,i)=>n.rotation.z=bestZ[i]);hum.update();root.updateWorldMatrix(true,true);return {...best,before:start.error,corrected:best!==start};
+ }
  function groundCombat320(T,a,ground,weight,pose){a.idleAnchor1170=null;a.idleGroundWeight=0;let rows=soleContacts(T,a,ground);if(!rows.length)return null;const stable=!pose||pose.kind==='guard'||(pose.kind==='strike'&&pose.progress>.86&&!pose.airborne&&!pose.air323&&pose.combo!==4);if(stable&&rows.length===2&&Math.abs(rows[0].error-rows[1].error)>.012&&Math.abs(rows[0].error-rows[1].error)<.12)rows=balanceIdle(T,a,ground,rows);const root=a.root,delta=clamp(Math.max(...rows.map(r=>r.error))+.001,-.24,.24)*clamp(weight*1.5,0,1);if(!Number.isFinite(delta))return null;if(root.parent){const p=root.getWorldPosition(new T.Vector3());p.y+=delta;root.position.copy(root.parent.worldToLocal(p));}else root.position.y+=delta;root.updateWorldMatrix(true,true);return {mode:'combat-support',balancedRecovery:stable,offset:delta,planted:rows.filter(r=>Math.abs(delta-r.error)<.035).length,maxError:Math.max(...rows.map(r=>Math.abs(delta-r.error)))};}
- const api={groundCombat320,solve,apply,reset,support252,groundIdle,calibrateSoles,soleContacts,stance119};if(typeof module!=='undefined')module.exports=api;else root.WWFootIK=api;
+ const api={supportPhase3525,separation3525,enforceStance3525,groundCombat320,solve,apply,reset,support252,groundIdle,calibrateSoles,soleContacts,stance119};if(typeof module!=='undefined')module.exports=api;else root.WWFootIK=api;
 })(typeof globalThis!=='undefined'?globalThis:this);
