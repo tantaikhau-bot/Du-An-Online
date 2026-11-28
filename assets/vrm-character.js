@@ -106,10 +106,67 @@
   const speed=want?Math.min(160,Math.max(35,deadline-now+dt)):380;state.amount=Math.max(0,Math.min(1,state.amount+(want?dt/speed:-dt/speed)));if(active&&now>=deadline)state.amount=1;
   return {amount:state.amount,phase:state.amount<=0?'sheathed':state.amount>=1?'drawn':want?'drawing':'stowing'};
  }
+ // Traveler V2: a bounded, reversible rest-space sculpt on the original m1 VRM.
+ // No bone scaling; all head surfaces (including eyes and hair) receive the same field.
+ function travelerSculptPoint(x,y,z,headX,headY,out=[]){
+  const smooth=t=>{t=Math.max(0,Math.min(1,t));return t*t*(3-2*t)};
+  const band=(v,a,b,c,d)=>smooth((v-a)/(b-a))*(1-smooth((v-c)/(d-c)));
+  const h=y-headY,dx=x-headX;
+  const jaw=band(h,-.035,.015,.055,.105),crown=smooth((h-.065)/.11);
+  const shoulders=band(h,-.39,-.30,-.19,-.10),waist=band(h,-.71,-.60,-.48,-.37);
+  const core=1-smooth((Math.abs(dx)-.15)/.16);
+  out[0]=headX+dx*(1+.045*jaw-.065*crown+core*(.045*shoulders-.055*waist));
+  out[1]=y;out[2]=z;return out;
+ }
+ function captureTravelerRest(T,a){
+  if(a.kind!=='male'||a.original||a.experimentalShape3527)return;
+  const head=a.vrm.humanoid.getRawBoneNode('head');if(!head)return;
+  a.root.updateMatrixWorld(true);
+  const inv=a.root.matrixWorld.clone().invert(),scale=a.baseScale;
+  const h=a.root.worldToLocal(head.getWorldPosition(new T.Vector3())).multiplyScalar(scale);
+  if(!Number.isFinite(h.x)||!Number.isFinite(h.y)||h.y<1.15||h.y>1.7)return;
+  const records=[];let vertices=0;
+  a.vrm.scene.traverse(o=>{const g=o.geometry,p=g?.attributes?.position;if(!o.isMesh||!p||p.itemSize!==3)return;
+   vertices+=p.count*(1+(g.morphAttributes?.position?.length||0));
+   const matrix=inv.clone().multiply(o.matrixWorld);records.push({mesh:o,original:g,matrix,back:matrix.clone().invert()});
+  });
+  if(vertices>2200000||!records.length)return;
+  a.travelerRest={headX:h.x,headY:h.y,records,scale};
+ }
+ function restoreTravelerSculpt(a){
+  for(const r of a.travelerRest?.records||[]){if(!r.sculpted)continue;r.mesh.geometry=r.original;r.sculpted.dispose();r.sculpted=null;}
+  a.travelerSculpt=null;
+ }
+ function applyTravelerSculpt(T,a,id){
+  if(id!=='m1'){restoreTravelerSculpt(a);return;}
+  const rest=a.travelerRest;if(!rest||a.travelerSculpt)return;
+  const {headX,headY,scale}=rest,v=new T.Vector3(),base=new T.Vector3(),warpedBase=new T.Vector3(),out=[],outBase=[];
+  const warp=(p,m,b,out)=>{p.applyMatrix4(m).multiplyScalar(scale);travelerSculptPoint(p.x,p.y,p.z,headX,headY,out);return p.fromArray(out).multiplyScalar(1/scale).applyMatrix4(b)};
+  try{
+   for(const r of rest.records){
+    const source=r.original,src=source.attributes.position,g=source.clone(),dst=g.attributes.position;
+    r.sculpted=g;
+    // Transform absolute targets and relative morph deltas coherently.
+    for(let i=0;i<src.count;i++){
+     base.fromBufferAttribute(src,i);v.copy(base);warp(v,r.matrix,r.back,outBase);dst.setXYZ(i,v.x,v.y,v.z);warpedBase.copy(v);
+     for(let j=0;j<(source.morphAttributes.position?.length||0);j++){
+      const old=source.morphAttributes.position[j],next=g.morphAttributes.position[j];
+      v.fromBufferAttribute(old,i);if(source.morphTargetsRelative)v.add(base);warp(v,r.matrix,r.back,out);
+      if(source.morphTargetsRelative)v.sub(warpedBase);
+      next.setXYZ(i,v.x,v.y,v.z);
+     }
+    }
+    dst.needsUpdate=true;for(const m of g.morphAttributes.position||[])m.needsUpdate=true;
+    // Retain authored normals/tangents and skin attributes; small sculpt avoids hard seam regeneration.
+    g.computeBoundingBox();g.computeBoundingSphere();r.mesh.geometry=g;
+   }
+   a.travelerSculpt={id,meshes:rest.records.length,mode:'reversible-rest-sculpt'};
+  }catch(e){restoreTravelerSculpt(a);console.warn('Traveler sculpt fallback',e);}
+ }
  function applyPreset(T,a,p){
   if(a.applied===p.id)return;
-  a.root.scale.setScalar(a.baseScale*heightFactor(p));if(a.experimentalShape3527)applyShape3523(T,a,p.id);
-  const roles342={};for(const record of a.colors){finishMaterial342(T,record,p);roles342[record.role]=(roles342[record.role]||0)+1;}a.appearance342={preset:p.id,roles:roles342,base:a.kind,geometry:a.original?'original-skinned-mesh':a.experimentalShape3527?'rest-mesh-silhouette':'authored-vrm-mesh',shape:a.shape3523||null,finish:'authored-shader'};
+  a.root.scale.setScalar(a.baseScale*heightFactor(p));if(a.experimentalShape3527)applyShape3523(T,a,p.id);else applyTravelerSculpt(T,a,p.id);
+  const roles342={};for(const record of a.colors){finishMaterial342(T,record,p);roles342[record.role]=(roles342[record.role]||0)+1;}a.appearance342={preset:p.id,roles:roles342,base:a.kind,geometry:a.original?'original-skinned-mesh':a.experimentalShape3527?'rest-mesh-silhouette':'authored-vrm-mesh',shape:a.shape3523||null,travelerSculpt:a.travelerSculpt||null,finish:'authored-shader'};
   if(a.vrm&&!a.original&&typeof WWIdentity!=='undefined'){try{a.vrm.humanoid.resetNormalizedPose?.();a.vrm.humanoid.update();WWIdentity.apply(T,a,p)}catch(e){WWIdentity.clear(a);console.warn('Optional wearable fallback',e)}}
   a.applied=p.id;a.motionProfile=p.id;a.lastDiagnostic140=undefined;a.rawDiagnostics140=null;a.action132={};a.secondary132={};a.combatFilter308=null;a.flowTransition3526=null;a.support3525=null;a.stanceVectors3525=null;a.kinetic341=null;a.idleCombat341=null;if(a.spring316?.active)springMotion316(a,{},false);if(a.fingers163)for(const side of ['left','right'])for(const f of a.fingers163[side]){f.node.quaternion.copy(f.rest);f.curl=0;f.spread=0}a.idleGroundWeight=0;a.idleAnchor1170=null;a.contacts={};a.contactFrame=null;if(typeof WWMotion!=='undefined')a.motion=WWMotion.newState();
  }
@@ -164,7 +221,7 @@
   for(const side of ['left','right']){const foot=vrm.humanoid.getRawBoneNode(side+'Foot'),toe=vrm.humanoid.getRawBoneNode(side+'Toes');if(foot&&toe){const d=root.worldToLocal(toe.getWorldPosition(new T.Vector3())).sub(root.worldToLocal(foot.getWorldPosition(new T.Vector3())));d.y=0;if(d.length()>.015){modelForward=d.normalize();break}}}
   const soleHeight=Object.fromEntries(['left','right'].map(side=>{let n=vrm.humanoid.getRawBoneNode(side+'Foot');return [side,n?Math.max(.015,Math.min(.24,n.getWorldPosition(new T.Vector3()).y)):.06]}));
   const a={root,vrm,kind,phase:0,weight:0,elapsed:0,baseScale:root.scale.x,colors,armDown,legSign,modelForward,motionProfile:kind.startsWith('female')?'f1':'m1',motion:WWMotion.newState(),hipsRest:vrm.humanoid.getNormalizedBoneNode('hips')?.position.clone(),springReady:false,T,dispose:()=>VRMUtils.deepDispose(vrm.scene),soleHeight};
-  a.experimentalShape3527=experimentalShape;if(experimentalShape)captureShape3523(T,a);try{WWFootIK.calibrateSoles(T,a)}catch(e){console.warn('Sole calibration fallback',e);a.soleSamples=null}return a;
+  a.experimentalShape3527=experimentalShape;if(experimentalShape)captureShape3523(T,a);else captureTravelerRest(T,a);try{WWFootIK.calibrateSoles(T,a)}catch(e){console.warn('Sole calibration fallback',e);a.soleSamples=null}return a;
  }
  // V16.3: normalized VRM finger joints, independent per hand with eased transitions.
  const digits163=['Index','Middle','Ring','Little'];
@@ -580,6 +637,6 @@
   }
   if(measure140&&mode==='idle'&&a.weight<.05&&!WWMotion.phaseOf(j)){vrm.scene.updateMatrixWorld(true);const h=vrm.humanoid.getRawBoneNode('head'),l=vrm.humanoid.getRawBoneNode('leftHand'),r=vrm.humanoid.getRawBoneNode('rightHand'),ls=vrm.humanoid.getRawBoneNode('leftUpperArm'),rs=vrm.humanoid.getRawBoneNode('rightUpperArm');if(h&&l&&r&&ls&&rs){const hy=h.matrixWorld.elements[13];a.handsBelowHead=l.matrixWorld.elements[13]<hy&&r.matrixWorld.elements[13]<hy;a.handsDown=l.matrixWorld.elements[13]<ls.matrixWorld.elements[13]&&r.matrixWorld.elements[13]<rs.matrixWorld.elements[13]}}
  }
- function release(a){if(!a||a.released335)return;a.released335=true;try{if(a.spring316?.active)springMotion316(a,{},false)}catch{}try{if(typeof WWIdentity!=='undefined')WWIdentity.clear(a)}finally{a.root.removeFromParent();try{a.dispose?.()}finally{a.contacts={};a.combatFilter308=null;a.dispose=null;}}}
- const api={travelerFinish,fallbackSources3527,flow3526,transition3526,sheathPath3526,modelKey3524,bodyShapes3523,shapePoint3523,stanceSpread3523,carry3523,readyWeight359,comboEnvelope353,idleStance352,appearance342,materialRole342,materialPolicy342,snapshotMaterial342,finishMaterial342,expression341,kineticFrame341,idleCombat341,smoothKey339,blendRate339,ultimate338,ultimateFrame338,ultimatePath338,createLoadQueue335,loadQueueStats335:()=>({...loadQueue335.stats(),player:playerQueue3527.stats()}),dodgePose334,weaponKeyframe321,clips321,actionFootwork320,boundedFootwork320,danceProfiles320,combatBody320,combatGrip312,fingerTargets163,fingerResponse251,setupFingers163,animateFingers163,load,animate,sources,roster,preset,applyPreset,release,heightFactor,createBufferCache140,bufferStats140:()=>buffers.stats()};if(typeof module!=='undefined')module.exports=api;else window.WWVRM=api;
+ function release(a){if(!a||a.released335)return;a.released335=true;restoreTravelerSculpt(a);try{if(a.spring316?.active)springMotion316(a,{},false)}catch{}try{if(typeof WWIdentity!=='undefined')WWIdentity.clear(a)}finally{a.root.removeFromParent();try{a.dispose?.()}finally{a.contacts={};a.combatFilter308=null;a.dispose=null;}}}
+ const api={travelerSculptPoint,applyTravelerSculpt,restoreTravelerSculpt,captureTravelerRest,travelerFinish,fallbackSources3527,flow3526,transition3526,sheathPath3526,modelKey3524,bodyShapes3523,shapePoint3523,stanceSpread3523,carry3523,readyWeight359,comboEnvelope353,idleStance352,appearance342,materialRole342,materialPolicy342,snapshotMaterial342,finishMaterial342,expression341,kineticFrame341,idleCombat341,smoothKey339,blendRate339,ultimate338,ultimateFrame338,ultimatePath338,createLoadQueue335,loadQueueStats335:()=>({...loadQueue335.stats(),player:playerQueue3527.stats()}),dodgePose334,weaponKeyframe321,clips321,actionFootwork320,boundedFootwork320,danceProfiles320,combatBody320,combatGrip312,fingerTargets163,fingerResponse251,setupFingers163,animateFingers163,load,animate,sources,roster,preset,applyPreset,release,heightFactor,createBufferCache140,bufferStats140:()=>buffers.stats()};if(typeof module!=='undefined')module.exports=api;else window.WWVRM=api;
 })();
