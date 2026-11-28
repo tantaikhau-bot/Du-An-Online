@@ -144,10 +144,10 @@
   let distance=0,lateral=0,turn=0,hop=0,gesture=0;const approach=ease((t-.07)/Math.max(.15,hit-.07)),recover=ease((t-hit)/Math.max(.15,1-hit)),arc=Math.sin(Math.PI*t);
   if(kind==='strike'&&melee){distance=[.34,.40,.63,.48,.51][form]*style[0]*(weapon==='great'?.80:weapon==='dual'?1.10:1);lateral=[.06,-.07,0,.05,.17][form]*style[0]*style[1];turn=form===4?sign*Math.PI*2*ease((t-.12)/.77):0;gesture=style[2]*arc;if(form===3&&!move?.airborne)hop=.33* Math.pow(Math.sin(Math.PI*ease(t)),1.15);}
   else if(kind==='spin'&&melee){distance=.24*style[0];lateral=.14*style[1];turn=sign*Math.PI*2*ease((t-.10)/.83);gesture=style[2]*arc;}
-  else if(kind==='dodge'){distance=-1.30;gesture=arc;}
+  else if(kind==='dodge'){const f=Number.isFinite(move?.dodgeForward328)?move.dodgeForward328:-1,side=Number.isFinite(move?.dodgeSide328)?move.dodgeSide328:0;distance=1.30*Math.max(-1,Math.min(1,f));lateral=1.30*Math.max(-1,Math.min(1,side));hop=.12*arc;gesture=arc;}
   else if(kind==='strike'){distance=weapon==='bow'?-.13:.12;gesture=style[2]*arc;}
-  if(move?.airborne)hop=0;
-  out.forward=distance*(kind==='dodge'?ease(t):approach);out.side=lateral*Math.sin(Math.PI*approach*.5);out.turn=turn;out.hop=Math.max(0,hop);out.gesture=gesture;out.recovery=recover;out.melee=melee?1:0;return out;
+  if(move?.airborne)hop=0;if(move?.air323===2&&melee)turn=sign*Math.PI*2*ease((t-.10)/.82);if(move?.air323===3)turn=0;
+  out.forward=distance*(kind==='dodge'?ease(t):approach);out.side=lateral*(kind==='dodge'?ease(t):Math.sin(Math.PI*approach*.5));out.turn=turn;out.hop=Math.max(0,hop);out.gesture=gesture;out.recovery=recover;out.melee=melee?1:0;return out;
  }
  function boundedFootwork320(previous,desired,maxStep=.18,out={}){
   let x=desired.forward-previous.forward,z=desired.side-previous.side;const len=Math.hypot(x,z);if(!Number.isFinite(len)||len<1e-7){out.forward=0;out.side=0;return out;}const k=Math.min(1,maxStep/len);out.forward=x*k;out.side=z*k;return out;
@@ -323,7 +323,7 @@
    additive('neck',-sign*b.hipPitch*.28,b.headYaw,0);additive('head',0,b.headYaw*.35,0);
    if(combat){const sword=['sword','dual','great'].includes(combat.weapon),contact=combat.contact?b.cut*.10:0;additive('rightHand',-b.load*.12+b.cut*.17,0,sword?b.wrist*.46:0);additive('leftHand',b.follow*.10,0,-b.wrist*.20);
     if(combat.kind==='strike'&&combat.weapon==='sword'){additive('leftUpperArm',-sign*(.16*b.load+.28*b.follow),b.offhand,left*-.16*b.cut);additive('leftLowerArm',-sign*.24*b.follow,0,0);}if(step.melee&&(combat.kind==='strike'||combat.kind==='spin')){additive('rightUpperArm',-sign*.07*step.gesture,dir*.08*step.gesture,0);additive('rightLowerArm',-sign*.05*b.load,0,0);additive('rightHand',sign*.06*step.gesture,0,dir*.07*b.follow);}if(combat.kind==='dodge'){overlay('leftUpperArm',-sign*.72,.22,left*.85,w);overlay('leftLowerArm',-sign*.92,0,0,w);overlay('rightUpperArm',-sign*.65,-.18,right*.80,w);overlay('rightLowerArm',-sign*.85,0,0,w);}
-    if(airStage){additive('spine',sign*(airStage===3?.32:-.12)*airArc,dir*.18*airArc,0);additive('chest',sign*(airStage===3?.18:-.08)*airArc,dir*.24*airArc,0);additive('rightUpperArm',-sign*(airStage===3?.36:.12)*airArc,0,0);additive('leftUpperArm',-sign*.16*airArc,0,left*.13*airArc);}if(contact){additive('rightLowerArm',-sign*contact,0,0);additive('rightShoulder',sign*contact*.45,0,0);}
+    if(combat.kind==='dodge'){const roll=Math.sin(Math.PI*Math.max(0,Math.min(1,combat.progress))),side=combat.dodgeSide328||0;additive('hips',sign*.20*roll,0,-side*.24*roll);additive('spine',sign*.30*roll,0,-side*.16*roll);additive('leftUpperLeg',-sign*.16*roll,0,0);additive('rightUpperLeg',-sign*.10*roll,0,0);}if(airStage){additive('spine',sign*(airStage===3?.32:-.12)*airArc,dir*.18*airArc,0);additive('chest',sign*(airStage===3?.18:-.08)*airArc,dir*.24*airArc,0);additive('rightUpperArm',-sign*(airStage===3?.36:.12)*airArc,0,0);additive('leftUpperArm',-sign*.16*airArc,0,left*.13*airArc);}if(contact){additive('rightLowerArm',-sign*contact,0,0);additive('rightShoulder',sign*contact*.45,0,0);}
    }
   }
   // Damp bone rotations on entry, release and recovery, rather than snapping to each procedural pose.
