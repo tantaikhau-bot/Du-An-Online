@@ -101,22 +101,30 @@ const fs=require('node:fs'),os=require('node:os'),path=require('node:path'),asse
   const asset=await page.evaluate(()=>window.wwGraphics59.avatarAsset);
   assert.equal(asset,'VRM male');
   await page.waitForFunction(()=>window.wwGraphics59?.motionState==='idle'&&window.wwGraphics59?.npcBlockFallback===0,{},{timeout:45000});
-  // Exercise the real peer render pipeline with isolated synthetic presence snapshots.
-  // First deliberately fail VRM loading, then restore it and introduce a fresh peer.
-  await page.evaluate(()=>{
-   window.__peerLoad117=WWVRM.load;
-   WWVRM.load=()=>Promise.reject(new Error('simulated peer VRM load failure'));
-   window.__peerId117='peer-render-failure';
-   window.__peerTimer117=setInterval(()=>{remotePlayers=[{id:window.__peerId117,name:'Peer QA',area:0,x:player.x+50,y:player.y,body:'male',avatar109:'m1',heading:0,moving:false}]},80);
-  });
-  await page.waitForFunction(()=>window.wwGraphics59?.peerCount===1&&window.wwGraphics59?.peerVisible===1&&window.wwGraphics59?.peerFallback===1,{},{timeout:30000});
-  console.log('Peer load failure: animated fallback visible');
-  await page.evaluate(()=>{WWVRM.load=window.__peerLoad117;window.__peerId117='peer-render-success'});
-  await page.waitForFunction(()=>window.wwGraphics59?.peerCount===1&&window.wwGraphics59?.peerVisible===1&&window.wwGraphics59?.peerVRM===1,{},{timeout:90000});
-  console.log('Peer loaded: VRM visible and fallback replaced');
-  fs.mkdirSync('test-output',{recursive:true});
-  await page.screenshot({path:'test-output/multiplayer-visible.png',timeout:120000});
-  await page.evaluate(()=>{clearInterval(window.__peerTimer117);remotePlayers=[];WWVRM.load=window.__peerLoad117;delete window.__peerLoad117});
+  // Actual authenticated presence with separate browser cookie jars; only the model load is fault-injected.
+  const peerContext=await browser.newContext();
+  let peerTimer=null,peerBusy=false,peerError=null;
+  try{
+   for(const [ctx,name] of [[page,'QA_Render_Owner'],[peerContext,'QA_Render_Peer']]){
+    const res=await ctx.request.post(origin+'/api/register',{data:{name,password:'test-password-only-134'}});assert.equal(res.status(),200);
+   }
+   await page.evaluate(async()=>{await refreshCloud();if(!onlineUser)throw Error('Missing authenticated render owner');window.__peerLoad117=WWVRM.load;WWVRM.load=()=>Promise.reject(new Error('simulated peer VRM load failure'));});
+   const pos=await page.evaluate(()=>({x:player.x+50,y:player.y,area:0,body:'male',avatar109:'m1',heading:0,moving:false,gait109:0,jump:0}));
+   const beat=async()=>{if(peerBusy)return;peerBusy=true;try{const res=await peerContext.request.post(origin+'/api/social/pulse',{data:pos});assert.equal(res.status(),200);}catch(e){peerError=e}finally{peerBusy=false}};
+   await beat();assert.ifError(peerError);peerTimer=setInterval(beat,1000);
+   await page.evaluate(()=>pulse());
+   await page.waitForFunction(()=>window.wwGraphics59?.peerCount===1&&window.wwGraphics59?.peerVisible===1&&window.wwGraphics59?.peerFallback===1,{},{timeout:45000});
+   assert.ifError(peerError);console.log('Authenticated peer load failure: animated fallback visible');
+   await page.evaluate(()=>{WWVRM.load=window.__peerLoad117});
+   await page.waitForFunction(()=>window.wwGraphics59?.peerCount===1&&window.wwGraphics59?.peerVisible===1&&window.wwGraphics59?.peerVRM===1,{},{timeout:90000});
+   assert.ifError(peerError);console.log('Authenticated peer loaded: VRM visible and fallback replaced');
+   fs.mkdirSync('test-output',{recursive:true});
+   await page.screenshot({path:'test-output/multiplayer-visible.png',timeout:120000});
+  }finally{
+   clearInterval(peerTimer);await peerContext.request.post(origin+'/api/social/leave',{data:{}}).catch(()=>{});await peerContext.close();
+   await page.evaluate(async()=>{if(window.__peerLoad117){WWVRM.load=window.__peerLoad117;delete window.__peerLoad117}await api('logout',{});await refreshCloud()});
+  }
+  await page.waitForFunction(()=>window.wwGraphics59?.peerCount===0,{},{timeout:30000});
 
   await page.waitForFunction(()=>window.wwGraphics59?.npcVRM>=1,{},{timeout:90000});
   await page.waitForFunction(()=>window.wwGraphics59?.poseCheck?.profile==='m1',{},{timeout:45000});
