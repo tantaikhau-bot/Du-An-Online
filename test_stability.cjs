@@ -1,6 +1,6 @@
 const fs = require('node:fs');
 const assert = require('node:assert/strict');
-const html=fs.readFileSync('index.html','utf8');
+const html=fs.readFileSync('index.html','utf8').replace(/<script src="\/(assets\/ww346-[a-z-]+\.js)\?v=\d+"><\/script>/g,(_,path)=>'<script>'+fs.readFileSync(path,'utf8')+'</script>');
 const {clarityStep100:clarity,resolution77:resolution}=require('./assets/game-policy.js');
 let v={tier:0,scale:1};
 for(let i=0;i<12;i++)v=clarity(v,15,100,45,true,false);
