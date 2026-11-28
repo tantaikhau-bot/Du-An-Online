@@ -30,7 +30,7 @@
   a.root.scale.setScalar(a.baseScale*heightFactor(p));
   for(const {material,base,role} of a.colors){material.color.copy(base);if(role==='hair')material.color.multiply(new T.Color(p.hair));else if(role==='cloth')material.color.multiply(new T.Color(p.cloth))}
   if(a.vrm&&!a.original&&typeof WWIdentity!=='undefined'){try{a.vrm.humanoid.resetNormalizedPose?.();a.vrm.humanoid.update();WWIdentity.apply(T,a,p)}catch(e){WWIdentity.clear(a);console.warn('Optional wearable fallback',e)}}
-  a.applied=p.id;a.motionProfile=p.id;a.lastDiagnostic140=undefined;a.rawDiagnostics140=null;a.action132={};a.secondary132={};if(a.fingers163)for(const side of ['left','right'])for(const f of a.fingers163[side]){f.node.quaternion.copy(f.rest);f.curl=0;f.spread=0}a.idleGroundWeight=0;a.idleAnchor1170=null;a.contacts={};a.contactFrame=null;if(typeof WWMotion!=='undefined')a.motion=WWMotion.newState();
+  a.applied=p.id;a.motionProfile=p.id;a.lastDiagnostic140=undefined;a.rawDiagnostics140=null;a.action132={};a.secondary132={};if(a.spring316?.active)springMotion316(a,{},false);if(a.fingers163)for(const side of ['left','right'])for(const f of a.fingers163[side]){f.node.quaternion.copy(f.rest);f.curl=0;f.spread=0}a.idleGroundWeight=0;a.idleAnchor1170=null;a.contacts={};a.contactFrame=null;if(typeof WWMotion!=='undefined')a.motion=WWMotion.newState();
  }
  const remote='https://raw.githubusercontent.com/madjin/vrm-samples/master/vroid/beta/';
  let lib;
@@ -130,13 +130,24 @@
   return {joints:count,meanCurl:count?grip/count:0,mode}
  }
 
- // Preserve authored VRM spring settings, only bias joints with compatible gravity settings.
+ // V33.7: preserve authored collider/drag/stiffness; apply bounded world-space inertia to native spring joints.
  function springMotion316(a,secondary,enabled){
   const manager=a.vrm.springBoneManager;if(!manager?.joints)return 0;
-  if(!a.spring316){const records=[];try{for(const joint of manager.joints){const s=joint.settings;if(!s||!s.gravityDir?.isVector3||!Number.isFinite(s.gravityPower))continue;records.push({s,gravity:s.gravityDir.clone(),power:s.gravityPower});}}catch{}a.spring316={records,dir:new a.T.Vector3(),forward:new a.T.Vector3(),right:new a.T.Vector3(),q:new a.T.Quaternion(),active:false};}
+  if(!a.spring316){
+   const records=[],counts={hair:0,cloth:0,other:0},seen=new Set();
+   for(const joint of manager.joints){const s=joint.settings;if(!s||seen.has(s)||!s.gravityDir?.isVector3||!Number.isFinite(s.gravityPower))continue;seen.add(s);
+    const n=(joint.bone?.name||joint.node?.name||'').toLowerCase(),role=/hair|bang|pony|fringe|braid|kami|髪/.test(n)?'hair':/skirt|cloth|cape|coat|dress|ribbon|scarf|sleeve|スカート/.test(n)?'cloth':'other';counts[role]++;records.push({s,gravity:s.gravityDir.clone(),power:s.gravityPower,role});}
+   a.spring316={records,counts,dir:new a.T.Vector3(),forward:new a.T.Vector3(),right:new a.T.Vector3(),q:new a.T.Quaternion(),active:false};
+  }
   const cache=a.spring316;if(!enabled&&!cache.active)return cache.records.length;
-  if(enabled){a.root.getWorldQuaternion(cache.q);cache.forward.copy(a.modelForward).applyQuaternion(cache.q);cache.forward.y=0;cache.forward.normalize();cache.right.set(-cache.forward.z,0,cache.forward.x);cache.dir.copy(cache.forward).multiplyScalar(-secondary.pitch*.18).addScaledVector(cache.right,secondary.roll*.13);cache.dir.y=-secondary.flutter*.035;const len=cache.dir.length();if(len>.22)cache.dir.multiplyScalar(.22/len);}
-  for(const {s,gravity,power} of cache.records){if(!enabled){s.gravityDir.copy(gravity);s.gravityPower=power;continue;}s.gravityDir.copy(gravity).multiplyScalar(power).add(cache.dir);const magnitude=s.gravityDir.length();if(magnitude>1e-6){s.gravityDir.divideScalar(magnitude);s.gravityPower=Math.min(Math.max(power,.0)+.14,magnitude);}else{s.gravityDir.copy(gravity);s.gravityPower=power;}}
+  if(enabled){a.root.getWorldQuaternion(cache.q);cache.forward.copy(a.modelForward).applyQuaternion(cache.q);cache.forward.y=0;if(cache.forward.lengthSq()<1e-6)cache.forward.set(0,0,1);else cache.forward.normalize();cache.right.set(-cache.forward.z,0,cache.forward.x);}
+  for(const {s,gravity,power,role} of cache.records){
+   if(!enabled){s.gravityDir.copy(gravity);s.gravityPower=power;continue;}
+   const hair=role==='hair',cloth=role==='cloth',pitch=hair?secondary.hairPitch:secondary.clothPitch,roll=hair?secondary.hairRoll:secondary.clothRoll;
+   const gain=hair?.23:cloth?.27:.085,side=hair?.18:cloth?.22:.065,max=hair?.15:cloth?.19:.065;
+   cache.dir.copy(cache.forward).multiplyScalar(-(Number.isFinite(pitch)?pitch:0)*gain).addScaledVector(cache.right,(Number.isFinite(roll)?roll:0)*side);cache.dir.y=-(Number.isFinite(secondary.flutter)?secondary.flutter:0)*(cloth?.07:.035);const len=cache.dir.length();if(len>max)cache.dir.multiplyScalar(max/len);
+   s.gravityDir.copy(gravity).multiplyScalar(power).add(cache.dir);const magnitude=s.gravityDir.length();if(magnitude>1e-6){s.gravityDir.divideScalar(magnitude);s.gravityPower=Math.min(Math.max(0,power)+max,magnitude);}else{s.gravityDir.copy(gravity);s.gravityPower=power;}
+  }
   cache.active=!!enabled;return cache.records.length;
  }
  // Original character-specific movement profiles: reach, turn direction, flourish.
@@ -336,16 +347,16 @@
   if(socialBlocked256){filter308.weight=0;for(const item of filter308.bones)if(item.node)item.q.copy(item.node.quaternion)}
   const look=WWMotion.socialLook255(a.look255??={},mode==='ride'||WWMotion.phaseOf(j)?0:j.lookYaw,dt);
   if(!socialBlocked256&&Math.abs(look)>.001){const n=vrm.humanoid.getNormalizedBoneNode('neck'),hd=vrm.humanoid.getNormalizedBoneNode('head');if(n)n.rotation.y+=look*.35;if(hd)hd.rotation.y+=look*(n?.65:1)}
-  a.secondary132??={};const secondary=j.physics316&&typeof WWMotion.secondary316==='function'?WWMotion.secondary316(a.secondary132,dt,{gait:a.weight,speed:j.speed,turn:j.turn,wind:j.wind,vertical:j.velocity,combat,reduce:j.reduce316}):WWMotion.secondary132(a.secondary132,dt,a.weight,a.motion.turn,j.wind);
-  a.physicsTier317=j.physicsTier317??(detail>0?2:0);if(typeof WWIdentity!=='undefined'&&!a.identityFailed317){try{WWIdentity.animate(a,t,a.weight,secondary)}catch(e){a.identityFailed317=true;console.warn('Optional cloth motion disabled',e)}}
+  a.secondary132??={};const secondary=j.physics316&&typeof WWMotion.secondary337==='function'?WWMotion.secondary337(a.secondary132,dt,{gait:a.weight,speed:j.speed,turn:j.turn,wind:j.wind,vertical:j.velocity,combat:socialBlocked256?null:combat,reduce:j.reduce316}):j.physics316&&typeof WWMotion.secondary316==='function'?WWMotion.secondary316(a.secondary132,dt,{gait:a.weight,speed:j.speed,turn:j.turn,wind:j.wind,vertical:j.velocity,combat,reduce:j.reduce316}):WWMotion.secondary132(a.secondary132,dt,a.weight,a.motion.turn,j.wind);
+  a.physicsTier317=Math.max(detail>0?2:0,j.physicsTier317??0);if(typeof WWIdentity!=='undefined'&&!a.identityFailed317){try{WWIdentity.animate(a,t,a.weight,secondary)}catch(e){a.identityFailed317=true;console.warn('Optional cloth motion disabled',e)}}
   const em=vrm.expressionManager,seed255=a.expressionSeed255??=Array.from(a.motionProfile||'m1').reduce((n,c)=>n+c.charCodeAt(0),0)%13,face=WWMotion.expression132(a.action132,mode,dt,t,seed255);
   if(combat&&!socialBlocked256){face.angry=Math.max(face.angry||0,.32*Math.sin(Math.PI*Math.max(0,Math.min(1,combat.progress))));face.relaxed=(face.relaxed||0)*.4}if(em){for(const k of ['happy','angry','surprised','blink','relaxed'])if(em.getExpression(k))em.setValue(k,face[k]||0)}
   const fingers=animateFingers163(a,dt,mode,a.weight,a.motion.jump,t,j.mountHorse?Math.max(Math.abs(j.mountTurn||0),j.mountBrake||0):j.turn,mode==='ride'?null:j.weapon307,combat);const airborne=!!(WWMotion.phaseOf(j)||a.motion.jump>.12),offGround=['down','recover'].includes(combat?.kind)||!!combat?.roll334||(j.height||0)>.006||(j.velocity||0)>.01||(j.hop320||0)>.012;
   if(detail===0&&ground&&bw320<.05&&!(mode==='idle'&&gait<.15)){vrm.humanoid.update();a.footIK=WWFootIK.apply(a.T,a,ground,dt,gait,airborne,mode)}else{WWFootIK.reset(a);a.footIK=null}
-  let springCount316=0;if(!a.springFailed317){try{springCount316=springMotion316(a,secondary,!!j.physics316&&detail===0&&!j.reduce316);}catch(e){a.springFailed317=true;try{springMotion316(a,secondary,false)}catch{}console.warn('Optional spring bias disabled',e)}}
+  let springCount316=0;if(!a.springFailed317){try{springCount316=springMotion316(a,secondary,!!j.physics316&&detail===0&&!j.reduce316&&a.physicsTier317<2);}catch(e){a.springFailed317=true;try{springMotion316(a,secondary,false)}catch{}console.warn('Optional spring bias disabled',e)}}
   if(detail===0){for(let remain=dt;remain>0;){let d=Math.min(.033,remain);vrm.update(d);remain-=d}}else{vrm.humanoid.update();vrm.expressionManager?.update();}
   if(detail<=1&&!['down','recover'].includes(combat?.kind)&&!combat?.roll334){const contact=bw320>.05&&!offGround&&ground&&typeof WWFootIK.groundCombat320==='function'?WWFootIK.groundCombat320(a.T,a,ground,bw320):WWFootIK.groundIdle(a.T,a,ground,dt,gait,offGround,mode);if(contact)a.footIK=contact;}
-  a.motionState=a.motion.state;a.poseCheck={motionVersion:'33.4',combatBody320:{...body320},face255:{...face},lookYaw255:look,brake250:a.motion.brake250||0,turnBody250:a.motion.turnBody250||0,drive250:a.motion.drive250||0,fingers163:fingers,actionWeights:{...weights},secondary:{...secondary},springCount316,targetHeight:1.68*heightFactor(preset(a.motionProfile)),original:!!a.original,measuredSpeed:a.motion.speed,turn:a.motion.turn,identity:a.identityType||null,fallbackBase:a.fallbackBase||null,cycle:a.motion.cycle,walkWeight:a.motion.walk,runWeight:a.motion.run,profile:a.motionProfile,legSign:sign,hip:[v.hipL,v.hipR],knee:['left','right'].map(side=>(vrm.humanoid.getNormalizedBoneNode(side+'LowerLeg')?.rotation.x||0)*sign),ankle:[v.ankleL,v.ankleR],jumpWeight:a.motion.jump};
+  a.motionState=a.motion.state;a.poseCheck={motionVersion:'33.4',combatBody320:{...body320},face255:{...face},lookYaw255:look,brake250:a.motion.brake250||0,turnBody250:a.motion.turnBody250||0,drive250:a.motion.drive250||0,fingers163:fingers,actionWeights:{...weights},secondary:{...secondary},springCount316,wearables337:{tier:a.physicsTier317,springBias:!!a.spring316?.active,roles:a.spring316?.counts||null,clothPanels:a.identityMotion?.length||0},targetHeight:1.68*heightFactor(preset(a.motionProfile)),original:!!a.original,measuredSpeed:a.motion.speed,turn:a.motion.turn,identity:a.identityType||null,fallbackBase:a.fallbackBase||null,cycle:a.motion.cycle,walkWeight:a.motion.walk,runWeight:a.motion.run,profile:a.motionProfile,legSign:sign,hip:[v.hipL,v.hipR],knee:['left','right'].map(side=>(vrm.humanoid.getNormalizedBoneNode(side+'LowerLeg')?.rotation.x||0)*sign),ankle:[v.ankleL,v.ankleR],jumpWeight:a.motion.jump};
   const measure140=!a.diagnosticInterval140||!Number.isFinite(a.lastDiagnostic140)||t-a.lastDiagnostic140>=a.diagnosticInterval140||a.lastMode140!==a.motion.state;const previousRaw140=a.rawDiagnostics140;if(previousRaw140){a.poseCheck.rawArm=previousRaw140.arm;a.poseCheck.rawLeg=previousRaw140.leg}
   if(detail===0&&measure140&&['idle','walk','run'].includes(mode)){a.lastDiagnostic140=t;a.lastMode140=a.motion.state;
    a.root.updateWorldMatrix(true,true);
@@ -358,6 +369,6 @@
   }
   if(measure140&&mode==='idle'&&a.weight<.05&&!WWMotion.phaseOf(j)){vrm.scene.updateMatrixWorld(true);const h=vrm.humanoid.getRawBoneNode('head'),l=vrm.humanoid.getRawBoneNode('leftHand'),r=vrm.humanoid.getRawBoneNode('rightHand'),ls=vrm.humanoid.getRawBoneNode('leftUpperArm'),rs=vrm.humanoid.getRawBoneNode('rightUpperArm');if(h&&l&&r&&ls&&rs){const hy=h.matrixWorld.elements[13];a.handsBelowHead=l.matrixWorld.elements[13]<hy&&r.matrixWorld.elements[13]<hy;a.handsDown=l.matrixWorld.elements[13]<ls.matrixWorld.elements[13]&&r.matrixWorld.elements[13]<rs.matrixWorld.elements[13]}}
  }
- function release(a){if(!a||a.released335)return;a.released335=true;try{if(typeof WWIdentity!=='undefined')WWIdentity.clear(a)}finally{a.root.removeFromParent();try{a.dispose?.()}finally{a.contacts={};a.combatFilter308=null;a.dispose=null;}}}
+ function release(a){if(!a||a.released335)return;a.released335=true;try{if(a.spring316?.active)springMotion316(a,{},false)}catch{}try{if(typeof WWIdentity!=='undefined')WWIdentity.clear(a)}finally{a.root.removeFromParent();try{a.dispose?.()}finally{a.contacts={};a.combatFilter308=null;a.dispose=null;}}}
  const api={createLoadQueue335,loadQueueStats335:()=>loadQueue335.stats(),dodgePose334,weaponKeyframe321,clips321,actionFootwork320,boundedFootwork320,danceProfiles320,combatBody320,combatGrip312,fingerTargets163,fingerResponse251,setupFingers163,animateFingers163,load,animate,sources,roster,preset,applyPreset,release,heightFactor,createBufferCache140,bufferStats140:()=>buffers.stats()};if(typeof module!=='undefined')module.exports=api;else window.WWVRM=api;
 })();
