@@ -144,7 +144,11 @@
   const warp=(p,m,b,out)=>{p.applyMatrix4(m).multiplyScalar(scale);travelerSculptPoint(p.x,p.y,p.z,headX,headY,out);return p.fromArray(out).multiplyScalar(1/scale).applyMatrix4(b)};
   try{
    for(const r of rest.records){
-    const source=r.original,src=source.attributes.position,g=source.clone(),dst=g.attributes.position;
+    const source=r.original,src=source.attributes.position;
+    // Skip geometry entirely below the waist deformation band, including shoes and most leg meshes.
+    if(!source.boundingBox)source.computeBoundingBox();const bounds=source.boundingBox?.clone().applyMatrix4(r.matrix);
+    if(bounds&&bounds.max.y*scale<headY-.72)continue;
+    const g=source.clone(),dst=g.attributes.position;
     r.sculpted=g;
     // Transform absolute targets and relative morph deltas coherently.
     for(let i=0;i<src.count;i++){
@@ -160,7 +164,7 @@
     // Retain authored normals/tangents and skin attributes; small sculpt avoids hard seam regeneration.
     g.computeBoundingBox();g.computeBoundingSphere();r.mesh.geometry=g;
    }
-   a.travelerSculpt={id,meshes:rest.records.length,mode:'reversible-rest-sculpt'};
+   a.travelerSculpt={id,meshes:rest.records.filter(r=>r.sculpted).length,mode:'reversible-rest-sculpt'};
   }catch(e){restoreTravelerSculpt(a);console.warn('Traveler sculpt fallback',e);}
  }
  function applyPreset(T,a,p){
@@ -221,7 +225,7 @@
   for(const side of ['left','right']){const foot=vrm.humanoid.getRawBoneNode(side+'Foot'),toe=vrm.humanoid.getRawBoneNode(side+'Toes');if(foot&&toe){const d=root.worldToLocal(toe.getWorldPosition(new T.Vector3())).sub(root.worldToLocal(foot.getWorldPosition(new T.Vector3())));d.y=0;if(d.length()>.015){modelForward=d.normalize();break}}}
   const soleHeight=Object.fromEntries(['left','right'].map(side=>{let n=vrm.humanoid.getRawBoneNode(side+'Foot');return [side,n?Math.max(.015,Math.min(.24,n.getWorldPosition(new T.Vector3()).y)):.06]}));
   const a={root,vrm,kind,phase:0,weight:0,elapsed:0,baseScale:root.scale.x,colors,armDown,legSign,modelForward,motionProfile:kind.startsWith('female')?'f1':'m1',motion:WWMotion.newState(),hipsRest:vrm.humanoid.getNormalizedBoneNode('hips')?.position.clone(),springReady:false,T,dispose:()=>VRMUtils.deepDispose(vrm.scene),soleHeight};
-  a.experimentalShape3527=experimentalShape;if(experimentalShape)captureShape3523(T,a);else captureTravelerRest(T,a);try{WWFootIK.calibrateSoles(T,a)}catch(e){console.warn('Sole calibration fallback',e);a.soleSamples=null}return a;
+  a.experimentalShape3527=experimentalShape;if(experimentalShape)captureShape3523(T,a);else {try{captureTravelerRest(T,a)}catch(e){console.warn('Traveler rest capture fallback',e)}}try{WWFootIK.calibrateSoles(T,a)}catch(e){console.warn('Sole calibration fallback',e);a.soleSamples=null}return a;
  }
  // V16.3: normalized VRM finger joints, independent per hand with eased transitions.
  const digits163=['Index','Middle','Ring','Little'];
