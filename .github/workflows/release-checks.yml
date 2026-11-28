@@ -21,6 +21,12 @@ jobs:
       - run: python test_release347.py
       - run: python test_foundation350.py
       - run: node test_performance349.cjs
+      - run: node test_character352.cjs
+      - run: node test_mobile_quality355.cjs
+      - run: node test_graphics100.cjs
+      - run: node test_multiplayer270.cjs
+      - run: node test_world245.cjs
+      - run: python -m unittest test_combat281
       - run: python test_http_assets.py
       - run: python test_together.py
       - run: python test_guild.py

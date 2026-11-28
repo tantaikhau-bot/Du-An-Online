@@ -163,14 +163,35 @@ function mobileCap139(preset,pref){
 const MOBILE_CLARITY171=Object.freeze({
  battery:Object.freeze({floor:.85,base:1,max:1,budget:650000,scaleFloor:.85,aniso:4}),
  low:Object.freeze({floor:1,base:1,max:1,budget:700000,scaleFloor:1,aniso:4}),
- balanced:Object.freeze({floor:1,base:1.2,max:1.35,budget:1100000,scaleFloor:.85,aniso:4}),
- high:Object.freeze({floor:1,base:1.35,max:1.5,budget:1400000,scaleFloor:.85,aniso:8}),
- sharp:Object.freeze({floor:1.15,base:1.5,max:1.65,budget:1800000,scaleFloor:.85,aniso:8})
+ balanced:Object.freeze({floor:1,base:1.35,max:1.5,budget:1350000,scaleFloor:.85,aniso:4}),
+ high:Object.freeze({floor:1,base:1.5,max:1.7,budget:1650000,scaleFloor:.85,aniso:8}),
+ sharp:Object.freeze({floor:1.15,base:1.6,max:1.9,budget:2000000,scaleFloor:.85,aniso:8})
 });
-function mobileResolution139(w,h,dpr,quality,tier,scale,hd,maxBuffer,preset=hd?'sharp':'balanced'){
- w=Math.max(1,w);h=Math.max(1,h);const p=MOBILE_CLARITY171[preset]||MOBILE_CLARITY171.balanced;
- const desired=Math.max(p.floor,p.base*Math.max(p.scaleFloor,Math.min(1.2,scale)));
- return Math.min(desired,Math.max(1,dpr),p.max,Math.sqrt(p.budget/(w*h)),maxBuffer/Math.max(w,h));
+// V35.0.5: one conservative pixel budget for resolution and diagnostics.
+function mobilePixelBudget355(preset,tier,lowMemory=false){
+ const p=MOBILE_CLARITY171[preset]||MOBILE_CLARITY171.balanced;
+ const tierBudget=tier===2?1000000:tier===1?1650000:2000000;
+ return Math.min(p.budget,tierBudget,lowMemory?1000000:2000000);
+}
+function mobileResolution139(w,h,dpr,quality,tier,scale,hd,maxBuffer,preset=hd?'sharp':'balanced',lowMemory=false){
+ if(![w,h,maxBuffer].every(Number.isFinite)||w<1||h<1||maxBuffer<1)return 0;
+ const p=MOBILE_CLARITY171[preset]||MOBILE_CLARITY171.balanced;
+ const safeScale=Number.isFinite(scale)?scale:1,safeDpr=Number.isFinite(dpr)&&dpr>0?dpr:1;
+ const desired=Math.max(p.floor,p.base*Math.max(p.scaleFloor,Math.min(1.2,safeScale)));
+ return Math.min(desired,safeDpr,p.max,Math.sqrt(mobilePixelBudget355(preset,tier,lowMemory)/(w*h)),maxBuffer/Math.max(w,h));
+}
+// Deduplicate concurrent model fetch/parse; failed requests can be retried.
+function sharedAsset355(cache,key,load){
+ if(cache.has(key))return cache.get(key);
+ const pending=Promise.resolve().then(load);
+ cache.set(key,pending);
+ pending.catch(()=>{if(cache.get(key)===pending)cache.delete(key);});
+ return pending;
+}
+function hudPoint355(x,y,w,h,bw,bh){
+ if(![x,y,w,h,bw,bh].every(Number.isFinite)||w<=0||h<=0)return null;
+ const mx=Math.min(.5,(Math.max(0,bw)/2+8)/w),my=Math.min(.5,(Math.max(0,bh)/2+8)/h);
+ return [Math.max(mx,Math.min(1-mx,x)),Math.max(my,Math.min(1-my,y))];
 }
 function mobileStep139(v,fps,p95,cap,ceiling,tierFloor,scaleCeiling,manual=false,preset='balanced'){
  const severe=fps<cap*.64||p95>100,slow=severe||fps<cap*.86||p95>1000/cap*1.9;
@@ -210,6 +231,27 @@ function jumpStep141(j,ms,canLaunch){
  return {prep,height,velocity,land,landed}
 }
 // V34.0: a single timing gate for combat, including interrupted or stale casts.
+// Continuous mortar-to-stone bevel: no new geometry or texture channels.
+function masonryRelief354(kind,seam,noise,mid,fine,tone,out={}){
+ const clamp=v=>Math.max(0,Math.min(1,Number.isFinite(v)?v:0)),s=clamp(seam),n=clamp(noise),m=clamp(mid),f=clamp(fine),t=clamp(tone);
+ const width=(kind==='path'?.025:.039)+n*.012,bevel=kind==='roof'?.045:.032;
+ let x=clamp((s-width)/bevel);x=x*x*(3-2*x);
+ const low=kind==='path'?.34:.23,high=.55+m*.24+f*.10;
+ out.height=low+(high-low)*x;
+ out.light=(kind==='path'?.77:.65)+( .85+t*.24-(kind==='path'?.77:.65))*x;
+ return out;
+}
+function firstStrikeFrame352(c,now){
+ const m=c.move;if(!m||m.firstFrame352)return 0;m.firstFrame352=true;
+ if(m.kind!=='strike'||m.airborne||m.air323||m.counter322||m.hit)return 0;
+ if(![m.start,m.impact,m.end,now].every(Number.isFinite)||m.start>m.impact||m.impact>=m.end)return 0;
+ const delay=now-m.start;if(delay<=80||delay>1200)return 0;
+ m.start+=delay;m.impact+=delay;m.end+=delay;
+ if(Number.isFinite(c.cd?.strike))c.cd.strike+=delay;
+ if(Number.isFinite(c.lastCombo))c.lastCombo+=delay;
+ if(c.buffer310>0)c.buffer310+=delay;
+ return delay;
+}
 function combatTiming340(move,now,paused=false,landingHeight=0,out={}){
  const valid=!!move&&[move.start,move.impact,move.end,now].every(Number.isFinite)&&move.start<=move.impact&&move.impact<move.end&&move.start<=now;
  out.valid=valid;out.cancel=!!move&&(!valid||paused||now>move.end+180);out.progress=valid?Math.max(0,Math.min(1,(now-move.start)/(move.end-move.start))):0;
@@ -259,4 +301,4 @@ function gpuState344(st,event,hidden=false){
  if(event==='restored'){if(!st.lost)return 'ignore';st.lost=false;return st.losses===1?(hidden?'defer':'resume'):'reload';}
  return 'ignore';
 }
-if(typeof module!=='undefined')module.exports={rendererOptions344,createRenderer344,viewport344,capture344,release344,gpuState344,createFrameGuard343,safeComboIndex343,frameInterval343,frameSample343,combatTiming340,combatReset340,TREE192,treeProfile192,trunkData192,HEAVEN190,heavenZone190,heavenSegment190,heavenFloor190,heavenBlocked190,heavenHeight190,SEA180,seaWeight180,seaLand180,seaTerrain180,seaBlocked180,seaReserved180,DESERT179,desertWeight179,desertTerrain179,desertBlocked179,desertReserved179,VOLCANO178,volcanoWeight178,volcanoLava178,volcanoTerrain178,volcanoBlocked178,volcanoReserved178,MAGIC177,magicWeight177,magicTerrain177,magicBlocked177,magicReserved177,LIGHT176,lightWeight176,lightTerrain176,lightBlocked176,lightReserved176,DREAM175,dreamWeight175,dreamTerrain175,dreamReserved175,ICE174,iceWeight174,icePeak174,iceTerrain174,iceReserved174,BLOSSOM173,blossomWeight173,blossomPond173,blossomTrail173,blossomTerrain173,blossomWaterBlocked173,MOBILE_CLARITY171,WW_ATLAS170,atlasDestination170,atlasMap170,smooth162,frontierHeight162,trailDistance162,terrainTiles162,tileAt162,tileVisible162,physicsDelta141,physicsSteps141,angle141,orbit141,jumpStep141,trimModels140,expiredModel140,mobileCap139,mobileResolution139,mobileStep139,actorBudget139,WW_WORLD137,WW_EXPANSION137,insideWorld137,expansionRegion137,clarityStep100,resolution77,WW_PERF118,perfPreset118,perfWarning118,WW_LANDMARK124,landmarkSite124,cellVisible124,landmarkVisits124,WW_LOOK131,look131,blendLook131,cameraSafe131,stepSound131};
+if(typeof module!=='undefined')module.exports={mobilePixelBudget355,sharedAsset355,hudPoint355,masonryRelief354,firstStrikeFrame352,rendererOptions344,createRenderer344,viewport344,capture344,release344,gpuState344,createFrameGuard343,safeComboIndex343,frameInterval343,frameSample343,combatTiming340,combatReset340,TREE192,treeProfile192,trunkData192,HEAVEN190,heavenZone190,heavenSegment190,heavenFloor190,heavenBlocked190,heavenHeight190,SEA180,seaWeight180,seaLand180,seaTerrain180,seaBlocked180,seaReserved180,DESERT179,desertWeight179,desertTerrain179,desertBlocked179,desertReserved179,VOLCANO178,volcanoWeight178,volcanoLava178,volcanoTerrain178,volcanoBlocked178,volcanoReserved178,MAGIC177,magicWeight177,magicTerrain177,magicBlocked177,magicReserved177,LIGHT176,lightWeight176,lightTerrain176,lightBlocked176,lightReserved176,DREAM175,dreamWeight175,dreamTerrain175,dreamReserved175,ICE174,iceWeight174,icePeak174,iceTerrain174,iceReserved174,BLOSSOM173,blossomWeight173,blossomPond173,blossomTrail173,blossomTerrain173,blossomWaterBlocked173,MOBILE_CLARITY171,WW_ATLAS170,atlasDestination170,atlasMap170,smooth162,frontierHeight162,trailDistance162,terrainTiles162,tileAt162,tileVisible162,physicsDelta141,physicsSteps141,angle141,orbit141,jumpStep141,trimModels140,expiredModel140,mobileCap139,mobileResolution139,mobileStep139,actorBudget139,WW_WORLD137,WW_EXPANSION137,insideWorld137,expansionRegion137,clarityStep100,resolution77,WW_PERF118,perfPreset118,perfWarning118,WW_LANDMARK124,landmarkSite124,cellVisible124,landmarkVisits124,WW_LOOK131,look131,blendLook131,cameraSafe131,stepSound131};

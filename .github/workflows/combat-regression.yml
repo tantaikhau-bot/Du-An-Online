@@ -3,6 +3,8 @@ on:
   push:
     branches: [main]
     paths: ['dungeon.py', 'test_combat281.py', 'server.py', 'index.html', 'test_camera319.cjs', 'test_combat_motion320.cjs', 'test_action_footwork320.cjs', 'test_weapon_keyframes321.cjs', 'test_defense322.cjs', 'assets/vrm-character.js', 'assets/foot-ik.js', '.github/workflows/combat-regression.yml']
+  pull_request:
+    branches: [main]
   workflow_dispatch:
 permissions:
   contents: read

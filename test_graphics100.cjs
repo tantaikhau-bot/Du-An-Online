@@ -41,12 +41,12 @@ const P139=require('./assets/game-policy.js');
 assert.equal(P139.mobileCap139('low',60),30);assert.equal(P139.mobileCap139('balanced',0),60);assert.equal(P139.mobileCap139('balanced',30),30);assert.equal(P139.mobileCap139('balanced',90),90);assert.equal(P139.mobileCap139('high',60),60);
 for(const [w,h] of [[360,640],[390,844],[844,390],[873,392],[1280,720],[1920,1080]])for(const [preset,p] of Object.entries(P139.MOBILE_CLARITY171))for(const tier of [0,1,2])for(const scale of [.5,.75,1,1.25])for(const dpr of [1,3]){
  const r=P139.mobileResolution139(w,h,dpr,0,tier,scale,preset==='sharp',4096,preset);
- const floor=Math.min(p.floor,dpr,Math.sqrt(p.budget/(w*h)),4096/Math.max(w,h));assert.ok(r>=floor-1e-9&&w*h*r*r<=p.budget+.01&&r<=dpr);
- assert.equal(r,P139.mobileResolution139(w,h,dpr,0,0,scale,preset==='sharp',4096,preset));
+ const budget=P139.mobilePixelBudget355(preset,tier),floor=Math.min(p.floor,dpr,Math.sqrt(budget/(w*h)),4096/Math.max(w,h));assert.ok(r>=floor-1e-9&&w*h*r*r<=budget+.01&&r<=dpr);
+ assert.ok(r<=P139.mobileResolution139(w,h,dpr,0,0,scale,preset==='sharp',4096,preset)+1e-9);
 }
 for(const [preset,p] of Object.entries(P139.MOBILE_CLARITY171)){let bad={tier:1,quality:1,scale:1,slow:0,good:0};bad=P139.mobileStep139(bad,9,120,30,1,1,1,false,preset);assert.equal(bad.tier,2);assert.equal(bad.quality,0);for(let i=0;i<30;i++)bad=P139.mobileStep139(bad,9,120,30,1,1,1,false,preset);assert.equal(bad.scale,p.scaleFloor);for(let i=0;i<12;i++)bad=P139.mobileStep139(bad,30,34,30,1,1,1,false,preset);if(p.scaleFloor<.975)assert.ok(bad.scale>p.scaleFloor);else{assert.equal(bad.scale,p.scaleFloor);assert.equal(bad.tier,1);}}
 const budget=P139.actorBudget139(true,2,0);assert.equal(budget.load,1);assert.equal(budget.npcCount,1);assert.ok(budget.peerCount>=1&&budget.peerRig<budget.peerRange);
-console.log('V13.9 mobile render budgets, 60 FPS default with explicit 30/90 FPS options, fast degradation, slow recovery and visible actor policy passed');
+console.log('V35.0.6 tier-aware mobile render budgets, 60 FPS default with explicit 30/90 FPS options, fast degradation, slow recovery and visible actor policy passed');
 
 const P140=require('./assets/game-policy.js');const map140=new Map([['a',1],['b',2],['c',3],['d',4]]),disposed140=[];
 assert.equal(P140.trimModels140(map140,'a',2,v=>disposed140.push(v)),2);assert.deepEqual([...map140.keys()],['a','d']);assert.deepEqual(disposed140,[2,3]);assert.equal(P140.expiredModel140(0,19999),false);assert.equal(P140.expiredModel140(0,20000),true);assert.equal(P140.expiredModel140(undefined,30000),false);

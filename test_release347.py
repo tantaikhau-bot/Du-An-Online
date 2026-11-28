@@ -52,7 +52,7 @@ class ReleaseTests(unittest.TestCase):
         actual = [(i, a) for i, (a, _) in enumerate(scripts())
                   if a.get("src", "").startswith("/assets/ww346-")]
         self.assertEqual([a["src"] for _, a in actual],
-                         ["/assets/ww346-" + n + ".js?v=3500" for n in MODULES])
+                         ["/assets/ww346-" + n + ".js?v=3506" for n in MODULES])
         self.assertEqual([i for i, _ in actual], list(range(actual[0][0], actual[0][0]+14)))
         for _, a in actual:
             self.assertFalse({"async", "defer", "type"} & a.keys())
