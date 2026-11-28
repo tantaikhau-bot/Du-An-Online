@@ -322,6 +322,7 @@
   const exit=queued? .32+.68*ease((1-p)/recovery):ease((1-p)/recovery);
   return entry*exit;
  }
+ function readyWeight359(armed,moving,ready){return armed&&Number.isFinite(moving)&&moving<.25?Math.max(0,Math.min(1,Number.isFinite(ready)?ready:0)):0;}
  function idleStance352(weight,id,t){const w=Math.max(0,Math.min(1,Number.isFinite(weight)?weight:0)),d=expression341[id]||expression341.m1,phase=Number.isFinite(t)?t:0;return {spread:.055*w,toe:.035*w,lead:.018*w*Math.sin(phase*.72+d[3])};}
  function idleCombat341(id,weapon,t,weight,out={}){
   const d=expression341[id]||expression341.m1,t0=Number.isFinite(t)?t:0,w=Math.max(0,Math.min(1,Number.isFinite(weight)?weight:0)),seed=id?.charCodeAt?.(0)||109,phase=t0*.9+seed*.19+(parseInt(id?.slice(1),10)||1)*.71;
@@ -442,7 +443,7 @@
    }
   }
   // V31.9: full-body choreography with asymmetric stance and continuous follow-through.
-  const ready320=!socialBlocked256&&armed308&&a.weight<.25?Math.max(.34,Math.min(1,j.ready320||0)):0,body320=combatBody320(!socialBlocked256?combat:null,ready320,a.body320??={}),bw320=body320.weight;
+  const ready320=readyWeight359(!socialBlocked256&&armed308,a.weight,j.ready320),body320=combatBody320(!socialBlocked256?combat:null,ready320,a.body320??={}),bw320=body320.weight;
   if(bw320>.001){
    const b=body320,w=bw320,dir=(combat?.combo|0)%2?-1:1,step=actionFootwork320(combat,combat?.progress,a.motionProfile,a.dance320??={});
    if(hips){hips.position.y+=b.drop*w;hips.position.x+=b.shift*w;}
@@ -504,5 +505,5 @@
   if(measure140&&mode==='idle'&&a.weight<.05&&!WWMotion.phaseOf(j)){vrm.scene.updateMatrixWorld(true);const h=vrm.humanoid.getRawBoneNode('head'),l=vrm.humanoid.getRawBoneNode('leftHand'),r=vrm.humanoid.getRawBoneNode('rightHand'),ls=vrm.humanoid.getRawBoneNode('leftUpperArm'),rs=vrm.humanoid.getRawBoneNode('rightUpperArm');if(h&&l&&r&&ls&&rs){const hy=h.matrixWorld.elements[13];a.handsBelowHead=l.matrixWorld.elements[13]<hy&&r.matrixWorld.elements[13]<hy;a.handsDown=l.matrixWorld.elements[13]<ls.matrixWorld.elements[13]&&r.matrixWorld.elements[13]<rs.matrixWorld.elements[13]}}
  }
  function release(a){if(!a||a.released335)return;a.released335=true;try{if(a.spring316?.active)springMotion316(a,{},false)}catch{}try{if(typeof WWIdentity!=='undefined')WWIdentity.clear(a)}finally{a.root.removeFromParent();try{a.dispose?.()}finally{a.contacts={};a.combatFilter308=null;a.dispose=null;}}}
- const api={comboEnvelope353,idleStance352,appearance342,materialRole342,materialPolicy342,snapshotMaterial342,finishMaterial342,expression341,kineticFrame341,idleCombat341,smoothKey339,blendRate339,ultimate338,ultimateFrame338,ultimatePath338,createLoadQueue335,loadQueueStats335:()=>loadQueue335.stats(),dodgePose334,weaponKeyframe321,clips321,actionFootwork320,boundedFootwork320,danceProfiles320,combatBody320,combatGrip312,fingerTargets163,fingerResponse251,setupFingers163,animateFingers163,load,animate,sources,roster,preset,applyPreset,release,heightFactor,createBufferCache140,bufferStats140:()=>buffers.stats()};if(typeof module!=='undefined')module.exports=api;else window.WWVRM=api;
+ const api={readyWeight359,comboEnvelope353,idleStance352,appearance342,materialRole342,materialPolicy342,snapshotMaterial342,finishMaterial342,expression341,kineticFrame341,idleCombat341,smoothKey339,blendRate339,ultimate338,ultimateFrame338,ultimatePath338,createLoadQueue335,loadQueueStats335:()=>loadQueue335.stats(),dodgePose334,weaponKeyframe321,clips321,actionFootwork320,boundedFootwork320,danceProfiles320,combatBody320,combatGrip312,fingerTargets163,fingerResponse251,setupFingers163,animateFingers163,load,animate,sources,roster,preset,applyPreset,release,heightFactor,createBufferCache140,bufferStats140:()=>buffers.stats()};if(typeof module!=='undefined')module.exports=api;else window.WWVRM=api;
 })();
