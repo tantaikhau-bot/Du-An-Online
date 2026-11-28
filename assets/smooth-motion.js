@@ -126,5 +126,18 @@
   for(let n=0;n<3;n++){const k=['pitch','roll','flutter'][n],vk=k+'Velocity';let pos=finite(st[k]),vel=finite(st[vk]),remain=seconds;while(remain>1e-7){const step=Math.min(remain,1/120);vel+=(95*(goal[n]-pos)-17*vel)*step;pos+=vel*step;remain-=step;}const bound=n===0?.72:n===1?.48:.38;st[k]=clamp(pos,n===2?0:-bound,bound);st[vk]=Math.abs(pos-st[k])>.0001?0:clamp(vel,-6,6);}
   st.wind=wind;return st;
  }
- const api={secondary316,newState,step,phaseOf,landingEnvelope252,npcLOD,profile,profiles,animalState,actionBlend132,expression132,socialLook255,secondary132};if(typeof module!=='undefined')module.exports=api;else root.WWMotion=api;
+ // V33.7: independent damped hair and textile inertia, bounded at low frame rates.
+ function secondary337(st,dt,input={}){
+ const f=(v,d=0)=>Number.isFinite(v)?v:d,c=(v,l,h)=>Math.max(l,Math.min(h,v));
+ const seconds=c(f(dt),0,.10),gait=c(f(input.gait),0,1),speed=c(f(input.speed,gait*4),0,10),turn=c(f(input.turn),-5,5),wind=c(f(input.wind,1),0,3),vertical=c(f(input.vertical),-6,6);
+ const combat=input.combat,p=c(f(combat?.progress),0,1),impact=c(f(combat?.impact,.45),.15,.85),dir=(combat?.combo|0)%2?-1:1;
+ const swing=combat&&['strike','spin','ultimate','dodge'].includes(combat.kind)?Math.sin(Math.PI*p)*(combat.kind==='ultimate'||combat.kind==='spin'?1:combat.weapon==='great'?.82:.55):0;
+ const cut=swing*Math.tanh((p-impact)*8),scale=input.reduce?.16:1;
+ const accel=seconds>.001&&f(dt)<.18&&Number.isFinite(st.speed)?c((speed-st.speed)/seconds,-9,9):0;st.speed=speed;
+ const targets=[c((gait*.30+accel*.018-vertical*.027+cut*.18)*scale,-.25,.62),c((-turn*.085+dir*cut*.23)*scale,-.45,.45),c((wind*.035+gait*.10+Math.abs(vertical)*.017+swing*.13)*scale,0,.38),c((gait*.39+accel*.024-vertical*.041+cut*.28)*scale,-.25,.72),c((-turn*.10+dir*cut*.28)*scale,-.48,.48)];
+ const keys=['hairPitch','hairRoll','flutter','clothPitch','clothRoll'],bounds=[.65,.48,.4,.75,.52],rates=[115,105,85,63,59],damping=[18,17,15,11,11];
+ for(let i=0;i<keys.length;i++){const k=keys[i],vk=k+'Velocity';let x=c(f(st[k]),-bounds[i],bounds[i]),v=c(f(st[vk]),-5,5),remaining=seconds;if(f(dt)>.18)v=0;while(remaining>1e-7){const h=Math.min(remaining,1/120);v+=(rates[i]*(targets[i]-x)-damping[i]*v)*h;x+=v*h;remaining-=h;}const bounded=c(x,i===2?0:-bounds[i],bounds[i]);st[k]=bounded;st[vk]=bounded===x?c(v,-5,5):0;}
+ st.pitch=st.clothPitch;st.roll=st.clothRoll;st.wind=wind;return st;
+}
+ const api={secondary337,secondary316,newState,step,phaseOf,landingEnvelope252,npcLOD,profile,profiles,animalState,actionBlend132,expression132,socialLook255,secondary132};if(typeof module!=='undefined')module.exports=api;else root.WWMotion=api;
 })(typeof globalThis!=='undefined'?globalThis:this);
